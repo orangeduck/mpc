@@ -31,6 +31,7 @@ bool suite_ident(void) {
   mpc_test(Ident, "", "", string_eq, free, string_print);
   mpc_test(Ident, "18nums", "", string_eq, free, string_print);
   
+  mpc_undefine(Ident);
   mpc_delete(Ident);
   
   return true;

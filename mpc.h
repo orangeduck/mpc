@@ -52,9 +52,10 @@ bool mpc_parse_filename(const char* filename, mpc_parser_t* p, mpc_result_t* r);
 
 void mpc_delete(mpc_parser_t* p);
 mpc_parser_t* mpc_new(void);
-mpc_parser_t* mpc_assign(mpc_parser_t* p, mpc_parser_t* a);
+
 mpc_parser_t* mpc_define(mpc_parser_t* p, mpc_parser_t* a);
-mpc_parser_t* mpc_retain(mpc_parser_t* p);
+mpc_parser_t* mpc_undefine(mpc_parser_t* p);
+
 mpc_parser_t* mpc_expect(mpc_parser_t* a, const char* expected);
 
 mpc_parser_t* mpc_pass(void);

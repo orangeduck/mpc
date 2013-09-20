@@ -46,6 +46,11 @@ bool suite_math(void) {
   mpc_test(Maths, "a", (int[]){ 0 }, int_eq, free, int_print);
   mpc_test(Maths, "2b+4", (int[]){ 2 }, int_eq, free, int_print);
   
+  mpc_undefine(Expr);
+  mpc_undefine(Factor);
+  mpc_undefine(Term);
+  mpc_undefine(Maths);
+  
   mpc_delete(Expr);
   mpc_delete(Factor);
   mpc_delete(Term);
