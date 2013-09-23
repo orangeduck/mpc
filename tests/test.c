@@ -1,15 +1,12 @@
-#include <stdbool.h>
+#include "ptest.h"
 
-bool suite_ident(void);
-bool suite_math(void);
-bool suite_regex(void);
+void suite_core(void);
+void suite_regex(void);
+void suite_grammar(void);
 
 int main(int argc, char** argv) {
-  
-  suite_ident();
-  suite_math();
-  suite_regex();
-  
-  return 0;
-  
+  pt_add_suite(suite_core);
+  pt_add_suite(suite_regex);
+  pt_add_suite(suite_grammar);
+  return pt_run();
 }
