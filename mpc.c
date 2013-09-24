@@ -1691,7 +1691,7 @@ static void mpc_print_unretained(mpc_parser_t* p, bool force) {
   if (p->type == MPC_TYPE_FAIL)   { printf("<fail>"); }
   if (p->type == MPC_TYPE_LIFT)   { printf("<lift>"); }
   if (p->type == MPC_TYPE_EXPECT) {
-    printf(p->data.expect.m);
+    printf("%s", p->data.expect.m);
     /*mpc_print_unretained(p->data.expect.x, false);*/
   }
   
@@ -2039,9 +2039,6 @@ static mpc_val_t* mpca_grammar_lift(void) {
 }
 
 static mpc_val_t* mpca_grammar_fold_repeat(mpc_val_t* x, mpc_val_t* y) {
-  
-  printf("Got Repeat '%s'\n", (char*)y);
-  
   if (strcmp(y, "*") == 0) { free(y); return mpca_many(x); }
   if (strcmp(y, "+") == 0) { free(y); return mpca_many1(x); }
   if (strcmp(y, "?") == 0) { free(y); return mpca_maybe(x); }
@@ -2051,15 +2048,11 @@ static mpc_val_t* mpca_grammar_fold_repeat(mpc_val_t* x, mpc_val_t* y) {
 }
 
 static mpc_val_t* mpc_grammar_apply_string(mpc_val_t* x) {
-  mpc_parser_t* p = mpc_ast(mpc_string(mpcf_unescape(x)));
-  free(x);
-  return p;
+  return mpc_ast(mpc_string(mpcf_unescape(x)));
 }
 
-static mpc_val_t* mpc_grammar_apply_char(mpc_val_t* x) {
-  mpc_parser_t* p = mpc_ast(mpc_char(*(char*)mpcf_unescape(x)));
-  free(x);
-  return p;
+static mpc_val_t* mpc_grammar_apply_char(mpc_val_t* x) {;
+  return mpc_ast(mpc_char(*(char*)mpcf_unescape(x)));
 }
 
 static mpc_val_t* mpc_grammar_apply_regex(mpc_val_t* x) {
