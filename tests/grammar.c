@@ -39,18 +39,19 @@ void test_grammar(void) {
       
       mpc_ast_new("char", "+"),
       mpc_ast_new("value", "5"));
-  
+      
   PT_ASSERT(mpc_match(Maths, "  24 ", t0, (bool(*)(void*,void*))mpc_ast_eq, (mpc_dtor_t)mpc_ast_delete, (void(*)(void*))mpc_ast_print));
   PT_ASSERT(mpc_match(Maths, "(5)", t1, (bool(*)(void*,void*))mpc_ast_eq, (mpc_dtor_t)mpc_ast_delete, (void(*)(void*))mpc_ast_print));
   PT_ASSERT(mpc_match(Maths, "(4 * 2 * 11 + 2) + 5", t2, (bool(*)(void*,void*))mpc_ast_eq, (mpc_dtor_t)mpc_ast_delete, (void(*)(void*))mpc_ast_print));
   PT_ASSERT(mpc_unmatch(Maths, "a", t0, (bool(*)(void*,void*))mpc_ast_eq, (mpc_dtor_t)mpc_ast_delete, (void(*)(void*))mpc_ast_print));
   PT_ASSERT(mpc_unmatch(Maths, "2b+4", t0, (bool(*)(void*,void*))mpc_ast_eq, (mpc_dtor_t)mpc_ast_delete, (void(*)(void*))mpc_ast_print));
-  
+
   mpc_ast_delete(t0);
   mpc_ast_delete(t1);
   mpc_ast_delete(t2);
-  
+
   mpc_cleanup(4, Expr, Prod, Value, Maths);
+  
 }
 
 void test_language(void) {
@@ -69,10 +70,12 @@ void test_language(void) {
     ",
     Expr, Prod, Value, Maths);
   
+  /*
   mpc_print(Expr);
   mpc_print(Prod);
   mpc_print(Value);
   mpc_print(Maths);
+  */
   
   mpc_cleanup(4, Expr, Prod, Value, Maths);
 }
@@ -84,12 +87,7 @@ void test_language_file(void) {
   mpc_parser_t* Value = mpc_new("value");
   mpc_parser_t* Maths = mpc_new("maths");
   
-  mpca_lang_file("maths.grammar", Expr, Prod, Value, Maths);
-  
-  mpc_print(Expr);
-  mpc_print(Prod);
-  mpc_print(Value);
-  mpc_print(Maths);
+  mpca_lang_file("./tests/maths.grammar", Expr, Prod, Value, Maths);
   
   mpc_cleanup(4, Expr, Prod, Value, Maths);
   

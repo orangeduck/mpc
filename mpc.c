@@ -113,17 +113,17 @@ void mpc_err_print_to(mpc_err_t* x, FILE* f) {
     
   }
   
-  printf(" at ");
-  if (x->state.next == '\a') { printf("bell"); }
-  else if (x->state.next == '\b') { printf("backspace"); }
-  else if (x->state.next == '\f') { printf("formfeed"); }
-  else if (x->state.next == '\r') { printf("carriage return"); }
-  else if (x->state.next == '\v') { printf("vertical tab"); }
-  else if (x->state.next == '\0') { printf("end of input"); }
-  else if (x->state.next == '\n') { printf("newline"); }
-  else if (x->state.next == '\t') { printf("tab"); }
-  else { printf("'%c'", x->state.next); }
-  printf("\n");
+  fprintf(f, " at ");
+  if (x->state.next == '\a') { fprintf(f, "bell"); }
+  else if (x->state.next == '\b') { fprintf(f, "backspace"); }
+  else if (x->state.next == '\f') { fprintf(f, "formfeed"); }
+  else if (x->state.next == '\r') { fprintf(f, "carriage return"); }
+  else if (x->state.next == '\v') { fprintf(f, "vertical tab"); }
+  else if (x->state.next == '\0') { fprintf(f, "end of input"); }
+  else if (x->state.next == '\n') { fprintf(f, "newline"); }
+  else if (x->state.next == '\t') { fprintf(f, "tab"); }
+  else { fprintf(f, "'%c'", x->state.next); }
+  fprintf(f, "\n");
   
 }
 
@@ -793,6 +793,14 @@ static void mpc_undefine_unretained(mpc_parser_t* p, bool force) {
       mpc_undefine_unretained(p->data.apply.x, false);
       break;
     
+    case MPC_TYPE_APPLY_TO:
+      mpc_undefine_unretained(p->data.apply_to.x, false);
+      break;
+    
+    case MPC_TYPE_NOT:
+      mpc_undefine_unretained(p->data.not.x, false);
+      break;
+    
     case MPC_TYPE_EXPECT:
       mpc_undefine_unretained(p->data.expect.x, false);
       free(p->data.expect.m);
@@ -849,6 +857,10 @@ void mpc_delete(mpc_parser_t* p) {
   }
 }
 
+static void mpc_soft_delete(mpc_val_t* x) {
+  mpc_undefine_unretained(x, false);
+}
+
 static mpc_parser_t* mpc_undefined(void) {
   mpc_parser_t* p = calloc(1, sizeof(mpc_parser_t));
   p->retained = false;
@@ -880,34 +892,6 @@ mpc_parser_t* mpc_define(mpc_parser_t* p, mpc_parser_t* a) {
   return p;  
 }
 
-static void mpc_delete_all_va(int n, va_list va) {
-  int i;
-  for (i = 0; i < n; i++) {
-    mpc_delete(va_arg(va, mpc_parser_t*));
-  }
-}
-
-static void mpc_undefine_all_va(int n, va_list va) {
-  int i;
-  for (i = 0; i < n; i++) {
-    mpc_undefine(va_arg(va, mpc_parser_t*));
-  }
-}
-
-static void mpc_delete_all(int n, ...) {  
-  va_list va;
-  va_start(va, n);
-  mpc_delete_all_va(n, va);
-  va_end(va);
-}
-
-static void mpc_undefine_all(int n, ...) {
-  va_list va;
-  va_start(va, n);
-  mpc_undefine_all_va(n, va);
-  va_end(va);
-}
-
 void mpc_cleanup(int n, ...) {
   va_list va;
   va_start(va, n);  
@@ -916,8 +900,23 @@ void mpc_cleanup(int n, ...) {
 }
 
 void mpc_cleanup_va(int n, va_list va) {
-  mpc_undefine_all_va(n, va);
-  mpc_delete_all_va(n, va);
+  
+  int i;
+  mpc_parser_t** list = malloc(sizeof(mpc_parser_t*) * n);
+  
+  for (i = 0; i < n; i++) {
+    list[i] = va_arg(va, mpc_parser_t*);
+  }
+  
+  for (i = 0; i < n; i++) {
+    mpc_undefine(list[i]);
+  }
+  
+  for (i = 0; i < n; i++) {
+    mpc_delete(list[i]);
+  }
+  
+  free(list);
 }
 
 mpc_parser_t* mpc_pass(void) {
@@ -1161,7 +1160,7 @@ mpc_parser_t* mpc_bind(mpc_parser_t* a, mpc_parser_t* b, mpc_dtor_t da, mpc_fold
   return mpc_also(a, b, da, f);
 }
 
-mpc_parser_t* mpc_or_va(int n, va_list va) {
+mpc_parser_t* mpc_or(int n, ...) {
 
   mpc_parser_t* p = mpc_undefined();
   
@@ -1169,16 +1168,19 @@ mpc_parser_t* mpc_or_va(int n, va_list va) {
   p->data.or.n = n;
   p->data.or.xs = malloc(sizeof(mpc_parser_t*) * n);
   
+  va_list va;
+  va_start(va, n);  
   int i;
   for (i = 0; i < n; i++) {
     p->data.or.xs[i] = va_arg(va, mpc_parser_t*);
   }
+  va_end(va);
   
   return p;
-
 }
 
-mpc_parser_t* mpc_and_va(int n, mpc_afold_t f, va_list va) {
+mpc_parser_t* mpc_and(int n, mpc_afold_t f, ...) {
+
   mpc_parser_t* p = mpc_undefined();
   
   p->type = MPC_TYPE_AND;
@@ -1186,31 +1188,18 @@ mpc_parser_t* mpc_and_va(int n, mpc_afold_t f, va_list va) {
   p->data.and.f = f;
   p->data.and.xs = malloc(sizeof(mpc_parser_t*) * n);
   p->data.and.dxs = malloc(sizeof(mpc_dtor_t) * (n-1));
-  
+
+  va_list va;
+  va_start(va, f);  
   int i;
   for (i = 0; i < n; i++) {
     p->data.and.xs[i] = va_arg(va, mpc_parser_t*);
   }
   for (i = 0; i < (n-1); i++) {
     p->data.and.dxs[i] = va_arg(va, mpc_dtor_t);
-  }
+  }  
+  va_end(va);
   
-  return p;
-}
-
-mpc_parser_t* mpc_or(int n, ...) {
-  va_list va;
-  va_start(va, n);
-  mpc_parser_t* p = mpc_or_va(n, va);
-  va_end(va);
-  return p;
-}
-
-mpc_parser_t* mpc_and(int n, mpc_afold_t f, ...) {
-  va_list va;
-  va_start(va, f);
-  mpc_parser_t* p = mpc_and_va(n, f, va);
-  va_end(va);
   return p;
 }
 
@@ -1891,7 +1880,6 @@ bool mpc_match(mpc_parser_t* p, const char* s, void* d,
   if (mpc_parse("<test>", s, p, &r)) {
     
     if (tester(r.output, d)) {
-      /*printf("Passed with "); printer(r.output); printf("\n");*/
       destructor(r.output);
       return true;
     } else {
@@ -2093,11 +2081,23 @@ mpc_parser_t* mpca_also(mpc_parser_t* a, mpc_parser_t* b) { return mpc_also(a, b
 mpc_parser_t* mpca_bind(mpc_parser_t* a, mpc_parser_t* b) { return mpca_also(a, b); }
 
 mpc_parser_t* mpca_or(int n, ...) {
+
+  mpc_parser_t* p = mpc_undefined();
+  
+  p->type = MPC_TYPE_OR;
+  p->data.or.n = n;
+  p->data.or.xs = malloc(sizeof(mpc_parser_t*) * n);
+  
   va_list va;
-  va_start(va, n);
-  mpc_parser_t* p = mpc_or_va(n, va);
+  va_start(va, n);  
+  int i;
+  for (i = 0; i < n; i++) {
+    p->data.or.xs[i] = va_arg(va, mpc_parser_t*);
+  }
   va_end(va);
+  
   return p;
+  
 }
 
 mpc_parser_t* mpca_and(int n, ...) {
@@ -2205,7 +2205,7 @@ static mpc_val_t* mpca_grammar_apply_string(mpc_val_t* x) {
 
 static mpc_val_t* mpca_grammar_apply_char(mpc_val_t* x) {
   char* y = mpcf_unescape(x);
-  mpc_parser_t* p = mpc_tok(mpc_char(*(char*)y));
+  mpc_parser_t* p = mpc_tok(mpc_char(y[0]));
   free(y);
   return mpca_tag(mpc_apply(p, mpcf_apply_str_ast), "char");
 }
@@ -2223,13 +2223,12 @@ typedef struct {
   mpc_parser_t** parsers; 
 } mpca_grammar_st_t;
 
-static mpc_val_t* mpca_grammar_apply_id(mpc_val_t* x, void* y) {
+static mpc_parser_t* mpca_grammar_find_parser(char* x, mpca_grammar_st_t* st) {
   
   /* Case of Number */
   if (strstr("0123456789", x)) {
 
     int i = strtol(x, NULL, 10);
-    mpca_grammar_st_t* st = y;
     
     while (st->parsers_num <= i) {
       st->parsers_num++;
@@ -2237,26 +2236,24 @@ static mpc_val_t* mpca_grammar_apply_id(mpc_val_t* x, void* y) {
       st->parsers[st->parsers_num-1] = va_arg(*st->va, mpc_parser_t*);
     }
     
-    return mpc_apply(st->parsers[i], (mpc_apply_t)mpc_ast_insert_root);
+    return st->parsers[st->parsers_num-1];
   
   /* Case of Identifier */
   } else {
     
     int i;
-    mpca_grammar_st_t* st = y;
     
     /* Search Existing Parsers */
     for (i = 0; i < st->parsers_num; i++) {
       mpc_parser_t* p = st->parsers[i];
-      if (p->name && strcmp(p->name, x) == 0) {
-        return mpc_apply(mpca_tag(p, p->name), (mpc_apply_t)mpc_ast_insert_root);
-      }
+      if (p->name && strcmp(p->name, x) == 0) { return p; }
     }
     
     /* Search New Parsers */
     while (true) {
     
       mpc_parser_t* p = va_arg(*st->va, mpc_parser_t*);
+      
       st->parsers_num++;
       st->parsers = realloc(st->parsers, sizeof(mpc_parser_t*) * st->parsers_num);
       st->parsers[st->parsers_num-1] = p;
@@ -2266,19 +2263,26 @@ static mpc_val_t* mpca_grammar_apply_id(mpc_val_t* x, void* y) {
         abort();
       }
       
-      if (p->name && strcmp(p->name, x) == 0) {
-        return mpc_apply(mpca_tag(p, p->name), (mpc_apply_t)mpc_ast_insert_root);
-      }
+      if (p->name && strcmp(p->name, x) == 0) { return p; }
       
     }
   
-  }
+  }  
   
-
 }
 
-static void mpc_soft_delete(mpc_val_t* x) {
-  mpc_undefine_unretained(x, false);
+static mpc_val_t* mpca_grammar_apply_id(mpc_val_t* x, void* y) {
+  
+  mpc_parser_t* p = mpca_grammar_find_parser(x, y);
+  
+  free(x);
+  
+  if (p->name) {
+    return mpc_apply(mpca_tag(p, p->name), (mpc_apply_t)mpc_ast_insert_root);
+  } else {
+    return mpc_apply(p, (mpc_apply_t)mpc_ast_insert_root);
+  }
+
 }
 
 static mpc_val_t* mpcf_make_root(mpc_val_t* x) {
@@ -2311,7 +2315,7 @@ mpc_parser_t* mpca_grammar_st(const char* grammar, mpca_grammar_st_t* st) {
     mpc_apply(mpc_tok(mpc_string_lit()), mpca_grammar_apply_string),
     mpc_apply(mpc_tok(mpc_char_lit()),   mpca_grammar_apply_char),
     mpc_apply(mpc_tok(mpc_regex_lit()),  mpca_grammar_apply_regex),
-    mpc_apply_to(mpc_tok_braces(mpc_tok(mpc_else(mpc_digits(), mpc_ident())), free), mpca_grammar_apply_id, &st),
+    mpc_apply_to(mpc_tok_braces(mpc_tok(mpc_else(mpc_digits(), mpc_ident())), free), mpca_grammar_apply_id, st),
     mpc_tok_parens(Grammar, mpc_soft_delete)
   ));
   
@@ -2331,17 +2335,12 @@ mpc_parser_t* mpca_grammar_st(const char* grammar, mpca_grammar_st_t* st) {
   
 }
 
-mpc_parser_t* mpca_grammar_va(const char* grammar, va_list va) {
-  mpca_grammar_st_t st = { &va, 0, NULL };
-  mpc_parser_t* res = mpca_grammar_st(grammar, &st);
-  free(st.parsers);
-  return res;
-}
-
 mpc_parser_t* mpca_grammar(const char* grammar, ...) {
   va_list va;
   va_start(va, grammar);
-  mpc_parser_t* res = mpca_grammar_va(grammar, va);  
+  mpca_grammar_st_t st = { &va, 0, NULL };
+  mpc_parser_t* res = mpca_grammar_st(grammar, &st);  
+  free(st.parsers);
   va_end(va);
   return res;
 }
@@ -2373,7 +2372,7 @@ static mpc_val_t* mpca_stmt_afold(int n, mpc_val_t** xs) {
 static int mpca_stmt_list_count(mpc_val_t* x) {
   int i = 0;
   mpca_stmt_t** stmts = x;
-  while(*stmts) { i++; }
+  while(*stmts) { i++; stmts++;  }
   return i;
 }
 
@@ -2386,14 +2385,15 @@ static mpc_val_t* mpca_stmt_fold(mpc_val_t* t, mpc_val_t* x) {
   }
   
   int count = mpca_stmt_list_count(stmts);
-  stmts = realloc(stmts, (count + 1) * sizeof(mpca_stmt_t*));
+  stmts = realloc(stmts, (count + 2) * sizeof(mpca_stmt_t*));
   stmts[count] = x;
+  stmts[count+1] = NULL;
   
   return stmts;
   
 }
 
-static mpc_val_t* mpca_stmt_list_delete(mpc_val_t* x) {
+static void mpca_stmt_list_delete(mpc_val_t* x) {
 
   mpca_stmt_t** stmts = x;
 
@@ -2405,8 +2405,7 @@ static mpc_val_t* mpca_stmt_list_delete(mpc_val_t* x) {
     stmts++;
   }
   
-  free(stmts);
-  return NULL;
+  free(x);
 
 }
 
@@ -2415,14 +2414,18 @@ static mpc_val_t* mpca_stmt_list_apply_to(mpc_val_t* x, void* st) {
   mpca_stmt_t** stmts = x;
 
   while(*stmts) {
-    mpca_stmt_t* stmt = *stmts; 
-    mpc_parser_t* left = mpca_grammar_apply_id(stmt->left, st);
+    mpca_stmt_t* stmt = *stmts;
+    mpc_parser_t* left = mpca_grammar_find_parser(stmt->left, st);
     mpc_parser_t* right = mpca_grammar_st(stmt->right, st);
     mpc_define(left, right);
+    free(stmt->left);
+    free(stmt->right);
+    free(stmt);
     stmts++;
   }
+  free(x);
   
-  return mpca_stmt_list_delete(x);
+  return NULL;
 }
 
 static void mpca_lang_st(const char* language, mpca_grammar_st_t* st) {
@@ -2431,9 +2434,9 @@ static void mpca_lang_st(const char* language, mpca_grammar_st_t* st) {
   mpc_parser_t* Stmt = mpc_new("stmt");
   
   mpc_define(Lang, mpc_apply_to(
-    mpc_total(mpc_many(Stmt, mpca_stmt_fold), (mpc_dtor_t)mpca_stmt_list_delete),
+    mpc_total(mpc_many(Stmt, mpca_stmt_fold), mpca_stmt_list_delete),
     mpca_stmt_list_apply_to,
-    &st
+    st
   ));
   
   mpc_define(Stmt, mpc_and(4,
@@ -2456,29 +2459,19 @@ static void mpca_lang_st(const char* language, mpca_grammar_st_t* st) {
   
 }
 
-void mpca_lang_va(const char* language, va_list va) {
-  mpca_grammar_st_t st = { &va, 0, NULL };
-  mpca_lang_st(language, &st);
-  free(st.parsers);
-}
-
 void mpca_lang(const char* language, ...) {
   va_list va;
   va_start(va, language);
-  mpca_lang_va(language, va);
+  mpca_grammar_st_t st = { (va_list*)&va, 0, NULL };
+  mpca_lang_st(language, &st);
+  free(st.parsers);
   va_end(va);  
 }
 
 void mpca_lang_file(const char* filename, ...) {
-  va_list va;
-  va_start(va, filename);
-  mpca_lang_file_va(filename, va);
-  va_end(va); 
-}
-
-void mpca_lang_file_va(const char* filename, va_list va) {
   
   FILE* f = fopen(filename, "r");
+  
   if (f == NULL) {
     fprintf(stderr, "Error: Unable to open file '%s'\n", filename);
     abort();
@@ -2492,7 +2485,12 @@ void mpca_lang_file_va(const char* filename, va_list va) {
   buff[len] = '\0';
   fclose(f);
   
-  mpca_lang_va(buff, va);
+  va_list va;
+  va_start(va, filename);
+  mpca_grammar_st_t st = { (va_list*)&va, 0, NULL };
+  mpca_lang_st(buff, &st);
+  free(st.parsers);
+  va_end(va);  
   
   free(buff);
 }

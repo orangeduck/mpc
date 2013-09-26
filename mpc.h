@@ -110,8 +110,6 @@ mpc_parser_t* mpc_also(mpc_parser_t* a, mpc_parser_t* b, mpc_dtor_t da, mpc_fold
 mpc_parser_t* mpc_bind(mpc_parser_t* a, mpc_parser_t* b, mpc_dtor_t da, mpc_fold_t f);
 mpc_parser_t* mpc_or(int n, ...);
 mpc_parser_t* mpc_and(int n, mpc_afold_t f, ...);
-mpc_parser_t* mpc_or_va(int n, va_list va);
-mpc_parser_t* mpc_and_va(int n, mpc_afold_t f, va_list va);
 
 /*
 ** Common Parsers
@@ -265,12 +263,9 @@ mpc_parser_t* mpca_bind(mpc_parser_t* a, mpc_parser_t* b);
 mpc_parser_t* mpca_or(int n, ...);
 mpc_parser_t* mpca_and(int n, ...);
 mpc_parser_t* mpca_grammar(const char* grammar, ...);
-mpc_parser_t* mpca_grammar_va(const char* grammar, va_list va);
 
 void mpca_lang(const char* language, ...);
-void mpca_lang_va(const char* language, va_list va);
 void mpca_lang_file(const char* filename, ...);
-void mpca_lang_file_va(const char* filename, va_list va);
 
 /*
 ** Testing
