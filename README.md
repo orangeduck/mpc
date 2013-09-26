@@ -9,7 +9,7 @@ Using _mpc_ might be of interest to you if you are...
 * Building a new data format
 * Parsing an existing data format
 * Embedding a Domain Specific Language
-* (http://en.wikipedia.org/wiki/Greenspun%27s_tenth_rule)[Adding an ad-hoc embedded Lisp to your C program]
+* [Adding an ad-hoc embedded Lisp to your C program](http://en.wikipedia.org/wiki/Greenspun%27s_tenth_rule)
 
 
 Features
@@ -25,7 +25,7 @@ Features
 Alternatives
 ------------
 
-The current main alternative C based parser combinator is a branch of (https://github.com/wbhart/Cesium3/tree/combinators)[Cesium3].
+The current main alternative C based parser combinator is a branch of [Cesium3](https://github.com/wbhart/Cesium3/tree/combinators).
 
 The main advantages of _mpc_ over this are:
 
@@ -38,9 +38,9 @@ The main advantages of _mpc_ over this are:
 View From the Top
 -----------------
 
-In this example I specify a grammar for a basic maths language and parse a string from it.
+In this example I specify a grammar for a basic maths language.
 
-The output is an instance of the included `mpc_ast_t` type.
+The output from the parse is an instance of the included `mpc_ast_t` type.
 
 ```c
 #include "mpc.h"
@@ -69,9 +69,9 @@ mpc_ast_t* parse_maths(const char* input) {
 }
 ```
 
-Then the output for the parse of an expression `(4 * 2 * 11 + 2) + 5` would look something like this
+The output for the parse of an expression like `(4 * 2 * 11 + 2) + 5` would look something like this
 
-```xml
+```c
 <root>
     <value>
         <char> '('
@@ -149,6 +149,8 @@ A second annoyance in C is that of manual memory management. Some parsers might 
 
 Here are the main combinators and how to use then.
 
+* * *
+
 ```c
 mpc_parser_t* mpc_expect(mpc_parser_t* a, const char* e);
 ```
@@ -165,12 +167,16 @@ might report `error: expected '0' or '1' at 'x'`, while
 
 will report `error: expected binary digit at 'x'` which in some circumstances can drastically improve readability of error messages.
 
+* * *
+
 ```c
 mpc_parser_t* mpc_apply(mpc_parser_t* a, mpc_apply_t f);
 mpc_parser_t* mpc_apply_to(mpc_parser_t* a, mpc_apply_to_t f, void* x);
 ```
 
 Applies function `f` (optionality taking extra input `x`) to the result of parser `a`.
+
+* * *
 
 ```c
 mpc_parser_t* mpc_not(mpc_parser_t* a, mpc_dtor_t da);
@@ -181,12 +187,16 @@ Returns a parser with the following behaviour. If parser `a` succeeds, the outpu
 
 Destructor `da` is used to destroy the result of `a`.
 
+* * *
+
 ```c
 mpc_parser_t* mpc_maybe(mpc_parser_t* a);
 mpc_parser_t* mpc_maybe_else(mpc_parser_t* a, mpc_lift_t lf);
 ```
 
 Attempts to parser `a`. If this fails then succeeds and returns `NULL` (or the result of `lf`).
+
+* * *
 
 ```c
 mpc_parser_t* mpc_many(mpc_parser_t* a, mpc_fold_t f);
@@ -197,11 +207,15 @@ Attempts to parse zero or more `a`. If zero instances are found then succeeds an
 
 If more than zero instances are found, results of `a` are combined using fold function `f`. See the _Function Types_ section for more details.
 
+* * *
+
 ```c
 mpc_parser_t* mpc_many1(mpc_parser_t* a, mpc_fold_t f);
 ```
 
 Attempts to parse one or more `a`. Results are combined with fold function `f`.
+
+* * *
 
 ```c
 mpc_parser_t* mpc_count(mpc_parser_t* a, mpc_dtor_t da, mpc_fold_t f, int n);
@@ -212,11 +226,15 @@ Attempts to parse exactly `n` of `a`. If it fails the result output by the fold 
 
 Results of `a` are combined using fold function `f`.
 
+* * *
+
 ```c
 mpc_parser_t* mpc_else(mpc_parser_t* a, mpc_parser_t* b);
 ```
 
 Attempts to parse `a` and if fails attempts to parse `b`. If both fail, returns an error.
+
+* * *
 
 ```c
 mpc_parser_t* mpc_also(mpc_parser_t* a, mpc_parser_t* b, mpc_dtor_t da, mpc_fold_t f);
@@ -225,6 +243,8 @@ mpc_parser_t* mpc_bind(mpc_parser_t* a, mpc_parser_t* b, mpc_dtor_t da, mpc_fold
 
 Attempts to parse `a` and then attempts to parse `b`. If `b` fails it destructs the result of `a` using `da`. If both succeed it returns the result of `a` and `b` combined using the fold function `f`.
 
+* * *
+
 ```c
 mpc_parser_t* mpc_or(int n, ...);
 ```
@@ -232,6 +252,8 @@ mpc_parser_t* mpc_or(int n, ...);
 Attempts to parse `n` parsers in sequence, returning the first one that succeeds. If all fail, returns an error.
 
 For example: `mpc_or(3, mpc_char('a'), mpc_char('b'), mpc_char('c'))` would attempt to match either an `'a'` or a `'b'` or a `'c'`.
+
+* * *
 
 ```c
 mpc_parser_t* mpc_and(int n, mpc_afold_t f, ...);
@@ -247,36 +269,46 @@ Function Types
 
 The combinator functions take a number of special function types as function pointers. Here is a short explanation of those types are how they are expected to behave.
 
+### Destructor Function
+
 ```c
 typedef void(*mpc_dtor_t)(mpc_val_t*);
 ```
 
-Destructor function. Given some pointer to a data value it will ensure the memory it points to is freed correctly.
+Given some pointer to a data value it will ensure the memory it points to is freed correctly.
+
+### Application function
 
 ```c
 typedef mpc_val_t*(*mpc_apply_t)(mpc_val_t*);
 typedef mpc_val_t*(*mpc_apply_to_t)(mpc_val_t*,void*);
 ```
 
-Application function. This takes in some pointer to data and outputs some new or modified pointer to data, ensuring to free and old data no longer required. The `apply_to` variation takes in an extra pointer to some data such as state of the system.
+This takes in some pointer to data and outputs some new or modified pointer to data, ensuring to free and old data no longer required. The `apply_to` variation takes in an extra pointer to some data such as state of the system.
+
+### Fold function
 
 ```c
 typedef mpc_val_t*(*mpc_fold_t)(mpc_val_t*,mpc_val_t*);
 ```
 
-Fold function. This takes two pointers to data and must output some new combined pointer to data, ensuring to free and old data no longer required. When used with the `many`, `many1` and `count` functions this initially takes in `NULL` for it's first argument and following that takes in for it's first argument whatever was previously returned by the function itself. In this way users have a chance to build some initial data structure before populating it with whatever is passed as the second argument.
+This takes two pointers to data and must output some new combined pointer to data, ensuring to free and old data no longer required. When used with the `many`, `many1` and `count` functions this initially takes in `NULL` for it's first argument and following that takes in for it's first argument whatever was previously returned by the function itself. In this way users have a chance to build some initial data structure before populating it with whatever is passed as the second argument.
+
+### AFold Function
 
 ```c
 typedef mpc_val_t*(*mpc_afold_t)(int,mpc_val_t**);
 ```
 
-AFold Function. Similar to the above but it is passed in a list of pointers to data values which must all be folded together and output as a new single data value.
+Similar to the above but it is passed in a list of pointers to data values which must all be folded together and output as a new single data value.
+
+### Lift Function
 
 ```c
 typedef mpc_val_t*(*mpc_lift_t)(void);
 ```
 
-Lift Function. This function returns some data value when called. It can be used to create _empty_ versions of data types when certain combinators have no known default value to return.
+This function returns some data value when called. It can be used to create _empty_ versions of data types when certain combinators have no known default value to return.
 
 Example
 -------
@@ -302,7 +334,7 @@ mpc_val_t* parse_fold_string(mpc_val_t* x, mpc_val_t* y) {
 
 Then we can actually specify the grammar.
 
-```
+```c
 char* parse_ident(char* input) {
   
   mpc_parser_t* alpha = mpc_oneof("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
