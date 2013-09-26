@@ -64,20 +64,22 @@ typedef mpc_val_t*(*mpc_lift_t)(void);
 */
 
 void mpc_delete(mpc_parser_t* p);
-mpc_parser_t* mpc_new(void);
+mpc_parser_t* mpc_new(const char* name);
 
 mpc_parser_t* mpc_define(mpc_parser_t* p, mpc_parser_t* a);
 mpc_parser_t* mpc_undefine(mpc_parser_t* p);
+
+void mpc_cleanup(int n, ...);
+void mpc_cleanup_va(int n, va_list va);
+
+/*
+** Basic Parsers
+*/
 
 mpc_parser_t* mpc_pass(void);
 mpc_parser_t* mpc_fail(void);
 mpc_parser_t* mpc_lift(mpc_lift_t f);
 mpc_parser_t* mpc_lift_val(mpc_val_t* x);
-mpc_parser_t* mpc_expect(mpc_parser_t* a, const char* expected);
-
-/*
-** Basic Parsers
-*/
 
 mpc_parser_t* mpc_any(void);
 mpc_parser_t* mpc_char(char c);
@@ -91,6 +93,7 @@ mpc_parser_t* mpc_string(const char* s);
 ** Core Parsers
 */
 
+mpc_parser_t* mpc_expect(mpc_parser_t* a, const char* expected);
 mpc_parser_t* mpc_apply(mpc_parser_t* a, mpc_apply_t f);
 mpc_parser_t* mpc_apply_to(mpc_parser_t* a, mpc_apply_to_t f, void* x);
 mpc_parser_t* mpc_not(mpc_parser_t* a, mpc_dtor_t da);
@@ -114,13 +117,15 @@ mpc_parser_t* mpc_and_va(int n, mpc_afold_t f, va_list va);
 ** Common Parsers
 */
 
+mpc_parser_t* mpc_eoi(void);
+mpc_parser_t* mpc_soi(void);
+
 mpc_parser_t* mpc_space(void);
 mpc_parser_t* mpc_spaces(void);
 mpc_parser_t* mpc_whitespace(void);
 
 mpc_parser_t* mpc_newline(void);
 mpc_parser_t* mpc_tab(void);
-mpc_parser_t* mpc_eoi(void);
 mpc_parser_t* mpc_escape(void);
 
 mpc_parser_t* mpc_digit(void);
@@ -151,6 +156,7 @@ mpc_parser_t* mpc_dot(void);
 
 mpc_parser_t* mpc_char_lit(void);
 mpc_parser_t* mpc_string_lit(void);
+mpc_parser_t* mpc_regex_lit(void);
 
 mpc_parser_t* mpc_ident(void);
 
@@ -158,17 +164,29 @@ mpc_parser_t* mpc_ident(void);
 ** Useful Parsers
 */
 
-mpc_parser_t* mpc_ends(mpc_parser_t* a, mpc_dtor_t da);
+mpc_parser_t* mpc_start(mpc_parser_t* a);
+mpc_parser_t* mpc_end(mpc_parser_t* a, mpc_dtor_t da);
+mpc_parser_t* mpc_enclose(mpc_parser_t* a, mpc_dtor_t da);
+
 mpc_parser_t* mpc_skip_many(mpc_parser_t* a, mpc_fold_t f);
 mpc_parser_t* mpc_skip_many1(mpc_parser_t* a, mpc_fold_t f);
+
+mpc_parser_t* mpc_strip(mpc_parser_t* a);
 mpc_parser_t* mpc_tok(mpc_parser_t* a); 
 mpc_parser_t* mpc_sym(const char* s);
+mpc_parser_t* mpc_total(mpc_parser_t* a, mpc_dtor_t da);
+
 mpc_parser_t* mpc_between(mpc_parser_t* a, mpc_dtor_t ad, const char* o, const char* c);
 mpc_parser_t* mpc_parens(mpc_parser_t* a, mpc_dtor_t ad);
 mpc_parser_t* mpc_braces(mpc_parser_t* a, mpc_dtor_t ad);
 mpc_parser_t* mpc_brackets(mpc_parser_t* a, mpc_dtor_t ad);
 mpc_parser_t* mpc_squares(mpc_parser_t* a, mpc_dtor_t ad);
 
+mpc_parser_t* mpc_tok_between(mpc_parser_t* a, mpc_dtor_t ad, const char* o, const char* c);
+mpc_parser_t* mpc_tok_parens(mpc_parser_t* a, mpc_dtor_t ad);
+mpc_parser_t* mpc_tok_braces(mpc_parser_t* a, mpc_dtor_t ad);
+mpc_parser_t* mpc_tok_brackets(mpc_parser_t* a, mpc_dtor_t ad);
+mpc_parser_t* mpc_tok_squares(mpc_parser_t* a, mpc_dtor_t ad);
 
 /*
 ** Regular Expression Parsers
@@ -201,6 +219,10 @@ mpc_val_t* mpcf_snd_free(mpc_val_t* x, mpc_val_t* y);
 mpc_val_t* mpcf_freefold(mpc_val_t* t, mpc_val_t* x);
 mpc_val_t* mpcf_strfold(mpc_val_t* t, mpc_val_t* x);
 
+mpc_val_t* mpcf_afst(int n, mpc_val_t** xs);
+mpc_val_t* mpcf_asnd(int n, mpc_val_t** xs);
+mpc_val_t* mpcf_atrd(int n, mpc_val_t** xs);
+
 mpc_val_t* mpcf_astrfold(int n, mpc_val_t** xs);
 mpc_val_t* mpcf_between_free(int n, mpc_val_t** xs);
 mpc_val_t* mpcf_maths(int n, mpc_val_t** xs);
@@ -211,6 +233,46 @@ mpc_val_t* mpcf_maths(int n, mpc_val_t** xs);
 */
 
 void mpc_print(mpc_parser_t* p);
+
+  
+/*
+** AST
+*/
+
+typedef struct mpc_ast_t {
+  char* tag;
+  char* contents;
+  int children_num;
+  struct mpc_ast_t** children;
+} mpc_ast_t;
+
+void mpc_ast_delete(mpc_ast_t* a);
+mpc_ast_t* mpc_ast_new(const char* tag, const char* contents);
+mpc_ast_t* mpc_ast_build(int n, const char* tag, ...);
+mpc_ast_t* mpc_ast_insert_root(mpc_ast_t* a);
+
+void mpc_ast_add_child(mpc_ast_t* r, mpc_ast_t* a);
+void mpc_ast_tag(mpc_ast_t* a, const char* t);
+void mpc_ast_print(mpc_ast_t* a);
+bool mpc_ast_eq(mpc_ast_t* a, mpc_ast_t* b);
+
+mpc_val_t* mpcf_fold_ast(mpc_val_t* a, mpc_val_t* b);
+mpc_val_t* mpcf_afold_ast(int n, mpc_val_t** as);
+mpc_val_t* mpcf_apply_str_ast(mpc_val_t* c);
+
+mpc_parser_t* mpca_tag(mpc_parser_t* a, const char* t);
+mpc_parser_t* mpca_total(mpc_parser_t* a);
+mpc_parser_t* mpca_not(mpc_parser_t* a);
+mpc_parser_t* mpca_maybe(mpc_parser_t* a);
+mpc_parser_t* mpca_many(mpc_parser_t* a);
+mpc_parser_t* mpca_many1(mpc_parser_t* a);
+mpc_parser_t* mpca_count(mpc_parser_t* a, int n);
+mpc_parser_t* mpca_else(mpc_parser_t* a, mpc_parser_t* b);
+mpc_parser_t* mpca_also(mpc_parser_t* a, mpc_parser_t* b);
+mpc_parser_t* mpca_bind(mpc_parser_t* a, mpc_parser_t* b);
+mpc_parser_t* mpca_or(int n, ...);
+mpc_parser_t* mpca_and(int n, ...);
+mpc_parser_t* mpca_grammar(const char* grammar, ...);
 
 
 /*
@@ -226,45 +288,5 @@ bool mpc_match(mpc_parser_t* p, const char* s, void* d,
   bool(*tester)(void*, void*), 
   mpc_dtor_t destructor, 
   void(*printer)(void*));
-
-  
-/*
-** AST
-*/
-
-typedef struct mpc_ast_t {
-  int tag;
-  char* contents;
-  int children_num;
-  struct mpc_ast_t** children;
-} mpc_ast_t;
-
-void mpc_ast_delete(mpc_ast_t* a);
-mpc_ast_t* mpc_ast_empty(void);
-mpc_ast_t* mpc_ast_new(char* contents);
-
-void mpc_ast_add_child(mpc_ast_t* r, mpc_ast_t* a);
-mpc_ast_t* mpc_ast_tag(mpc_ast_t* a, int t);
-void mpc_ast_print(mpc_ast_t* a);
-
-mpc_val_t* mpcf_fold_ast(mpc_val_t* a, mpc_val_t* b);
-mpc_val_t* mpcf_afold_ast(int n, mpc_val_t** as);
-mpc_val_t* mpcf_apply_str_ast(mpc_val_t* c);
-mpc_val_t* mpcf_lift_ast(void);
-
-mpc_parser_t* mpc_ast(mpc_parser_t* a);
-
-mpc_parser_t* mpca_not(mpc_parser_t* a);
-mpc_parser_t* mpca_maybe(mpc_parser_t* a);
-mpc_parser_t* mpca_many(mpc_parser_t* a);
-mpc_parser_t* mpca_many1(mpc_parser_t* a);
-mpc_parser_t* mpca_count(mpc_parser_t* a, int n);
-mpc_parser_t* mpca_else(mpc_parser_t* a, mpc_parser_t* b);
-mpc_parser_t* mpca_also(mpc_parser_t* a, mpc_parser_t* b);
-mpc_parser_t* mpca_bind(mpc_parser_t* a, mpc_parser_t* b);
-mpc_parser_t* mpca_or(int n, ...);
-mpc_parser_t* mpca_and(int n, ...);
-mpc_parser_t* mpca_ends(mpc_parser_t* a);
-mpc_parser_t* mpca_grammar(const char* grammar, ...);
 
 #endif

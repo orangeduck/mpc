@@ -13,7 +13,7 @@ void test_ident(void) {
 
   /* ^[a-zA-Z_][a-zA-Z0-9_]*$ */
   
-  mpc_parser_t* Ident = mpc_ends(
+  mpc_parser_t* Ident = mpc_enclose(
     mpc_also(
       mpc_else(mpc_alpha(), mpc_underscore()),
       mpc_many1(mpc_or(3, mpc_alpha(), mpc_underscore(), mpc_digit()), mpcf_strfold),
@@ -35,10 +35,10 @@ void test_ident(void) {
 
 void test_maths(void) {
 
-  mpc_parser_t* Expr   = mpc_new();
-  mpc_parser_t* Factor = mpc_new();
-  mpc_parser_t* Term   = mpc_new();
-  mpc_parser_t* Maths  = mpc_new();
+  mpc_parser_t* Expr   = mpc_new("expr");
+  mpc_parser_t* Factor = mpc_new("factor");
+  mpc_parser_t* Term   = mpc_new("term");
+  mpc_parser_t* Maths  = mpc_new("maths");
 
   mpc_define(Expr, mpc_else(
     mpc_and(3, mpcf_maths, Factor, mpc_oneof("*/"), Factor, free, free),
@@ -55,7 +55,7 @@ void test_maths(void) {
     mpc_parens(Expr, free)
   ));
   
-  mpc_define(Maths, mpc_ends(Expr, free));
+  mpc_define(Maths, mpc_enclose(Expr, free));
   
   PT_ASSERT(mpc_match(Maths, "1", (int[]){ 1 }, int_eq, free, int_print));
   PT_ASSERT(mpc_match(Maths, "(5)", (int[]){ 5 }, int_eq, free, int_print));
@@ -63,16 +63,7 @@ void test_maths(void) {
   PT_ASSERT(mpc_unmatch(Maths, "a", (int[]){ 0 }, int_eq, free, int_print));
   PT_ASSERT(mpc_unmatch(Maths, "2b+4", (int[]){ 2 }, int_eq, free, int_print));
   
-  mpc_undefine(Expr);
-  mpc_undefine(Factor);
-  mpc_undefine(Term);
-  mpc_undefine(Maths);
-  
-  mpc_delete(Expr);
-  mpc_delete(Factor);
-  mpc_delete(Term);
-  mpc_delete(Maths);
-
+  mpc_cleanup(4, Expr, Factor, Term, Maths);
 }
 
 void suite_core(void) {

@@ -39,12 +39,9 @@ void test_regex_range(void) {
   mpc_parser_t* re0 = mpc_re("abg[abcdef]");
   mpc_parser_t* re1 = mpc_re("y*[a-z]");
   mpc_parser_t* re2 = mpc_re("zz(p+)?[A-Z_0\\]123]*");
-  mpc_parser_t* re3 = mpc_re("[^56hy].*$");
-
-  mpc_print(re0);
-  mpc_print(re1);
-  mpc_print(re2);
-  mpc_print(re3);
+  mpc_parser_t* re3 = mpc_re("^[^56hy].*$");
+  
+  /* TODO: Testing */
   
   mpc_delete(re0);
   mpc_delete(re1);
