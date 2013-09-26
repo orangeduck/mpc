@@ -122,22 +122,102 @@ where `mpc_val_t` is synonymous with `void*` and simply represents some pointer 
 Basic Parsers
 -------------
 
+### String Parsers
+
 All the following functions return basic parsers. All of those parsers return strings with the character(s) matched. They have the following functionality.
 
-`mpc_parser_t* mpc_any(void);` - Matches any character
-`mpc_parser_t* mpc_char(char c);` - Matches a character `c`
-`mpc_parser_t* mpc_range(char s, char e);` - Matches any character in the range `s` to `e` (inclusive)
-`mpc_parser_t* mpc_oneof(const char* s);` - Matches any character in provided string
-`mpc_parser_t* mpc_noneof(const char* s);` - Matches any character not in provided string
-`mpc_parser_t* mpc_satisfy(bool(*f)(char));` - Matches any character satisfying function `f`
-`mpc_parser_t* mpc_string(const char* s);` - Matches string `s`
+* * * 
 
-Several other functions exist that return basic parsers with special functionality.
+```c
+mpc_parser_t* mpc_any(void);
+```
 
-`mpc_parser_t* mpc_pass(void);` - Always successful, returns `NULL`
-`mpc_parser_t* mpc_fail(void);` - Always fails
-`mpc_parser_t* mpc_lift(mpc_lift_t f);` - Always successful, returns the result of function `f`
-`mpc_parser_t* mpc_lift_val(mpc_val_t* x);` - Always successful, returns `x`
+Matches any character
+
+* * * 
+
+```c
+mpc_parser_t* mpc_char(char c);
+```
+
+Matches a character `c`
+
+* * *
+
+```c
+mpc_parser_t* mpc_range(char s, char e);
+```
+
+Matches any character in the range `s` to `e` (inclusive)
+
+* * *
+
+```c
+mpc_parser_t* mpc_oneof(const char* s);
+```
+
+Matches any character in provided string
+
+* * *
+
+```c
+mpc_parser_t* mpc_noneof(const char* s);
+```
+Matches any character not in provided string
+
+* * *
+
+```c
+mpc_parser_t* mpc_satisfy(bool(*f)(char));
+```
+
+Matches any character satisfying function `f`
+
+* * *
+
+```c
+mpc_parser_t* mpc_string(const char* s);
+```
+
+Matches string `s`
+
+* * *
+
+### Trivial Parsers
+
+Several other functions exist that return basic parsers with some special functionality.
+
+* * *
+
+```c
+mpc_parser_t* mpc_pass(void);
+```
+
+Always successful, returns `NULL`
+
+* * *
+
+```c
+mpc_parser_t* mpc_fail(void);
+```
+
+Always fails
+
+* * *
+
+```c
+mpc_parser_t* mpc_lift(mpc_lift_t f);
+```
+
+Always successful, returns the result of function `f`
+
+* * *
+
+```c
+mpc_parser_t* mpc_lift_val(mpc_val_t* x);
+```
+
+Always successful, returns `x`
 
 
 Combinators
