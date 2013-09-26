@@ -71,7 +71,7 @@ mpc_ast_t* parse_maths(const char* input) {
 
 The output for the parse of an expression like `(4 * 2 * 11 + 2) + 5` would look something like this
 
-```c
+```xml
 <root>
     <value>
         <char> '('
@@ -124,20 +124,20 @@ Basic Parsers
 
 All the following functions return basic parsers. All of those parsers return strings with the character(s) matched. They have the following functionality.
 
-* `mpc_parser_t* mpc_any(void);` - Matches any character
-* `mpc_parser_t* mpc_char(char c);` - Matches a character `c`
-* `mpc_parser_t* mpc_range(char s, char e);` - Matches any character in the range `s` to `e` (inclusive)
-* `mpc_parser_t* mpc_oneof(const char* s);` - Matches any character in provided string
-* `mpc_parser_t* mpc_noneof(const char* s);` - Matches any character not in provided string
-* `mpc_parser_t* mpc_satisfy(bool(*f)(char));` - Matches any character satisfying function `f`
-* `mpc_parser_t* mpc_string(const char* s);` - Matches string `s`
+`mpc_parser_t* mpc_any(void);` - Matches any character
+`mpc_parser_t* mpc_char(char c);` - Matches a character `c`
+`mpc_parser_t* mpc_range(char s, char e);` - Matches any character in the range `s` to `e` (inclusive)
+`mpc_parser_t* mpc_oneof(const char* s);` - Matches any character in provided string
+`mpc_parser_t* mpc_noneof(const char* s);` - Matches any character not in provided string
+`mpc_parser_t* mpc_satisfy(bool(*f)(char));` - Matches any character satisfying function `f`
+`mpc_parser_t* mpc_string(const char* s);` - Matches string `s`
 
 Several other functions exist that return basic parsers with special functionality.
 
-* `mpc_parser_t* mpc_pass(void);` - Always successful, returns `NULL`
-* `mpc_parser_t* mpc_fail(void);` - Always fails
-* `mpc_parser_t* mpc_lift(mpc_lift_t f);` - Always successful, returns the result of function `f`
-* `mpc_parser_t* mpc_lift_val(mpc_val_t* x);` - Always successful, returns `x`
+`mpc_parser_t* mpc_pass(void);` - Always successful, returns `NULL`
+`mpc_parser_t* mpc_fail(void);` - Always fails
+`mpc_parser_t* mpc_lift(mpc_lift_t f);` - Always successful, returns the result of function `f`
+`mpc_parser_t* mpc_lift_val(mpc_val_t* x);` - Always successful, returns `x`
 
 
 Combinators
@@ -157,16 +157,6 @@ mpc_parser_t* mpc_expect(mpc_parser_t* a, const char* e);
 
 Returns a parser that attempts `a`. On success returns the result of `a`. On failure reports that `e` was expected.
 
-This is useful for improving the readability of error messages. For example:
-
-`mpc_or(2, mpc_char('0'), mpc_char('1'))`
-
-might report `error: expected '0' or '1' at 'x'`, while
-
-`mpc_expect(mpc_or(2, mpc_char('0'), mpc_char('1')), "binary digit")`
-
-will report `error: expected binary digit at 'x'` which in some circumstances can drastically improve readability of error messages.
-
 * * *
 
 ```c
@@ -183,9 +173,7 @@ mpc_parser_t* mpc_not(mpc_parser_t* a, mpc_dtor_t da);
 mpc_parser_t* mpc_not_else(mpc_parser_t* a, mpc_dtor_t da, mpc_lift_t lf);
 ```
 
-Returns a parser with the following behaviour. If parser `a` succeeds, the output parser fails. If parser `a` fails, the output parser succeeds and returns `NULL` (or the result of lift function `lf`).
-
-Destructor `da` is used to destroy the result of `a`.
+Returns a parser with the following behaviour. If parser `a` succeeds, the output parser fails. If parser `a` fails, the output parser succeeds and returns `NULL` (or the result of lift function `lf`). Destructor `da` is used to destroy the result of `a`.
 
 * * *
 
@@ -203,9 +191,7 @@ mpc_parser_t* mpc_many(mpc_parser_t* a, mpc_fold_t f);
 mpc_parser_t* mpc_many_else(mpc_parser_t* a, mpc_fold_t f, mpc_lift_t lf);
 ```
 
-Attempts to parse zero or more `a`. If zero instances are found then succeeds and returns `NULL` (or the result of `lf`).
-
-If more than zero instances are found, results of `a` are combined using fold function `f`. See the _Function Types_ section for more details.
+Attempts to parse zero or more `a`. If zero instances are found then succeeds and returns `NULL` (or the result of `lf`). If more than zero instances are found, results of `a` are combined using fold function `f`. See the _Function Types_ section for more details.
 
 * * *
 
@@ -222,9 +208,7 @@ mpc_parser_t* mpc_count(mpc_parser_t* a, mpc_dtor_t da, mpc_fold_t f, int n);
 mpc_parser_t* mpc_count_else(mpc_parser_t* a, mpc_dtor_t da, mpc_fold_t f, int n, mpc_lift_t lf);
 ```
 
-Attempts to parse exactly `n` of `a`. If it fails the result output by the fold function `f` is destructed with `da` and either it returns `NULL` or the result of lift function `lf`.
-
-Results of `a` are combined using fold function `f`.
+Attempts to parse exactly `n` of `a`. If it fails the result output by the fold function `f` is destructed with `da` and either it returns `NULL` or the result of lift function `lf`. Results of `a` are combined using fold function `f`.
 
 * * *
 
@@ -249,9 +233,7 @@ Attempts to parse `a` and then attempts to parse `b`. If `b` fails it destructs 
 mpc_parser_t* mpc_or(int n, ...);
 ```
 
-Attempts to parse `n` parsers in sequence, returning the first one that succeeds. If all fail, returns an error.
-
-For example: `mpc_or(3, mpc_char('a'), mpc_char('b'), mpc_char('c'))` would attempt to match either an `'a'` or a `'b'` or a `'c'`.
+Attempts to parse `n` parsers in sequence, returning the first one that succeeds. If all fail, returns an error. For example: `mpc_or(3, mpc_char('a'), mpc_char('b'), mpc_char('c'))` would attempt to match either an `'a'` or a `'b'` or a `'c'`.
 
 * * *
 
@@ -259,9 +241,7 @@ For example: `mpc_or(3, mpc_char('a'), mpc_char('b'), mpc_char('c'))` would atte
 mpc_parser_t* mpc_and(int n, mpc_afold_t f, ...);
 ```
 
-Attempts to parse `n` parsers in sequence, returning the fold of them using fold function `f`. Parsers must be specified in series, followed by all the destructors for the types they return minus the last. These are used in case of partial success.
-
-For example: `mpc_and(3, mpcf_astrfold, mpc_char('a'), mpc_char('b'), mpc_char('c'), free, free),` would attempt to match `'a'` followed by `'b'` followed by `'c'` and if successful would concatenate them using `mpcf_astrfold`.
+Attempts to parse `n` parsers in sequence, returning the fold of them using fold function `f`. Parsers must be specified in series, followed by all the destructors for the types they return minus the last. These are used in case of partial success. For example: `mpc_and(3, mpcf_astrfold, mpc_char('a'), mpc_char('b'), mpc_char('c'), free, free),` would attempt to match `'a'` followed by `'b'` followed by `'c'` and if successful would concatenate them using `mpcf_astrfold`.
 
 
 Function Types
@@ -364,6 +344,8 @@ Building parsers in the above way can have issues with self reference and left h
 
 To overcome this we separate the construction of parsers into two different steps. Construction and Definition.
 
+* * *
+
 ```c
 mpc_parser_t* mpc_new(const char* name);
 ```
@@ -372,17 +354,23 @@ This will construct a parser called `name` which can then be used by others, inc
 
 A _retained_ parser can then be defined using...
 
+* * *
+
 ```c
 mpc_parser_t* mpc_define(mpc_parser_t* p, mpc_parser_t* a);
 ```
 
 This assigns the contents of parser `a` to `p`, and frees and memory used by `a`. With this technique parsers can now reference each other, as well as themselves, without trouble.
 
+* * *
+
 ```c
 mpc_parser_t* mpc_undefine(mpc_parser_t* p);
 ```
 
 A final step is required. Parsers that reference each other must all be undefined before they are deleted. It is important to do any undefining before deletion. The reason for this is that to delete a parser it must look at each sub-parser that is used by it. If any of these have already been deleted a segfault is unavoidable.
+
+* * *
 
 ```c
 void mpc_cleanup(int n, ...);
@@ -395,68 +383,68 @@ Common Parsers
 
 A number of common parsers are included.
 
-* `mpc_parser_t* mpc_eoi(void);` - Matches only the end of input
-* `mpc_parser_t* mpc_soi(void);` - Matches only the start of input
-,
-* `mpc_parser_t* mpc_space(void);` - Matches some whitespace character (" \f\n\r\t\v")
-* `mpc_parser_t* mpc_spaces(void);` - Matches zero or more whitespace characters
-* `mpc_parser_t* mpc_whitespace(void);` - Matches zero or more whitespace characters and frees the result
+`mpc_parser_t* mpc_eoi(void);` - Matches only the end of input
+`mpc_parser_t* mpc_soi(void);` - Matches only the start of input
 
-* `mpc_parser_t* mpc_newline(void);` - Matches `'\n'`
-* `mpc_parser_t* mpc_tab(void);` - Matches `'\t'`
-* `mpc_parser_t* mpc_escape(void);` - Matches a backslash followed by any character
+`mpc_parser_t* mpc_space(void);` - Matches some whitespace character (" \f\n\r\t\v")
+`mpc_parser_t* mpc_spaces(void);` - Matches zero or more whitespace characters
+`mpc_parser_t* mpc_whitespace(void);` - Matches zero or more whitespace characters and frees the result
 
-* `mpc_parser_t* mpc_digit(void);` - Matches any character in the range `'0'` - `'9'`
-* `mpc_parser_t* mpc_hexdigit(void);` - Matches any character in the range `'0'` - `'9'` as well as `'A'` - `'F'` and `'a'` - `'f'`
-* `mpc_parser_t* mpc_octdigit(void);` - Matches any character in the range `'0'` - `'7'`
-* `mpc_parser_t* mpc_digits(void);` - Matches one or more digit
-* `mpc_parser_t* mpc_hexdigits(void);` - Matches one or more hexdigit
-* `mpc_parser_t* mpc_octdigits(void);` - Matches one or more octdigit
+`mpc_parser_t* mpc_newline(void);` - Matches `'\n'`
+`mpc_parser_t* mpc_tab(void);` - Matches `'\t'`
+`mpc_parser_t* mpc_escape(void);` - Matches a backslash followed by any character
 
-* `mpc_parser_t* mpc_lower(void);` - Matches and lower case character
-* `mpc_parser_t* mpc_upper(void);` - Matches any upper case character
-* `mpc_parser_t* mpc_alpha(void);` - Matches and alphabet character
-* `mpc_parser_t* mpc_underscore(void);` - Matches `'_'`
-* `mpc_parser_t* mpc_alphanum(void);` - Matches any alphabet character, underscore or digit
+`mpc_parser_t* mpc_digit(void);` - Matches any character in the range `'0'` - `'9'`
+`mpc_parser_t* mpc_hexdigit(void);` - Matches any character in the range `'0'` - `'9'` as well as `'A'` - `'F'` and `'a'` - `'f'`
+`mpc_parser_t* mpc_octdigit(void);` - Matches any character in the range `'0'` - `'7'`
+`mpc_parser_t* mpc_digits(void);` - Matches one or more digit
+`mpc_parser_t* mpc_hexdigits(void);` - Matches one or more hexdigit
+`mpc_parser_t* mpc_octdigits(void);` - Matches one or more octdigit
 
-* `mpc_parser_t* mpc_int(void);` - Matches digits and converts to an `int*`
-* `mpc_parser_t* mpc_hex(void);` - Matches hexdigits and converts to an `int*`
-* `mpc_parser_t* mpc_oct(void);` - Matches octdigits and converts to an `int*`
-* `mpc_parser_t* mpc_number(void);` - Matches `mpc_int`, `mpc_hex` or `mpc_oct`
+`mpc_parser_t* mpc_lower(void);` - Matches and lower case character
+`mpc_parser_t* mpc_upper(void);` - Matches any upper case character
+`mpc_parser_t* mpc_alpha(void);` - Matches and alphabet character
+`mpc_parser_t* mpc_underscore(void);` - Matches `'_'`
+`mpc_parser_t* mpc_alphanum(void);` - Matches any alphabet character, underscore or digit
 
-* `mpc_parser_t* mpc_real(void);` - Matches some floating point number as a string
-* `mpc_parser_t* mpc_float(void);` - Matches some floating point number and converts to `float*`
+`mpc_parser_t* mpc_int(void);` - Matches digits and converts to an `int*`
+`mpc_parser_t* mpc_hex(void);` - Matches hexdigits and converts to an `int*`
+`mpc_parser_t* mpc_oct(void);` - Matches octdigits and converts to an `int*`
+`mpc_parser_t* mpc_number(void);` - Matches `mpc_int`, `mpc_hex` or `mpc_oct`
 
-* `mpc_parser_t* mpc_char_lit(void);` - Matches some character literal surrounded by `'`
-* `mpc_parser_t* mpc_string_lit(void);` - Matches some string literal surrounded by `"`
-* `mpc_parser_t* mpc_regex_lit(void);` - Matches some regex literal surrounded by `/`
+`mpc_parser_t* mpc_real(void);` - Matches some floating point number as a string
+`mpc_parser_t* mpc_float(void);` - Matches some floating point number and converts to `float*`
 
-* `mpc_parser_t* mpc_ident(void);` - Matches a C identifier
+`mpc_parser_t* mpc_char_lit(void);` - Matches some character literal surrounded by `'`
+`mpc_parser_t* mpc_string_lit(void);` - Matches some string literal surrounded by `"`
+`mpc_parser_t* mpc_regex_lit(void);` - Matches some regex literal surrounded by `/`
+
+`mpc_parser_t* mpc_ident(void);` - Matches a C identifier
 
 
 Useful Parsers
 --------------
 
-* `mpc_parser_t* mpc_start(mpc_parser_t* a);` - Matches the start of input an `a`
-* `mpc_parser_t* mpc_end(mpc_parser_t* a, mpc_dtor_t da);` - Matches `a` followed by the end of input
-* `mpc_parser_t* mpc_enclose(mpc_parser_t* a, mpc_dtor_t da);` - Matches the start of input, `a` and then the end of input  
+`mpc_parser_t* mpc_start(mpc_parser_t* a);` - Matches the start of input an `a`
+`mpc_parser_t* mpc_end(mpc_parser_t* a, mpc_dtor_t da);` - Matches `a` followed by the end of input
+`mpc_parser_t* mpc_enclose(mpc_parser_t* a, mpc_dtor_t da);` - Matches the start of input, `a` and then the end of input  
 
-* `mpc_parser_t* mpc_strip(mpc_parser_t* a);` - Matches `a` striping any surrounding whitespace
-* `mpc_parser_t* mpc_tok(mpc_parser_t* a);` - Matches `a` and strips any trailing whitespace
-* `mpc_parser_t* mpc_sym(const char* s);` - Matches string `s` and strips any trailing whitespace
-* `mpc_parser_t* mpc_total(mpc_parser_t* a, mpc_dtor_t da);` - Matches the whitespace stripped `a`, enclosed in the start and end of input
+`mpc_parser_t* mpc_strip(mpc_parser_t* a);` - Matches `a` striping any surrounding whitespace
+`mpc_parser_t* mpc_tok(mpc_parser_t* a);` - Matches `a` and strips any trailing whitespace
+`mpc_parser_t* mpc_sym(const char* s);` - Matches string `s` and strips any trailing whitespace
+`mpc_parser_t* mpc_total(mpc_parser_t* a, mpc_dtor_t da);` - Matches the whitespace stripped `a`, enclosed in the start and end of input
 
-* `mpc_parser_t* mpc_between(mpc_parser_t* a, mpc_dtor_t ad, const char* o, const char* c);` - Matches `a` between strings `o` and `c`
-* `mpc_parser_t* mpc_parens(mpc_parser_t* a, mpc_dtor_t ad);` - Matches `a` between `"("` and `")"`
-* `mpc_parser_t* mpc_braces(mpc_parser_t* a, mpc_dtor_t ad);` - Matches `a` between `"<"` and `">"`
-* `mpc_parser_t* mpc_brackets(mpc_parser_t* a, mpc_dtor_t ad);` - Matches `a` between `"{"` and `"}"`
-* `mpc_parser_t* mpc_squares(mpc_parser_t* a, mpc_dtor_t ad);` - Matches `a` between `"["` and `"]"`
+`mpc_parser_t* mpc_between(mpc_parser_t* a, mpc_dtor_t ad, const char* o, const char* c);` - Matches `a` between strings `o` and `c`
+`mpc_parser_t* mpc_parens(mpc_parser_t* a, mpc_dtor_t ad);` - Matches `a` between `"("` and `")"`
+`mpc_parser_t* mpc_braces(mpc_parser_t* a, mpc_dtor_t ad);` - Matches `a` between `"<"` and `">"`
+`mpc_parser_t* mpc_brackets(mpc_parser_t* a, mpc_dtor_t ad);` - Matches `a` between `"{"` and `"}"`
+`mpc_parser_t* mpc_squares(mpc_parser_t* a, mpc_dtor_t ad);` - Matches `a` between `"["` and `"]"`
 
-* `mpc_parser_t* mpc_tok_between(mpc_parser_t* a, mpc_dtor_t ad, const char* o, const char* c);` - Matches `a` between `o` and `c`, where `o` and `c` have their trailing whitespace striped.
-* `mpc_parser_t* mpc_tok_parens(mpc_parser_t* a, mpc_dtor_t ad);` - Matches `a` between trailing whitespace stripped `"("` and `")"`
-* `mpc_parser_t* mpc_tok_braces(mpc_parser_t* a, mpc_dtor_t ad);` - Matches `a` between trailing whitespace stripped `"<"` and `">"`
-* `mpc_parser_t* mpc_tok_brackets(mpc_parser_t* a, mpc_dtor_t ad);` - Matches `a` between trailing whitespace stripped `"{"` and `"}"`
-* `mpc_parser_t* mpc_tok_squares(mpc_parser_t* a, mpc_dtor_t ad);` - Matches `a` between trailing whitespace stripped `"["` and `"]"`
+`mpc_parser_t* mpc_tok_between(mpc_parser_t* a, mpc_dtor_t ad, const char* o, const char* c);` - Matches `a` between `o` and `c`, where `o` and `c` have their trailing whitespace striped.
+`mpc_parser_t* mpc_tok_parens(mpc_parser_t* a, mpc_dtor_t ad);` - Matches `a` between trailing whitespace stripped `"("` and `")"`
+`mpc_parser_t* mpc_tok_braces(mpc_parser_t* a, mpc_dtor_t ad);` - Matches `a` between trailing whitespace stripped `"<"` and `">"`
+`mpc_parser_t* mpc_tok_brackets(mpc_parser_t* a, mpc_dtor_t ad);` - Matches `a` between trailing whitespace stripped `"{"` and `"}"`
+`mpc_parser_t* mpc_tok_squares(mpc_parser_t* a, mpc_dtor_t ad);` - Matches `a` between trailing whitespace stripped `"["` and `"]"`
 
 
 Fold Functions
@@ -464,34 +452,34 @@ Fold Functions
 
 A number of common fold functions a user might want are included. They reside under the `mpcf_*` namespace.
 
-* `void mpcf_dtor_null(mpc_val_t* x);` - Empty destructor. Does nothing
-* `mpc_val_t* mpcf_lift_null(void);` - Returns `NULL`
-* `mpc_val_t* mpcf_lift_emptystr(void);` - Returns newly allocated empty string
+`void mpcf_dtor_null(mpc_val_t* x);` - Empty destructor. Does nothing
+`mpc_val_t* mpcf_lift_null(void);` - Returns `NULL`
+`mpc_val_t* mpcf_lift_emptystr(void);` - Returns newly allocated empty string
 
-* `mpc_val_t* mpcf_free(mpc_val_t* x);` - Frees `x` and returns `NULL`
-* `mpc_val_t* mpcf_int(mpc_val_t* x);` - Converts a decimal string `x` to an `int*`
-* `mpc_val_t* mpcf_hex(mpc_val_t* x);` - Converts a hex string `x` to an `int*`
-* `mpc_val_t* mpcf_oct(mpc_val_t* x);` - Converts a oct string `x` to an `int*`
-* `mpc_val_t* mpcf_float(mpc_val_t* x);` - Converts a string `x` to a `float*`
-* `mpc_val_t* mpcf_escape(mpc_val_t* x);` - Converts a string `x` to an escaped version
-* `mpc_val_t* mpcf_unescape(mpc_val_t* x);` - Converts a string `x` to an unescaped version
+`mpc_val_t* mpcf_free(mpc_val_t* x);` - Frees `x` and returns `NULL`
+`mpc_val_t* mpcf_int(mpc_val_t* x);` - Converts a decimal string `x` to an `int*`
+`mpc_val_t* mpcf_hex(mpc_val_t* x);` - Converts a hex string `x` to an `int*`
+`mpc_val_t* mpcf_oct(mpc_val_t* x);` - Converts a oct string `x` to an `int*`
+`mpc_val_t* mpcf_float(mpc_val_t* x);` - Converts a string `x` to a `float*`
+`mpc_val_t* mpcf_escape(mpc_val_t* x);` - Converts a string `x` to an escaped version
+`mpc_val_t* mpcf_unescape(mpc_val_t* x);` - Converts a string `x` to an unescaped version
 
-* `mpc_val_t* mpcf_fst(mpc_val_t* x, mpc_val_t* y);` - Returns `x`
-* `mpc_val_t* mpcf_snd(mpc_val_t* x, mpc_val_t* y);` - Returns `y`
+`mpc_val_t* mpcf_fst(mpc_val_t* x, mpc_val_t* y);` - Returns `x`
+`mpc_val_t* mpcf_snd(mpc_val_t* x, mpc_val_t* y);` - Returns `y`
 
-* `mpc_val_t* mpcf_fst_free(mpc_val_t* x, mpc_val_t* y);` - Returns `x` and frees `y`
-* `mpc_val_t* mpcf_snd_free(mpc_val_t* x, mpc_val_t* y);` - Returns `y` and frees `x`
+`mpc_val_t* mpcf_fst_free(mpc_val_t* x, mpc_val_t* y);` - Returns `x` and frees `y`
+`mpc_val_t* mpcf_snd_free(mpc_val_t* x, mpc_val_t* y);` - Returns `y` and frees `x`
 
-* `mpc_val_t* mpcf_freefold(mpc_val_t* t, mpc_val_t* x);` - Returns `NULL` and frees `x`
-* `mpc_val_t* mpcf_strfold(mpc_val_t* t, mpc_val_t* x);` - Concatenates `t` and `x` and returns result 
+`mpc_val_t* mpcf_freefold(mpc_val_t* t, mpc_val_t* x);` - Returns `NULL` and frees `x`
+`mpc_val_t* mpcf_strfold(mpc_val_t* t, mpc_val_t* x);` - Concatenates `t` and `x` and returns result 
 
-* `mpc_val_t* mpcf_afst(int n, mpc_val_t** xs);` - Returns first argument
-* `mpc_val_t* mpcf_asnd(int n, mpc_val_t** xs);` - Returns second argument
-* `mpc_val_t* mpcf_atrd(int n, mpc_val_t** xs);` - Returns third argument
+`mpc_val_t* mpcf_afst(int n, mpc_val_t** xs);` - Returns first argument
+`mpc_val_t* mpcf_asnd(int n, mpc_val_t** xs);` - Returns second argument
+`mpc_val_t* mpcf_atrd(int n, mpc_val_t** xs);` - Returns third argument
 
-* `mpc_val_t* mpcf_astrfold(int n, mpc_val_t** xs);` - Concatenates and returns all input strings
-* `mpc_val_t* mpcf_between_free(int n, mpc_val_t** xs);` - Frees first and third argument and returns second
-* `mpc_val_t* mpcf_maths(int n, mpc_val_t** xs);` - Examines second argument as string to see which operator it is, then operators on first and third argument as if they are `int*`.
+`mpc_val_t* mpcf_astrfold(int n, mpc_val_t** xs);` - Concatenates and returns all input strings
+`mpc_val_t* mpcf_between_free(int n, mpc_val_t** xs);` - Frees first and third argument and returns second
+`mpc_val_t* mpcf_maths(int n, mpc_val_t** xs);` - Examines second argument as string to see which operator it is, then operators on first and third argument as if they are `int*`.
 
 
 Another Example
