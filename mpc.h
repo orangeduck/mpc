@@ -149,11 +149,6 @@ mpc_parser_t* mpc_number(void);
 mpc_parser_t* mpc_real(void);
 mpc_parser_t* mpc_float(void);
 
-mpc_parser_t* mpc_semi(void);
-mpc_parser_t* mpc_comma(void);
-mpc_parser_t* mpc_colon(void);
-mpc_parser_t* mpc_dot(void);
-
 mpc_parser_t* mpc_char_lit(void);
 mpc_parser_t* mpc_string_lit(void);
 mpc_parser_t* mpc_regex_lit(void);
@@ -167,9 +162,6 @@ mpc_parser_t* mpc_ident(void);
 mpc_parser_t* mpc_start(mpc_parser_t* a);
 mpc_parser_t* mpc_end(mpc_parser_t* a, mpc_dtor_t da);
 mpc_parser_t* mpc_enclose(mpc_parser_t* a, mpc_dtor_t da);
-
-mpc_parser_t* mpc_skip_many(mpc_parser_t* a, mpc_fold_t f);
-mpc_parser_t* mpc_skip_many1(mpc_parser_t* a, mpc_fold_t f);
 
 mpc_parser_t* mpc_strip(mpc_parser_t* a);
 mpc_parser_t* mpc_tok(mpc_parser_t* a); 

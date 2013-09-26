@@ -9,6 +9,8 @@ Using _mpc_ might be of interest to you if you are...
 * Building a new data format
 * Parsing an existing data format
 * Embedding a Domain Specific Language
+* (http://en.wikipedia.org/wiki/Greenspun%27s_tenth_rule)[Adding an ad-hoc embedded Lisp to your C program]
+
 
 Features
 --------
@@ -23,7 +25,7 @@ Features
 Alternatives
 ------------
 
-The current main alternative is a branch of (https://github.com/wbhart/Cesium3/tree/combinators)[Cesium3].
+The current main alternative C based parser combinator is a branch of (https://github.com/wbhart/Cesium3/tree/combinators)[Cesium3].
 
 The main advantages of _mpc_ over this are:
 
@@ -67,7 +69,7 @@ mpc_ast_t* parse_maths(const char* input) {
 }
 ```
 
-The output for an expression like `(4 * 2 * 11 + 2) + 5` would look something like this
+Then the output for the parse of an expression `(4 * 2 * 11 + 2) + 5` would look something like this
 
 ```xml
 <root>
@@ -87,23 +89,25 @@ The output for an expression like `(4 * 2 * 11 + 2) + 5` would look something li
     <value> '5'
 ```
 
+
 View From the Bottom
 --------------------
 
 Parser Combinators are structures that encode how to parse a particular language. They can be combined using a number of intuitive operators to create new parsers of ever increasing complexity. With these, complex grammars and languages can be processed easily.
 
-The trick behind Parser Combinators is the observation that by structuring the library in a particular way, one can make building parser combinators, look like writing a grammar itself. Therefore instead of describing _how to parse a language_, a user must only specify _the language itself_, and the computer will work out how to parse it ... as if by magic!
+The trick behind Parser Combinators is the observation that by structuring the library in a particular way one can make building parser combinators look like writing a grammar itself. Therefore instead of describing _how to parse a language_, a user must only specify _the language itself_, and the computer will work out how to parse it ... as if by magic!
+
 
 Parsers
 -------
 
-The Parser Combinator type in _mpc_ is `mpc_parser_t`. This encodes a function that attempts to parse some string and, if successful, returns a pointer to some data, or otherwise returns some error. A parser can be run using `mpc_parse`.
+The Parser Combinator type in _mpc_ is `mpc_parser_t`. This encodes a function that attempts to parse some string and, if successful, returns a pointer to some data. Otherwise it returns some error. A parser can be run using `mpc_parse`.
 
 ```c
-bool mpc_parse(const char* filename, const char* s, mpc_parser_t* p, mpc_result_t* r);
+bool mpc_parse(const char* f, const char* s, mpc_parser_t* p, mpc_result_t* r);
 ```
 
-This function returns `true` on success and `false` on failure. It takes as input some parser `p`, string `s`, and some `filename`. It outputs into `r` the result of the parse which is either a pointer to some data object, or an error. The type `mpc_result_t` is a union type defined as follows.
+This function returns `true` on success and `false` on failure. It takes as input some parser `p`, some input string `s`, and some filename `f`. It outputs into `r` the result of the parse - which is either a pointer to some data object, or an error. The type `mpc_result_t` is a union type defined as follows.
 
 ```c
 typedef union {
@@ -118,64 +122,62 @@ where `mpc_val_t` is synonymous with `void*` and simply represents some pointer 
 Basic Parsers
 -------------
 
-All the following functions return parsers. All of those parsers return strings with the character(s) matched. They have the following functionality.
+All the following functions return basic parsers. All of those parsers return strings with the character(s) matched. They have the following functionality.
 
 * `mpc_parser_t* mpc_any(void);` - Matches any character
 * `mpc_parser_t* mpc_char(char c);` - Matches a character `c`
-* `mpc_parser_t* mpc_range(char s, char e);` - Matches any character in the range `s` to `e`
+* `mpc_parser_t* mpc_range(char s, char e);` - Matches any character in the range `s` to `e` (inclusive)
 * `mpc_parser_t* mpc_oneof(const char* s);` - Matches any character in provided string
 * `mpc_parser_t* mpc_noneof(const char* s);` - Matches any character not in provided string
 * `mpc_parser_t* mpc_satisfy(bool(*f)(char));` - Matches any character satisfying function `f`
 * `mpc_parser_t* mpc_string(const char* s);` - Matches string `s`
 
-Several other functions exist that return parsers with special functionality.
+Several other functions exist that return basic parsers with special functionality.
 
-* `mpc_parser_t* mpc_pass(void);` - Always is successful and returns `NULL`
+* `mpc_parser_t* mpc_pass(void);` - Always successful, returns `NULL`
 * `mpc_parser_t* mpc_fail(void);` - Always fails
-* `mpc_parser_t* mpc_lift(mpc_lift_t f);` - Always succeeds and returns the result of function `f`
-* `mpc_parser_t* mpc_lift_val(mpc_val_t* x);` - Always succeeds and returns `x`
+* `mpc_parser_t* mpc_lift(mpc_lift_t f);` - Always successful, returns the result of function `f`
+* `mpc_parser_t* mpc_lift_val(mpc_val_t* x);` - Always successful, returns `x`
+
 
 Combinators
 -----------
 
-Combinators are functions that take one or several parsers and return a new one. These combinators are type agnostic - meaning they can be used no matter what type the input parsers are meant to return. In languages such as Haskell ensuring you don't ferry one type of data into a parser requiring a different type of data is done by the compiler. But in C we don't have that luxury, so it is at the discretion of the programmer to ensure that he deals correctly with the output types of different parsers.
+Combinators are functions that take one or more parsers and return a new one. These combinators work independent of what types the input parsers return. In languages such as Haskell ensuring you don't ferry one type of data into a parser requiring a different type of data is done by the compiler. But in C we don't have that luxury, so it is at the discretion of the programmer to ensure that he or she deals correctly with the output types of different parsers.
 
-A second annoyance in C is that of manual memory management. Some parsers might get half-way and then fail, meaning they need to clean up any partial data that has been collected in the parse. In Haskell this is handled by the Garbage Collector but in C these functions take _destructors_ - functions which clean up and partial data of a given type that has been collected.
+A second annoyance in C is that of manual memory management. Some parsers might get half-way and then fail, meaning they need to clean up any partial data that has been collected in the parse. In Haskell this is handled by the Garbage Collector but in C these functions will need to take _destructors_ - functions which clean up and partial data that has been collected.
 
-Here are some common combinators and how to use then.
+Here are the main combinators and how to use then.
 
 ```c
-mpc_parser_t* mpc_expect(mpc_parser_t* a, const char* expected);
+mpc_parser_t* mpc_expect(mpc_parser_t* a, const char* e);
 ```
 
-Returns a parser that attempts `a` an on failure reports that `expected` was expected.
+Returns a parser that attempts `a`. On success returns the result of `a`. On failure reports that `e` was expected.
 
 This is useful for improving the readability of error messages. For example:
 
-* `mpc_or(2, mpc_char('0'), mpc_char('1'))`
+`mpc_or(2, mpc_char('0'), mpc_char('1'))`
 
-might report `expected '0' or '1' at 'x'` while
+might report `error: expected '0' or '1' at 'x'`, while
 
-* `mpc_expect(mpc_or(2, mpc_char('0'), mpc_char('1')), "binary digit")`
+`mpc_expect(mpc_or(2, mpc_char('0'), mpc_char('1')), "binary digit")`
 
-will report `expected binary digit at 'x'`.
+will report `error: expected binary digit at 'x'` which in some circumstances can drastically improve readability of error messages.
 
 ```c
 mpc_parser_t* mpc_apply(mpc_parser_t* a, mpc_apply_t f);
 mpc_parser_t* mpc_apply_to(mpc_parser_t* a, mpc_apply_to_t f, void* x);
 ```
 
-Applies function `f` to the result of parser `a`.
-Applies function `f`, taking extra input `x`, to the result of parser `a`.
+Applies function `f` (optionality taking extra input `x`) to the result of parser `a`.
 
 ```c
 mpc_parser_t* mpc_not(mpc_parser_t* a, mpc_dtor_t da);
 mpc_parser_t* mpc_not_else(mpc_parser_t* a, mpc_dtor_t da, mpc_lift_t lf);
 ```
 
-Returns a parser with the following behaviour:
-  * If parser `a` succeeds, the output parser fails.
-  * If parser `a` fails, the output parser succeeds and returns `NULL` or the result of lift function `lf`.
+Returns a parser with the following behaviour. If parser `a` succeeds, the output parser fails. If parser `a` fails, the output parser succeeds and returns `NULL` (or the result of lift function `lf`).
 
 Destructor `da` is used to destroy the result of `a`.
 
@@ -184,16 +186,16 @@ mpc_parser_t* mpc_maybe(mpc_parser_t* a);
 mpc_parser_t* mpc_maybe_else(mpc_parser_t* a, mpc_lift_t lf);
 ```
 
-Attempts to parser `a`. If this fails then succeeds and returns `NULL` or the result of `lf`.
+Attempts to parser `a`. If this fails then succeeds and returns `NULL` (or the result of `lf`).
 
 ```c
 mpc_parser_t* mpc_many(mpc_parser_t* a, mpc_fold_t f);
 mpc_parser_t* mpc_many_else(mpc_parser_t* a, mpc_fold_t f, mpc_lift_t lf);
 ```
 
-Attempts to parse zero or more `a`. If zero instances are found then succeeds and returns `NULL` or the result of `lf`.
+Attempts to parse zero or more `a`. If zero instances are found then succeeds and returns `NULL` (or the result of `lf`).
 
-If more than zero instances are found results of `a` are combined using fold function `f`. See the _Function Types_ section for more details.
+If more than zero instances are found, results of `a` are combined using fold function `f`. See the _Function Types_ section for more details.
 
 ```c
 mpc_parser_t* mpc_many1(mpc_parser_t* a, mpc_fold_t f);
@@ -274,12 +276,12 @@ AFold Function. Similar to the above but it is passed in a list of pointers to d
 typedef mpc_val_t*(*mpc_lift_t)(void);
 ```
 
-Lift Function. This is a simple function that returns some data value when called. It can be used to create _empty_ versions of data types when certain combinators have no known default value to return.
+Lift Function. This function returns some data value when called. It can be used to create _empty_ versions of data types when certain combinators have no known default value to return.
 
 Example
 -------
 
-Using the above we can already create a parser that matches a C identifier with relative .
+Using the above we can already create a parser that matches a C identifier with relative ease.
 
 First we build a fold function that will concatenate two strings together.
 
@@ -298,7 +300,7 @@ mpc_val_t* parse_fold_string(mpc_val_t* x, mpc_val_t* y) {
 }
 ```
 
-Then we can actually specify the parser.
+Then we can actually specify the grammar.
 
 ```
 char* parse_ident(char* input) {
@@ -328,13 +330,13 @@ Self Reference
 
 Building parsers in the above way can have issues with self reference and left handed recursion.
 
-To overcome this we separate the construction of parsers into two different steps. First we allocate them...
+To overcome this we separate the construction of parsers into two different steps. Construction and Definition.
 
 ```c
 mpc_parser_t* mpc_new(const char* name);
 ```
 
-This will construct a parser a parser called `name` which can then be referenced by others including itself when defined. Any parse created using `mpc_new` is said to be _retained_. This means it will behave slightly differently to a normal parser. For example when deleting a parser that includes a _retained_ parser, the _retained_ parser it will not be deleted. To delete a retained parser `mpc_delete` must be used on it directly.
+This will construct a parser called `name` which can then be used by others, including itself. Any parser created using `mpc_new` is said to be _retained_. This means it will behave slightly differently to a normal parser. For example when deleting a parser that includes a _retained_ parser, the _retained_ parser it will not be deleted along with it. To delete a retained parser `mpc_delete` must be used on it directly.
 
 A _retained_ parser can then be defined using...
 
@@ -342,30 +344,29 @@ A _retained_ parser can then be defined using...
 mpc_parser_t* mpc_define(mpc_parser_t* p, mpc_parser_t* a);
 ```
 
-This assigns the contents of parser `a` into `p`, and frees and memory involved in constructing `a`. Now parsers can reference each other and themselves without trouble.
+This assigns the contents of parser `a` to `p`, and frees and memory used by `a`. With this technique parsers can now reference each other, as well as themselves, without trouble.
 
 ```c
 mpc_parser_t* mpc_undefine(mpc_parser_t* p);
 ```
 
-But now parsers that reference each other must all be undefined before they are deleted. It is important to do any defining before deletion. The reason for this is that to delete a parser it must look at each sub-parser that is included in it. If any of these have already been deleted it will segfault.
-
+A final step is required. Parsers that reference each other must all be undefined before they are deleted. It is important to do any undefining before deletion. The reason for this is that to delete a parser it must look at each sub-parser that is used by it. If any of these have already been deleted a segfault is unavoidable.
 
 ```c
 void mpc_cleanup(int n, ...);
 ```
 
-To ease the task of undefining and then deleting parsers `mpc_cleanup` can be used. It takes `n` parsers as input and undefines them all, before deleting them all.
+To ease the task of undefining and then deleting parsers `mpc_cleanup` can be used. It takes `n` parsers as input, and undefines them all, before deleting them all.
 
 Common Parsers
 ---------------
 
-A number of common parsers have been included.
+A number of common parsers are included.
 
 * `mpc_parser_t* mpc_eoi(void);` - Matches only the end of input
 * `mpc_parser_t* mpc_soi(void);` - Matches only the start of input
-
-* `mpc_parser_t* mpc_space(void);` - Matches some whitespace character
+,
+* `mpc_parser_t* mpc_space(void);` - Matches some whitespace character (" \f\n\r\t\v")
 * `mpc_parser_t* mpc_spaces(void);` - Matches zero or more whitespace characters
 * `mpc_parser_t* mpc_whitespace(void);` - Matches zero or more whitespace characters and frees the result
 
@@ -374,7 +375,7 @@ A number of common parsers have been included.
 * `mpc_parser_t* mpc_escape(void);` - Matches a backslash followed by any character
 
 * `mpc_parser_t* mpc_digit(void);` - Matches any character in the range `'0'` - `'9'`
-* `mpc_parser_t* mpc_hexdigit(void);` - Matches any character in the range `'0'` - `'9'` as well as `'A'` - `'F'` or `'a'` - `'f'`
+* `mpc_parser_t* mpc_hexdigit(void);` - Matches any character in the range `'0'` - `'9'` as well as `'A'` - `'F'` and `'a'` - `'f'`
 * `mpc_parser_t* mpc_octdigit(void);` - Matches any character in the range `'0'` - `'7'`
 * `mpc_parser_t* mpc_digits(void);` - Matches one or more digit
 * `mpc_parser_t* mpc_hexdigits(void);` - Matches one or more hexdigit
@@ -386,22 +387,17 @@ A number of common parsers have been included.
 * `mpc_parser_t* mpc_underscore(void);` - Matches `'_'`
 * `mpc_parser_t* mpc_alphanum(void);` - Matches any alphabet character, underscore or digit
 
-* `mpc_parser_t* mpc_int(void);` - Matches digits and converts to `int*`
-* `mpc_parser_t* mpc_hex(void);` - Matches hexdigits and converts to `int*`
-* `mpc_parser_t* mpc_oct(void);` - Matches octdigits and converts to `int*`
+* `mpc_parser_t* mpc_int(void);` - Matches digits and converts to an `int*`
+* `mpc_parser_t* mpc_hex(void);` - Matches hexdigits and converts to an `int*`
+* `mpc_parser_t* mpc_oct(void);` - Matches octdigits and converts to an `int*`
 * `mpc_parser_t* mpc_number(void);` - Matches `mpc_int`, `mpc_hex` or `mpc_oct`
 
-* `mpc_parser_t* mpc_real(void);` - Matches some floating point number
+* `mpc_parser_t* mpc_real(void);` - Matches some floating point number as a string
 * `mpc_parser_t* mpc_float(void);` - Matches some floating point number and converts to `float*`
 
-* `mpc_parser_t* mpc_semi(void);` - Matches `';'`
-* `mpc_parser_t* mpc_comma(void);` - Matches `','`
-* `mpc_parser_t* mpc_colon(void);` - Matches `':'`
-* `mpc_parser_t* mpc_dot(void);` - Matches `'.'`
-
-* `mpc_parser_t* mpc_char_lit(void);` - Matches some character literal
-* `mpc_parser_t* mpc_string_lit(void);` - Matches some string literal
-* `mpc_parser_t* mpc_regex_lit(void);` - Matches some regex literal
+* `mpc_parser_t* mpc_char_lit(void);` - Matches some character literal surrounded by `'`
+* `mpc_parser_t* mpc_string_lit(void);` - Matches some string literal surrounded by `"`
+* `mpc_parser_t* mpc_regex_lit(void);` - Matches some regex literal surrounded by `/`
 
 * `mpc_parser_t* mpc_ident(void);` - Matches a C identifier
 
@@ -409,29 +405,26 @@ A number of common parsers have been included.
 Useful Parsers
 --------------
 
-* `mpc_parser_t* mpc_start(mpc_parser_t* a);`
-* `mpc_parser_t* mpc_end(mpc_parser_t* a, mpc_dtor_t da);`
-* `mpc_parser_t* mpc_enclose(mpc_parser_t* a, mpc_dtor_t da);`
+* `mpc_parser_t* mpc_start(mpc_parser_t* a);` - Matches the start of input an `a`
+* `mpc_parser_t* mpc_end(mpc_parser_t* a, mpc_dtor_t da);` - Matches `a` followed by the end of input
+* `mpc_parser_t* mpc_enclose(mpc_parser_t* a, mpc_dtor_t da);` - Matches the start of input, `a` and then the end of input  
 
-* `mpc_parser_t* mpc_skip_many(mpc_parser_t* a, mpc_fold_t f);`
-* `mpc_parser_t* mpc_skip_many1(mpc_parser_t* a, mpc_fold_t f);`
+* `mpc_parser_t* mpc_strip(mpc_parser_t* a);` - Matches `a` striping any surrounding whitespace
+* `mpc_parser_t* mpc_tok(mpc_parser_t* a);` - Matches `a` and strips any trailing whitespace
+* `mpc_parser_t* mpc_sym(const char* s);` - Matches string `s` and strips any trailing whitespace
+* `mpc_parser_t* mpc_total(mpc_parser_t* a, mpc_dtor_t da);` - Matches the whitespace stripped `a`, enclosed in the start and end of input
 
-* `mpc_parser_t* mpc_strip(mpc_parser_t* a);`
-* `mpc_parser_t* mpc_tok(mpc_parser_t* a);` 
-* `mpc_parser_t* mpc_sym(const char* s);`
-* `mpc_parser_t* mpc_total(mpc_parser_t* a, mpc_dtor_t da);`
+* `mpc_parser_t* mpc_between(mpc_parser_t* a, mpc_dtor_t ad, const char* o, const char* c);` - Matches `a` between strings `o` and `c`
+* `mpc_parser_t* mpc_parens(mpc_parser_t* a, mpc_dtor_t ad);` - Matches `a` between `"("` and `")"`
+* `mpc_parser_t* mpc_braces(mpc_parser_t* a, mpc_dtor_t ad);` - Matches `a` between `"<"` and `">"`
+* `mpc_parser_t* mpc_brackets(mpc_parser_t* a, mpc_dtor_t ad);` - Matches `a` between `"{"` and `"}"`
+* `mpc_parser_t* mpc_squares(mpc_parser_t* a, mpc_dtor_t ad);` - Matches `a` between `"["` and `"]"`
 
-* `mpc_parser_t* mpc_between(mpc_parser_t* a, mpc_dtor_t ad, const char* o, const char* c);`
-* `mpc_parser_t* mpc_parens(mpc_parser_t* a, mpc_dtor_t ad);`
-* `mpc_parser_t* mpc_braces(mpc_parser_t* a, mpc_dtor_t ad);`
-* `mpc_parser_t* mpc_brackets(mpc_parser_t* a, mpc_dtor_t ad);`
-* `mpc_parser_t* mpc_squares(mpc_parser_t* a, mpc_dtor_t ad);`
-
-* `mpc_parser_t* mpc_tok_between(mpc_parser_t* a, mpc_dtor_t ad, const char* o, const char* c);`
-* `mpc_parser_t* mpc_tok_parens(mpc_parser_t* a, mpc_dtor_t ad);`
-* `mpc_parser_t* mpc_tok_braces(mpc_parser_t* a, mpc_dtor_t ad);`
-* `mpc_parser_t* mpc_tok_brackets(mpc_parser_t* a, mpc_dtor_t ad);`
-* `mpc_parser_t* mpc_tok_squares(mpc_parser_t* a, mpc_dtor_t ad);`
+* `mpc_parser_t* mpc_tok_between(mpc_parser_t* a, mpc_dtor_t ad, const char* o, const char* c);` - Matches `a` between `o` and `c`, where `o` and `c` have their trailing whitespace striped.
+* `mpc_parser_t* mpc_tok_parens(mpc_parser_t* a, mpc_dtor_t ad);` - Matches `a` between trailing whitespace stripped `"("` and `")"`
+* `mpc_parser_t* mpc_tok_braces(mpc_parser_t* a, mpc_dtor_t ad);` - Matches `a` between trailing whitespace stripped `"<"` and `">"`
+* `mpc_parser_t* mpc_tok_brackets(mpc_parser_t* a, mpc_dtor_t ad);` - Matches `a` between trailing whitespace stripped `"{"` and `"}"`
+* `mpc_parser_t* mpc_tok_squares(mpc_parser_t* a, mpc_dtor_t ad);` - Matches `a` between trailing whitespace stripped `"["` and `"]"`
 
 
 Fold Functions

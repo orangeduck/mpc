@@ -1270,11 +1270,6 @@ mpc_parser_t* mpc_float(void) {
   return mpc_expect(mpc_apply(mpc_real(), mpcf_float), "float");
 }
 
-mpc_parser_t* mpc_semi(void)  { return mpc_char(';'); }
-mpc_parser_t* mpc_comma(void) { return mpc_char(','); }
-mpc_parser_t* mpc_colon(void) { return mpc_char(':'); }
-mpc_parser_t* mpc_dot(void)   { return mpc_char('.'); }
-
 mpc_parser_t* mpc_char_lit(void) {
   return mpc_expect(mpc_between(mpc_else(mpc_escape(), mpc_any()), free, "'", "'"), "char");
 }
@@ -1302,9 +1297,6 @@ mpc_parser_t* mpc_ident(void) {
 mpc_parser_t* mpc_start(mpc_parser_t* a) { return mpc_also(mpc_soi(), a, mpcf_dtor_null, mpcf_snd); }
 mpc_parser_t* mpc_end(mpc_parser_t* a, mpc_dtor_t da) { return mpc_also(a, mpc_eoi(), da, mpcf_fst); }
 mpc_parser_t* mpc_enclose(mpc_parser_t* a, mpc_dtor_t da) { return mpc_and(3, mpcf_asnd, mpc_soi(), a, mpc_eoi(), mpcf_dtor_null, da); }
-
-mpc_parser_t* mpc_skip_many(mpc_parser_t* a, mpc_fold_t f) { return mpc_many(a, f); }
-mpc_parser_t* mpc_skip_many1(mpc_parser_t* a, mpc_fold_t f) { return mpc_many1(a, f); }
 
 mpc_parser_t* mpc_strip(mpc_parser_t* a) { return mpc_and(3, mpcf_asnd, mpc_whitespace(), a, mpc_whitespace(), mpcf_dtor_null, mpcf_dtor_null); }
 mpc_parser_t* mpc_tok(mpc_parser_t* a) { return mpc_also(a, mpc_whitespace(), mpcf_dtor_null, mpcf_fst); }
