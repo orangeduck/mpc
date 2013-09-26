@@ -53,6 +53,50 @@ void test_grammar(void) {
   mpc_cleanup(4, Expr, Prod, Value, Maths);
 }
 
+void test_language(void) {
+  
+  mpc_parser_t* Expr  = mpc_new("expression");
+  mpc_parser_t* Prod  = mpc_new("product");
+  mpc_parser_t* Value = mpc_new("value");
+  mpc_parser_t* Maths = mpc_new("maths");
+  
+  mpca_lang(
+    "                                                    \
+        expression : <product> (('+' | '-') <product>)*; \
+        product : <value>   (('*' | '/')   <value>)*;    \
+        value : /[0-9]+/ | '(' <expression> ')';         \
+        maths : /^\\w*/ <expression> /\\w*$/;            \
+    ",
+    Expr, Prod, Value, Maths);
+  
+  mpc_print(Expr);
+  mpc_print(Prod);
+  mpc_print(Value);
+  mpc_print(Maths);
+  
+  mpc_cleanup(4, Expr, Prod, Value, Maths);
+}
+
+void test_language_file(void) {
+  
+  mpc_parser_t* Expr  = mpc_new("expression");
+  mpc_parser_t* Prod  = mpc_new("product");
+  mpc_parser_t* Value = mpc_new("value");
+  mpc_parser_t* Maths = mpc_new("maths");
+  
+  mpca_lang_file("maths.grammar", Expr, Prod, Value, Maths);
+  
+  mpc_print(Expr);
+  mpc_print(Prod);
+  mpc_print(Value);
+  mpc_print(Maths);
+  
+  mpc_cleanup(4, Expr, Prod, Value, Maths);
+  
+}
+
 void suite_grammar(void) {
   pt_add_test(test_grammar, "Test Grammar", "Suite Grammar");
+  pt_add_test(test_language, "Test Language", "Suite Grammar");
+  pt_add_test(test_language_file, "Test Language File", "Suite Grammar");
 }

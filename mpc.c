@@ -738,7 +738,13 @@ bool mpc_parse_file(const char* filename, FILE* f, mpc_parser_t* p, mpc_result_t
 }
 
 bool mpc_parse_filename(const char* filename, mpc_parser_t* p, mpc_result_t* r) {
+  
   FILE* f = fopen(filename, "r");
+  if (f == NULL) {
+    fprintf(stderr, "Error: Unable to open file '%s'\n", filename);
+    abort();
+  }
+  
   bool res = mpc_parse_file(filename, f, p, r);
   fclose(f);
   return res;
@@ -2215,7 +2221,7 @@ typedef struct {
   va_list* va;
   int parsers_num;
   mpc_parser_t** parsers; 
-} mpc_grammar_st_t;
+} mpca_grammar_st_t;
 
 static mpc_val_t* mpca_grammar_apply_id(mpc_val_t* x, void* y) {
   
@@ -2223,7 +2229,7 @@ static mpc_val_t* mpca_grammar_apply_id(mpc_val_t* x, void* y) {
   if (strstr("0123456789", x)) {
 
     int i = strtol(x, NULL, 10);
-    mpc_grammar_st_t* st = y;
+    mpca_grammar_st_t* st = y;
     
     while (st->parsers_num <= i) {
       st->parsers_num++;
@@ -2237,7 +2243,7 @@ static mpc_val_t* mpca_grammar_apply_id(mpc_val_t* x, void* y) {
   } else {
     
     int i;
-    mpc_grammar_st_t* st = y;
+    mpca_grammar_st_t* st = y;
     
     /* Search Existing Parsers */
     for (i = 0; i < st->parsers_num; i++) {
@@ -2279,7 +2285,7 @@ static mpc_val_t* mpcf_make_root(mpc_val_t* x) {
   return mpca_tag(x, "root");
 }
 
-mpc_parser_t* mpca_grammar(const char* grammar, ...) {
+mpc_parser_t* mpca_grammar_st(const char* grammar, mpca_grammar_st_t* st) {
   
   mpc_parser_t* Grammar = mpc_new("grammar");
   mpc_parser_t* Term = mpc_new("term");
@@ -2301,10 +2307,6 @@ mpc_parser_t* mpca_grammar(const char* grammar, ...) {
     Base
   ));
   
-  va_list va;
-  va_start(va, grammar);
-  mpc_grammar_st_t st = { &va, 0, NULL };
-  
   mpc_define(Base, mpc_or(5,
     mpc_apply(mpc_tok(mpc_string_lit()), mpca_grammar_apply_string),
     mpc_apply(mpc_tok(mpc_char_lit()),   mpca_grammar_apply_char),
@@ -2323,13 +2325,174 @@ mpc_parser_t* mpca_grammar(const char* grammar, ...) {
   }
   
   mpc_delete(GrammarTotal);
-
-  free(st.parsers);
-  va_end(va);
-  
   mpc_cleanup(4, Grammar, Term, Factor, Base);
   
   return r.output;
   
 }
 
+mpc_parser_t* mpca_grammar_va(const char* grammar, va_list va) {
+  mpca_grammar_st_t st = { &va, 0, NULL };
+  mpc_parser_t* res = mpca_grammar_st(grammar, &st);
+  free(st.parsers);
+  return res;
+}
+
+mpc_parser_t* mpca_grammar(const char* grammar, ...) {
+  va_list va;
+  va_start(va, grammar);
+  mpc_parser_t* res = mpca_grammar_va(grammar, va);  
+  va_end(va);
+  return res;
+}
+
+typedef struct {
+  char* left;
+  char* right;
+} mpca_stmt_t;
+
+static mpc_val_t* mpca_stmt_afold(int n, mpc_val_t** xs) {
+  char** parts = (char**)xs;
+
+  mpca_stmt_t* stmt = malloc(sizeof(mpca_stmt_t));
+  
+  stmt->left = malloc(strlen(parts[0]) + 1);
+  stmt->right = malloc(strlen(parts[2]) + 1);
+  
+  strcpy(stmt->left, parts[0]);
+  strcpy(stmt->right, parts[2]);
+  
+  free(parts[0]);
+  free(parts[1]);
+  free(parts[2]);
+  free(parts[3]);
+  
+  return stmt;
+}
+
+static int mpca_stmt_list_count(mpc_val_t* x) {
+  int i = 0;
+  mpca_stmt_t** stmts = x;
+  while(*stmts) { i++; }
+  return i;
+}
+
+static mpc_val_t* mpca_stmt_fold(mpc_val_t* t, mpc_val_t* x) {
+  
+  mpca_stmt_t** stmts = t;
+
+  if (stmts == NULL) {
+    stmts = calloc(1, sizeof(mpca_stmt_t*));
+  }
+  
+  int count = mpca_stmt_list_count(stmts);
+  stmts = realloc(stmts, (count + 1) * sizeof(mpca_stmt_t*));
+  stmts[count] = x;
+  
+  return stmts;
+  
+}
+
+static mpc_val_t* mpca_stmt_list_delete(mpc_val_t* x) {
+
+  mpca_stmt_t** stmts = x;
+
+  while(*stmts) {
+    mpca_stmt_t* stmt = *stmts; 
+    free(stmt->left);
+    free(stmt->right);
+    free(stmt);  
+    stmts++;
+  }
+  
+  free(stmts);
+  return NULL;
+
+}
+
+static mpc_val_t* mpca_stmt_list_apply_to(mpc_val_t* x, void* st) {
+
+  mpca_stmt_t** stmts = x;
+
+  while(*stmts) {
+    mpca_stmt_t* stmt = *stmts; 
+    mpc_parser_t* left = mpca_grammar_apply_id(stmt->left, st);
+    mpc_parser_t* right = mpca_grammar_st(stmt->right, st);
+    mpc_define(left, right);
+    stmts++;
+  }
+  
+  return mpca_stmt_list_delete(x);
+}
+
+static void mpca_lang_st(const char* language, mpca_grammar_st_t* st) {
+  
+  mpc_parser_t* Lang = mpc_new("lang");
+  mpc_parser_t* Stmt = mpc_new("stmt");
+  
+  mpc_define(Lang, mpc_apply_to(
+    mpc_total(mpc_many(Stmt, mpca_stmt_fold), (mpc_dtor_t)mpca_stmt_list_delete),
+    mpca_stmt_list_apply_to,
+    &st
+  ));
+  
+  mpc_define(Stmt, mpc_and(4,
+    mpca_stmt_afold,
+    mpc_tok(mpc_ident()),
+    mpc_sym(":"),
+    mpc_tok(mpc_many(mpc_noneof(";"), mpcf_strfold)),
+    mpc_sym(";"),
+    free, free, free
+  ));
+  
+  mpc_result_t r;
+  if (!mpc_parse("<mpc_lang_compiler>", language, Lang, &r)) {
+    fprintf(stderr, "\nError Compiling Language");
+    mpc_err_print(r.error);
+    abort();  
+  }
+  
+  mpc_cleanup(2, Lang, Stmt);
+  
+}
+
+void mpca_lang_va(const char* language, va_list va) {
+  mpca_grammar_st_t st = { &va, 0, NULL };
+  mpca_lang_st(language, &st);
+  free(st.parsers);
+}
+
+void mpca_lang(const char* language, ...) {
+  va_list va;
+  va_start(va, language);
+  mpca_lang_va(language, va);
+  va_end(va);  
+}
+
+void mpca_lang_file(const char* filename, ...) {
+  va_list va;
+  va_start(va, filename);
+  mpca_lang_file_va(filename, va);
+  va_end(va); 
+}
+
+void mpca_lang_file_va(const char* filename, va_list va) {
+  
+  FILE* f = fopen(filename, "r");
+  if (f == NULL) {
+    fprintf(stderr, "Error: Unable to open file '%s'\n", filename);
+    abort();
+  }
+  
+  fseek(f, 0, SEEK_END);
+  int len = ftell(f);
+  fseek(f, 0, SEEK_SET);
+  char* buff = malloc(len + 1);
+  fread(buff, 1, len, f);
+  buff[len] = '\0';
+  fclose(f);
+  
+  mpca_lang_va(buff, va);
+  
+  free(buff);
+}
