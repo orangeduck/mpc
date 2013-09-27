@@ -66,16 +66,9 @@ void test_language(void) {
         expression : <product> (('+' | '-') <product>)*; \
         product : <value>   (('*' | '/')   <value>)*;    \
         value : /[0-9]+/ | '(' <expression> ')';         \
-        maths : /^\\w*/ <expression> /\\w*$/;            \
+        maths : /^/ <expression> /$/;                    \
     ",
     Expr, Prod, Value, Maths);
-  
-  /*
-  mpc_print(Expr);
-  mpc_print(Prod);
-  mpc_print(Value);
-  mpc_print(Maths);
-  */
   
   mpc_cleanup(4, Expr, Prod, Value, Maths);
 }

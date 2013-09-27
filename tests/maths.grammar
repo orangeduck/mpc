@@ -4,4 +4,4 @@ product : <value>   (('*' | '/')   <value>)*;
 
 value : /[0-9]+/ | '(' <expression> ')';
 
-maths : /^\\w*/ <expression> /\\w*$/;
+maths : /^/ <expression> /$/;

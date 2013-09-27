@@ -9,7 +9,7 @@ Using _mpc_ might be of interest to you if you are...
 * Building a new data format
 * Parsing an existing data format
 * Embedding a Domain Specific Language
-* [Adding an ad-hoc embedded Lisp to your C program](http://en.wikipedia.org/wiki/Greenspun%27s_tenth_rule)
+* [Adding an ad-hoc embedded Lisp to your application](http://en.wikipedia.org/wiki/Greenspun%27s_tenth_rule)
 
 
 Features
@@ -49,11 +49,15 @@ mpc_ast_t* parse_maths(const char* input) {
   mpc_parser_t* Prod  = mpc_new("product");
   mpc_parser_t* Value = mpc_new("value");
   mpc_parser_t* Maths = mpc_new("maths");
-
-  mpc_define(Expr,  mpca_grammar(" <product> (('+' | '-') <product>)* ", Prod));
-  mpc_define(Prod,  mpca_grammar(" <value>   (('*' | '/')   <value>)* ", Value));
-  mpc_define(Value, mpca_grammar(" /[0-9]+/ | '(' <expression> ')' ", Expr));
-  mpc_define(Maths, mpca_total(Expr));
+  
+  mpca_lang(
+    "                                                    \
+        expression : <product> (('+' | '-') <product>)*; \
+        product : <value>   (('*' | '/')   <value>)*;    \
+        value : /[0-9]+/ | '(' <expression> ')';         \
+        maths : /^/ <expression> /$/;                    \
+    ",
+    Expr, Prod, Value, Maths);
   
   mpc_result_t r;  
   if (!mpc_parse("parse_maths", input, Maths, &r)) {
@@ -67,7 +71,7 @@ mpc_ast_t* parse_maths(const char* input) {
 }
 ```
 
-The output for some input like `(4 * 2 * 11 + 2) + 5` might look something like this
+The output for some input like `(4 * 2 * 11 + 2) - 5` might look something like this
 
 ```xml
 <root>
@@ -83,7 +87,7 @@ The output for some input like `(4 * 2 * 11 + 2) + 5` might look something like 
             <char> '+'
             <value> '2'
         <char> ')'
-    <char> '+'
+    <char> '-'
     <value> '5'
 ```
 
@@ -91,9 +95,9 @@ The output for some input like `(4 * 2 * 11 + 2) + 5` might look something like 
 View From the Bottom
 --------------------
 
-Parser Combinators are structures that encode how to parse a particular language. They can be combined using a number of intuitive operators to create new parsers of ever increasing complexity. With these, complex grammars and languages can be processed easily.
+Parser Combinators are structures that encode how to parse a particular language. They can be combined using a number of intuitive operators to create new parsers of ever increasing complexity. With these, detailed grammars and languages can be processed easily.
 
-The trick behind Parser Combinators is the observation that by structuring the library in a particular way one can make building parser combinators look like writing a grammar itself. Therefore instead of describing _how to parse a language_, a user must only specify _the language itself_, and the computer will work out how to parse it ... as if by magic!
+The trick behind Parser Combinators is the observation that by structuring the library in a particular way, one can make building parser combinators look like writing a grammar itself. Therefore instead of describing _how to parse a language_, a user must only specify _the language itself_, and the computer will work out how to parse it ... as if by magic!
 
 
 Parsers
@@ -192,7 +196,7 @@ Several other functions exist that return basic parsers with some other special 
 mpc_parser_t* mpc_pass(void);
 ```
 
-Consumes no input, always successful, returns `NULL`
+Consumes no input, always successful, always returns `NULL`
 
 * * *
 
@@ -208,7 +212,7 @@ Consumes no input, always fails
 mpc_parser_t* mpc_lift(mpc_lift_t f);
 ```
 
-Consumes no input, always successful, returns the result of function `f`
+Consumes no input, always successful, always returns the result of function `f`
 
 * * *
 
@@ -216,13 +220,13 @@ Consumes no input, always successful, returns the result of function `f`
 mpc_parser_t* mpc_lift_val(mpc_val_t* x);
 ```
 
-Consumes no input, always successful, returns `x`
+Consumes no input, always successful, always returns `x`
 
 
 Combinators
 -----------
 
-Combinators are functions that take one or more parsers and return a new parser. These combinators work independent of what exactly those input parsers return on success. In languages such as Haskell ensuring you don't ferry one type of data into a parser requiring a different type of data is done by the compiler. But in C we don't have that luxury. So it is at the discretion of the programmer to ensure that he or she deals correctly with the outputs of different parser types.
+Combinators are functions that take one or more parsers and return a new parser. These combinators work independent of what exactly those input parsers return on success. In languages such as Haskell ensuring you don't input one type of data into a parser requiring a different type of data is done by the compiler. But in C we don't have that luxury. So it is at the discretion of the programmer to ensure that he or she deals correctly with the outputs of different parser types.
 
 A second annoyance in C is that of manual memory management. Some parsers might get half-way and then fail. This means they need to clean up any partial data that has been collected in the parse. In Haskell this is handled by the Garbage Collector, but in C these combinators will need to take _destructor_ functions as input, which say how clean up any partial data that has been collected.
 
@@ -252,7 +256,7 @@ mpc_parser_t* mpc_not(mpc_parser_t* a, mpc_dtor_t da);
 mpc_parser_t* mpc_not_else(mpc_parser_t* a, mpc_dtor_t da, mpc_lift_t lf);
 ```
 
-Returns a parser with the following behaviour. If parser `a` succeeds, the it fails. If parser `a` fails, then it succeeds and returns `NULL` (or the result of lift function `lf`). Destructor `da` is used to destroy the result of `a` on success.
+Returns a parser with the following behaviour. If parser `a` succeeds, the it fails and consumes no input. If parser `a` fails, then it succeeds, consumes no input and returns `NULL` (or the result of lift function `lf`). Destructor `da` is used to destroy the result of `a` on success.
 
 * * *
 
@@ -261,7 +265,7 @@ mpc_parser_t* mpc_maybe(mpc_parser_t* a);
 mpc_parser_t* mpc_maybe_else(mpc_parser_t* a, mpc_lift_t lf);
 ```
 
-Returns a parser that run `a`. If this fails then it still succeeds, but returns `NULL` (or the result of `lf`).
+Returns a parser that runs `a`. If this fails then it still succeeds, but returns `NULL` (or the result of `lf`).
 
 * * *
 
@@ -270,7 +274,7 @@ mpc_parser_t* mpc_many(mpc_parser_t* a, mpc_fold_t f);
 mpc_parser_t* mpc_many_else(mpc_parser_t* a, mpc_fold_t f, mpc_lift_t lf);
 ```
 
-Attempts to run `a` zero or more times. If this fails then it succeeds and returns `NULL` (or the result of `lf`). If there is at least one success, results of `a` are combined using fold function `f`. See the _Function Types_ section for more details.
+Attempts to run `a` zero or more times. If zero runs are made it succeeds and returns `NULL` (or the result of `lf`). If at least one run is made, results of `a` are combined using fold function `f` and returned. See the _Function Types_ section for more details.
 
 * * *
 
@@ -278,7 +282,7 @@ Attempts to run `a` zero or more times. If this fails then it succeeds and retur
 mpc_parser_t* mpc_many1(mpc_parser_t* a, mpc_fold_t f);
 ```
 
-Attempts run `a` one or more times. Results are combined with fold function `f`.
+Attempts to run `a` one or more times. Results are combined with fold function `f`.
 
 * * *
 
@@ -287,7 +291,7 @@ mpc_parser_t* mpc_count(mpc_parser_t* a, mpc_dtor_t da, mpc_fold_t f, int n);
 mpc_parser_t* mpc_count_else(mpc_parser_t* a, mpc_dtor_t da, mpc_fold_t f, int n, mpc_lift_t lf);
 ```
 
-Attempts run `a` exactly `n` times. If this fails, the result of fold function `f` is destructed with `da`, and it returns `NULL` (or the result of lift function `lf`). Result of `a` are combined using fold function `f`.
+Attempts to run `a` exactly `n` times. If this fails, any partial results are destructed with `da`, and it returns `NULL` (or the result of lift function `lf`). If it is successful, result of `a` are combined using fold function `f`.
 
 * * *
 
@@ -295,7 +299,7 @@ Attempts run `a` exactly `n` times. If this fails, the result of fold function `
 mpc_parser_t* mpc_else(mpc_parser_t* a, mpc_parser_t* b);
 ```
 
-Attempts run `a`, and on failure attempts to parse `b`. If `b` also fails then returns an error.
+Attempts to run `a`. On success returns the result `a`. On failure attempts to run `b`. If `b` also fails then returns an error. Otherwise it returns the result of `b`.
 
 * * *
 
@@ -320,13 +324,13 @@ Attempts to run `n` parsers in sequence, returning the first one that succeeds. 
 mpc_parser_t* mpc_and(int n, mpc_afold_t f, ...);
 ```
 
-Attempts to run `n` parsers in sequence, returning the fold of the results using fold function `f`. First parsers must be specified, followed by destructors for each parser minus the final one. These are used in case of partial success. For example: `mpc_and(3, mpcf_astrfold, mpc_char('a'), mpc_char('b'), mpc_char('c'), free, free);` would attempt to match `'a'` followed by `'b'` followed by `'c'`, and if successful would concatenate them using `mpcf_astrfold`.
+Attempts to run `n` parsers in sequence, returning the fold of the results using fold function `f`. First parsers must be specified, followed by destructors for each parser, minus the final one. These are used in case of partial success. For example: `mpc_and(3, mpcf_astrfold, mpc_char('a'), mpc_char('b'), mpc_char('c'), free, free);` would attempt to match `'a'` followed by `'b'` followed by `'c'`, and if successful would concatenate them using `mpcf_astrfold`. Otherwise would use `free` on the partial results.
 
 
 Function Types
 --------------
 
-The combinator functions take a number of special function types as function pointers. Here is a short explanation of those types are how they are expected to behave.
+The combinator functions take a number of special function types as function pointers. Here is a short explanation of those types are how they are expected to behave. It is important that these behave correctly otherwise it is exceedingly easy to introduce memory leaks into the system.
 
 * * *
 
@@ -343,7 +347,7 @@ typedef mpc_val_t*(*mpc_apply_t)(mpc_val_t*);
 typedef mpc_val_t*(*mpc_apply_to_t)(mpc_val_t*,void*);
 ```
 
-This takes in some pointer to data and outputs some new or modified pointer to data, ensuring to free and old data no longer required. The `apply_to` variation takes in an extra pointer to some data such as state of the system.
+This takes in some pointer to data and outputs some new or modified pointer to data, ensuring to free and old data no longer used. The `apply_to` variation takes in an extra pointer to some data such as state of the system.
 
 * * *
 
@@ -351,7 +355,7 @@ This takes in some pointer to data and outputs some new or modified pointer to d
 typedef mpc_val_t*(*mpc_fold_t)(mpc_val_t*,mpc_val_t*);
 ```
 
-This takes two pointers to data and must output some new combined pointer to data, ensuring to free and old data no longer required. When used with the `many`, `many1` and `count` functions this initially takes in `NULL` for it's first argument and following that takes in for it's first argument whatever was previously returned by the function itself. In this way users have a chance to build some initial data structure before populating it with whatever is passed as the second argument.
+This takes two pointers to data and must output some new combined pointer to data, ensuring to free and old data no longer used. When used with the `many`, `many1` and `count` functions this initially takes in `NULL` for it's first argument and following that takes in for it's first argument whatever was previously returned by the function itself. In this way users have a chance to build some initial data structure before populating it with whatever is passed as the second argument.
 
 * * *
 
@@ -359,7 +363,7 @@ This takes two pointers to data and must output some new combined pointer to dat
 typedef mpc_val_t*(*mpc_afold_t)(int,mpc_val_t**);
 ```
 
-Similar to the above but it is passed in a list of pointers to data values which must all be folded together and output as a new single data value.
+Similar to the above, but it is passed in a list of pointers to data values which must all be folded together and output as a new single data value. Any old data no longer used must be freed.
 
 * * *
 
@@ -367,14 +371,14 @@ Similar to the above but it is passed in a list of pointers to data values which
 typedef mpc_val_t*(*mpc_lift_t)(void);
 ```
 
-This function returns some data value when called. It can be used to create _empty_ versions of data types when certain combinators have no known default value to return.
+This function returns some data value when called. It can be used to create _empty_ versions of data types when certain combinators have no known default value to return. For example it may be used to return a newly allocated empty string rather than `NULL`.
 
 First Example
 -------------
 
-Using the above we can already create a parser that matches a C identifier with relative ease.
+Using the above we can create a parser that matches a C identifier with relative ease.
 
-First we build a fold function that will concatenate two strings together.
+First we build a fold function that will concatenate two strings together - freeing any data we no longer need.
 
 ```c
 mpc_val_t* parse_fold_string(mpc_val_t* x, mpc_val_t* y) {
@@ -416,12 +420,15 @@ char* parse_ident(char* input) {
 }
 ```
 
+Note that only `ident` must be deleted. This is because in referencing other parsers in how it is built it ensure they will be destructed along with it.
+
+
 Self Reference
 --------------
 
 Building parsers in the above way can have issues with self reference and left handed recursion.
 
-To overcome this we separate the construction of parsers into two different steps. Construction and Definition.
+To overcome this we can separate the construction of parsers into two different steps. Construction and Definition.
 
 * * *
 
@@ -547,7 +554,7 @@ A number of common fold functions a user might want are included. They reside un
 Secod Example
 -------------
 
-Passing around all these function pointers might seem clumsy, but having parsers be type-generic is important as it lets users define their own syntax tree types as well as perform specific house-keeping or data processing in the parsing phase. For example we can specify a simple maths grammar that computes the result of the expression as it goes along.
+Passing around all these function pointers might seem clumsy, but having parsers be type-generic is important as it lets users define their own syntax tree types, as well as allows them perform specific house-keeping or data processing in the parsing phase. For example we can specify a simple maths grammar that computes the result of the expression as it goes along.
 
 We start with a fold function that will fold two `int*` into a new `int*` based on some `char*` operator.
 
@@ -620,7 +627,7 @@ mpc_parser_t* mpc_re(const char* re);
 
 This returns a parser that will attempt to match the given regular expression pattern, and return the matched string on success. It does not have support for groups and match objects, but should be sufficient for simple tasks.
 
-A cute thing about this is that it uses previous parts of the library to parse the user input string - and because _mpc_ is type generic, the parser spits out a `mpc_parser_t` directly! It even uses many of the combinator functions as fold functions! This is a great case study in learning how to use _mpc_, so those curious are encouraged to find it in the source code.
+A cute thing about this is that it uses previous parts of the library to parse the user input string - and because _mpc_ is type generic, the parser spits out a new `mpc_parser_t` that matches the regular expression directly! It even uses many of the combinator functions indirectly as fold functions! This is a great case study in learning how to use _mpc_, so those curious are encouraged to find it in the source code.
 
 
 Abstract Syntax Tree
