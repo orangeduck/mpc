@@ -8,12 +8,20 @@
 
 /* Globals */
 
-#define MAX_NAME 512
-#define MAX_ERROR 2048
-#define MAX_TESTS 2048
+enum {
+  MAX_NAME = 512
+};
 
-static bool test_passing = false;
-static bool suite_passing = false;
+enum {
+  MAX_ERROR = 2048
+};
+
+enum {
+  MAX_TESTS = 2048
+};
+
+static int test_passing = 0;
+static int suite_passing = 0;
 
 /* Colors */
 
@@ -33,7 +41,7 @@ enum {
   LIGHT_RED     = 0xC,
   LIGHT_PURPLE  = 0xD,
   LIGHT_YELLOW  = 0xE,
-  LIGHT_WHITE   = 0xF,
+  LIGHT_WHITE   = 0xF
 };
 
 #ifdef _WIN32
@@ -84,7 +92,7 @@ static char assert_err[MAX_ERROR];
 static char assert_err_buff[MAX_ERROR];
 static int assert_err_num = 0;
 
-void pt_assert_run(bool result, const char* expr, const char* func, const char* file, int line) {
+void pt_assert_run(int result, const char* expr, const char* func, const char* file, int line) {
   
   num_asserts++;
   test_passing = test_passing && result;
@@ -102,7 +110,7 @@ void pt_assert_run(bool result, const char* expr, const char* func, const char* 
 
 static void ptest_signal(int sig) {
   
-  test_passing = false;
+  test_passing = 0;
   
   switch( sig ) {
     case SIGFPE:  sprintf(assert_err_buff, "        %i. Division by Zero\n", assert_err_num+1); break;
@@ -125,15 +133,15 @@ static void ptest_signal(int sig) {
 
 static void pt_title_case(char* output, const char* input) {
   
-  bool space = true;
+  int space = 1;
+  unsigned int i;
   
   strcpy(output, input);
   
-  unsigned int i;
   for(i = 0; i < strlen(output); i++) {
     
     if (output[i] == '_' || output[i] == ' ') {
-      space = true;
+      space = 1;
       output[i] = ' ';
       continue;
     } 
@@ -143,7 +151,7 @@ static void pt_title_case(char* output, const char* input) {
       continue;
     }
     
-    space = false;
+    space = 0;
   }
   
 }
@@ -162,6 +170,8 @@ static int num_tests_fails  = 0;
 
 void pt_add_test(void (*func)(void), const char* name, const char* suite) {
   
+  test_t test;
+
   if (num_tests == MAX_TESTS) {
     printf("ERROR: Exceeded maximum test count of %i!\n", MAX_TESTS); abort();
   }
@@ -174,7 +184,6 @@ void pt_add_test(void (*func)(void), const char* name, const char* suite) {
     printf("ERROR: Test suite '%s' too long (Maximum is %i characters)\n", suite, MAX_NAME); abort();
   }
   
-  test_t test;
   test.func = func;
   pt_title_case(test.name, name);
   pt_title_case(test.suite, suite);
@@ -202,6 +211,9 @@ static char current_suite[MAX_NAME];
 
 int pt_run(void) {
   
+  unsigned int i;
+  double total;
+
   printf("    \n");
   printf("    +-------------------------------------------+\n");
   printf("    | ptest          MicroTesting Magic for C   |\n");
@@ -218,7 +230,6 @@ int pt_run(void) {
   start = clock();
   strcpy(current_suite, "");
   
-  unsigned int i;
   for(i = 0; i < num_tests; i++) {
     
     test_t test = tests[i];
@@ -235,14 +246,14 @@ int pt_run(void) {
         }
       }
     
-      suite_passing = true;
+      suite_passing = 1;
       strcpy(current_suite, test.suite);
       printf("\n\n  ===== %s =====\n\n", current_suite);
     }
     
     /* Run Test */
     
-    test_passing = true;
+    test_passing = 1;
     strcpy(assert_err, "");
     strcpy(assert_err_buff, "");
     assert_err_num = 0;
@@ -293,7 +304,7 @@ int pt_run(void) {
   printf("  +---------++------------+-------------+-------------+\n");
   printf("  \n");
   
-  double total = (double)(end - start) / CLOCKS_PER_SEC;
+  total = (double)(end - start) / CLOCKS_PER_SEC;
   
   printf("      Total Running Time: %0.3fs\n\n", total);
   

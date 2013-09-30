@@ -3,24 +3,27 @@
 
 void test_grammar(void) {
 
-  mpc_parser_t* Expr  = mpc_new("expression");
-  mpc_parser_t* Prod  = mpc_new("product");
-  mpc_parser_t* Value = mpc_new("value");
-  mpc_parser_t* Maths = mpc_new("maths");
+  mpc_parser_t *Expr, *Prod, *Value, *Maths;
+  mpc_ast_t *t0, *t1, *t2;
+  
+  Expr  = mpc_new("expression");
+  Prod  = mpc_new("product");
+  Value = mpc_new("value");
+  Maths = mpc_new("maths");
   
   mpc_define(Expr,  mpca_grammar(" <product> (('+' | '-') <product>)* ", Prod));
   mpc_define(Prod,  mpca_grammar(" <value>   (('*' | '/')   <value>)* ", Value));
   mpc_define(Value, mpca_grammar(" /[0-9]+/ | '(' <expression> ')' ", Expr));
   mpc_define(Maths, mpca_total(Expr));
   
-  mpc_ast_t* t0 = mpc_ast_build(1, "root", mpc_ast_new("value", "24"));
-  mpc_ast_t* t1 = mpc_ast_build(1, "root",
+  t0 = mpc_ast_build(1, "root", mpc_ast_new("value", "24"));
+  t1 = mpc_ast_build(1, "root",
     mpc_ast_build(3, "value",
       mpc_ast_new("char", "("),
       mpc_ast_new("value", "5"),
       mpc_ast_new("char", ")")));
   
-  mpc_ast_t* t2 = mpc_ast_build(3, "root",
+  t2 = mpc_ast_build(3, "root",
       
       mpc_ast_build(3, "value", 
         mpc_ast_new("char", "("),
@@ -39,12 +42,12 @@ void test_grammar(void) {
       
       mpc_ast_new("char", "+"),
       mpc_ast_new("value", "5"));
-      
-  PT_ASSERT(mpc_match(Maths, "  24 ", t0, (bool(*)(void*,void*))mpc_ast_eq, (mpc_dtor_t)mpc_ast_delete, (void(*)(void*))mpc_ast_print));
-  PT_ASSERT(mpc_match(Maths, "(5)", t1, (bool(*)(void*,void*))mpc_ast_eq, (mpc_dtor_t)mpc_ast_delete, (void(*)(void*))mpc_ast_print));
-  PT_ASSERT(mpc_match(Maths, "(4 * 2 * 11 + 2) + 5", t2, (bool(*)(void*,void*))mpc_ast_eq, (mpc_dtor_t)mpc_ast_delete, (void(*)(void*))mpc_ast_print));
-  PT_ASSERT(mpc_unmatch(Maths, "a", t0, (bool(*)(void*,void*))mpc_ast_eq, (mpc_dtor_t)mpc_ast_delete, (void(*)(void*))mpc_ast_print));
-  PT_ASSERT(mpc_unmatch(Maths, "2b+4", t0, (bool(*)(void*,void*))mpc_ast_eq, (mpc_dtor_t)mpc_ast_delete, (void(*)(void*))mpc_ast_print));
+  
+  PT_ASSERT(mpc_match(Maths, "  24 ", t0, (int(*)(void*,void*))mpc_ast_eq, (mpc_dtor_t)mpc_ast_delete, (void(*)(void*))mpc_ast_print));
+  PT_ASSERT(mpc_match(Maths, "(5)", t1, (int(*)(void*,void*))mpc_ast_eq, (mpc_dtor_t)mpc_ast_delete, (void(*)(void*))mpc_ast_print));
+  PT_ASSERT(mpc_match(Maths, "(4 * 2 * 11 + 2) + 5", t2, (int(*)(void*,void*))mpc_ast_eq, (mpc_dtor_t)mpc_ast_delete, (void(*)(void*))mpc_ast_print));
+  PT_ASSERT(mpc_unmatch(Maths, "a", t0, (int(*)(void*,void*))mpc_ast_eq, (mpc_dtor_t)mpc_ast_delete, (void(*)(void*))mpc_ast_print));
+  PT_ASSERT(mpc_unmatch(Maths, "2b+4", t0, (int(*)(void*,void*))mpc_ast_eq, (mpc_dtor_t)mpc_ast_delete, (void(*)(void*))mpc_ast_print));
 
   mpc_ast_delete(t0);
   mpc_ast_delete(t1);
@@ -56,10 +59,12 @@ void test_grammar(void) {
 
 void test_language(void) {
   
-  mpc_parser_t* Expr  = mpc_new("expression");
-  mpc_parser_t* Prod  = mpc_new("product");
-  mpc_parser_t* Value = mpc_new("value");
-  mpc_parser_t* Maths = mpc_new("maths");
+  mpc_parser_t *Expr, *Prod, *Value, *Maths;
+  
+  Expr  = mpc_new("expression");
+  Prod  = mpc_new("product");
+  Value = mpc_new("value");
+  Maths = mpc_new("maths");
   
   mpca_lang(
     "                                                    \
@@ -75,10 +80,12 @@ void test_language(void) {
 
 void test_language_file(void) {
   
-  mpc_parser_t* Expr  = mpc_new("expression");
-  mpc_parser_t* Prod  = mpc_new("product");
-  mpc_parser_t* Value = mpc_new("value");
-  mpc_parser_t* Maths = mpc_new("maths");
+  mpc_parser_t *Expr, *Prod, *Value, *Maths;
+  
+  Expr  = mpc_new("expression");
+  Prod  = mpc_new("product");
+  Value = mpc_new("value");
+  Maths = mpc_new("maths");
   
   mpca_lang_file("./tests/maths.grammar", Expr, Prod, Value, Maths);
   

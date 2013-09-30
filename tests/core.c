@@ -4,9 +4,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-static bool int_eq(void* x, void* y) { return (*(int*)x == *(int*)y); }
+static int int_eq(void* x, void* y) { return (*(int*)x == *(int*)y); }
 static void int_print(void* x) { printf("'%i'", *((int*)x)); }
-static bool string_eq(void* x, void* y) { return (strcmp(x, y) == 0); }
+static int string_eq(void* x, void* y) { return (strcmp(x, y) == 0); }
 static void string_print(void* x) { printf("'%s'", (char*)x); }
 
 void test_ident(void) {
@@ -34,11 +34,18 @@ void test_ident(void) {
 }
 
 void test_maths(void) {
-
-  mpc_parser_t* Expr   = mpc_new("expr");
-  mpc_parser_t* Factor = mpc_new("factor");
-  mpc_parser_t* Term   = mpc_new("term");
-  mpc_parser_t* Maths  = mpc_new("maths");
+  
+  mpc_parser_t *Expr, *Factor, *Term, *Maths; 
+  int r0 = 1;
+  int r1 = 5;
+  int r2 = 13;
+  int r3 = 0;
+  int r4 = 2;
+  
+  Expr   = mpc_new("expr");
+  Factor = mpc_new("factor");
+  Term   = mpc_new("term");
+  Maths  = mpc_new("maths");
 
   mpc_define(Expr, mpc_else(
     mpc_and(3, mpcf_maths, Factor, mpc_oneof("*/"), Factor, free, free),
@@ -57,11 +64,11 @@ void test_maths(void) {
   
   mpc_define(Maths, mpc_enclose(Expr, free));
   
-  PT_ASSERT(mpc_match(Maths, "1", (int[]){ 1 }, int_eq, free, int_print));
-  PT_ASSERT(mpc_match(Maths, "(5)", (int[]){ 5 }, int_eq, free, int_print));
-  PT_ASSERT(mpc_match(Maths, "(4*2)+5", (int[]){ 13 }, int_eq, free, int_print));
-  PT_ASSERT(mpc_unmatch(Maths, "a", (int[]){ 0 }, int_eq, free, int_print));
-  PT_ASSERT(mpc_unmatch(Maths, "2b+4", (int[]){ 2 }, int_eq, free, int_print));
+  PT_ASSERT(mpc_match(Maths, "1", &r0, int_eq, free, int_print));
+  PT_ASSERT(mpc_match(Maths, "(5)", &r1, int_eq, free, int_print));
+  PT_ASSERT(mpc_match(Maths, "(4*2)+5", &r2, int_eq, free, int_print));
+  PT_ASSERT(mpc_unmatch(Maths, "a", &r3, int_eq, free, int_print));
+  PT_ASSERT(mpc_unmatch(Maths, "2b+4", &r4, int_eq, free, int_print));
   
   mpc_cleanup(4, Expr, Factor, Term, Maths);
 }

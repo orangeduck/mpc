@@ -4,17 +4,19 @@
 #include <string.h>
 #include <stdlib.h>
 
-static bool string_eq(void* x, void* y) { return (strcmp(x, y) == 0); }
+static int string_eq(void* x, void* y) { return (strcmp(x, y) == 0); }
 static void string_print(void* x) { printf("'%s'", (char*)x); }
 
 void test_regex_basic(void) {
 
-  mpc_parser_t* re0 = mpc_re("abc|bcd");
-  mpc_parser_t* re1 = mpc_re("abc|bcd|e");
-  mpc_parser_t* re2 = mpc_re("ab()c(ab)*");
-  mpc_parser_t* re3 = mpc_re("abc(abdd)?");
-  mpc_parser_t* re4 = mpc_re("ab|c(abdd)?");
-  mpc_parser_t* re5 = mpc_re("abc(ab|dd)+g$");
+  mpc_parser_t *re0, *re1, *re2, *re3, *re4, *re5;
+
+  re0 = mpc_re("abc|bcd");
+  re1 = mpc_re("abc|bcd|e");
+  re2 = mpc_re("ab()c(ab)*");
+  re3 = mpc_re("abc(abdd)?");
+  re4 = mpc_re("ab|c(abdd)?");
+  re5 = mpc_re("abc(ab|dd)+g$");
   
   PT_ASSERT(mpc_match(re0, "abc", "abc", string_eq, free, string_print));
   PT_ASSERT(mpc_match(re0, "bcd", "bcd", string_eq, free, string_print));
@@ -36,10 +38,12 @@ void test_regex_basic(void) {
 
 void test_regex_range(void) {
 
-  mpc_parser_t* re0 = mpc_re("abg[abcdef]");
-  mpc_parser_t* re1 = mpc_re("y*[a-z]");
-  mpc_parser_t* re2 = mpc_re("zz(p+)?[A-Z_0\\]123]*");
-  mpc_parser_t* re3 = mpc_re("^[^56hy].*$");
+  mpc_parser_t *re0, *re1, *re2, *re3, *re4;
+  
+  re0 = mpc_re("abg[abcdef]");
+  re1 = mpc_re("y*[a-z]");
+  re2 = mpc_re("zz(p+)?[A-Z_0\\]123]*");
+  re3 = mpc_re("^[^56hy].*$");
   
   /* TODO: Testing */
   

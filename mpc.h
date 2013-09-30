@@ -1,16 +1,19 @@
 /*
 ** mpc - Micro Parser Combinator library for C
+**
 ** https://github.com/orangeduck/mpc
+**
 ** Daniel Holden - contact@daniel-holden.com
 ** Licensed under BSD3
 */
+
 #ifndef mpc_h
 #define mpc_h
 
+#include <stdlib.h>
 #include <stdio.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <stdarg.h>
+#include <string.h>
 
 /*
 ** Error Type
@@ -45,9 +48,9 @@ typedef union {
 struct mpc_parser_t;
 typedef struct mpc_parser_t mpc_parser_t;
 
-bool mpc_parse(const char* filename, const char* s, mpc_parser_t* p, mpc_result_t* r);
-bool mpc_parse_file(const char* filename, FILE* f, mpc_parser_t* p, mpc_result_t* r);
-bool mpc_parse_filename(const char* filename, mpc_parser_t* p, mpc_result_t* r);
+int mpc_parse(const char* filename, const char* s, mpc_parser_t* p, mpc_result_t* r);
+int mpc_parse_file(const char* filename, FILE* f, mpc_parser_t* p, mpc_result_t* r);
+int mpc_parse_filename(const char* filename, mpc_parser_t* p, mpc_result_t* r);
 
 /*
 ** Function Types
@@ -88,7 +91,7 @@ mpc_parser_t* mpc_char(char c);
 mpc_parser_t* mpc_range(char s, char e);
 mpc_parser_t* mpc_oneof(const char* s);
 mpc_parser_t* mpc_noneof(const char* s);
-mpc_parser_t* mpc_satisfy(bool(*f)(char));
+mpc_parser_t* mpc_satisfy(int(*f)(char));
 mpc_parser_t* mpc_string(const char* s);
 
 /*
@@ -247,7 +250,7 @@ mpc_ast_t* mpc_ast_insert_root(mpc_ast_t* a);
 void mpc_ast_add_child(mpc_ast_t* r, mpc_ast_t* a);
 void mpc_ast_tag(mpc_ast_t* a, const char* t);
 void mpc_ast_print(mpc_ast_t* a);
-bool mpc_ast_eq(mpc_ast_t* a, mpc_ast_t* b);
+int mpc_ast_eq(mpc_ast_t* a, mpc_ast_t* b);
 
 mpc_val_t* mpcf_fold_ast(mpc_val_t* a, mpc_val_t* b);
 mpc_val_t* mpcf_afold_ast(int n, mpc_val_t** as);
@@ -274,13 +277,13 @@ mpc_err_t* mpca_lang_file(const char* filename, ...);
 ** Testing
 */
 
-bool mpc_unmatch(mpc_parser_t* p, const char* s, void* d,
-  bool(*tester)(void*, void*),
+int mpc_unmatch(mpc_parser_t* p, const char* s, void* d,
+  int(*tester)(void*, void*),
   mpc_dtor_t destructor,
   void(*printer)(void*));
 
-bool mpc_match(mpc_parser_t* p, const char* s, void* d,
-  bool(*tester)(void*, void*), 
+int mpc_match(mpc_parser_t* p, const char* s, void* d,
+  int(*tester)(void*, void*), 
   mpc_dtor_t destructor, 
   void(*printer)(void*));
 

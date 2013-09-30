@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -ansi -Wall -Werror -Wno-unused -g
+CFLAGS = -ansi -Wall -Wpedantic -Werror -Wno-unused -g
 
 TESTS = $(wildcard tests/*.c)
 
