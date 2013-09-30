@@ -24,11 +24,12 @@ int mpc_err_column(mpc_err_t* x);
 char mpc_err_unexpected(mpc_err_t* x);
 char** mpc_err_expected(mpc_err_t* x, int* num);
 char* mpc_err_filename(mpc_err_t* x);
+char* mpc_err_failure(mpc_err_t* x);
 
 void mpc_err_delete(mpc_err_t* x);
 void mpc_err_print(mpc_err_t* x);
 void mpc_err_print_to(mpc_err_t* x, FILE* f);
-void mpc_err_msg(mpc_err_t* x, char* out, int* outn, int outmax);
+char* mpc_err_string_new(mpc_err_t* x);
 
 /*
 ** Parsing
@@ -77,7 +78,8 @@ void mpc_cleanup_va(int n, va_list va);
 */
 
 mpc_parser_t* mpc_pass(void);
-mpc_parser_t* mpc_fail(void);
+mpc_parser_t* mpc_fail(const char* m);
+mpc_parser_t* mpc_failf(const char* fmt, ...);
 mpc_parser_t* mpc_lift(mpc_lift_t f);
 mpc_parser_t* mpc_lift_val(mpc_val_t* x);
 
@@ -96,6 +98,7 @@ mpc_parser_t* mpc_string(const char* s);
 mpc_parser_t* mpc_expect(mpc_parser_t* a, const char* expected);
 mpc_parser_t* mpc_apply(mpc_parser_t* a, mpc_apply_t f);
 mpc_parser_t* mpc_apply_to(mpc_parser_t* a, mpc_apply_to_t f, void* x);
+mpc_parser_t* mpc_predict(mpc_parser_t* a);
 mpc_parser_t* mpc_not(mpc_parser_t* a, mpc_dtor_t da);
 mpc_parser_t* mpc_not_else(mpc_parser_t* a, mpc_dtor_t da, mpc_lift_t lf);
 mpc_parser_t* mpc_maybe(mpc_parser_t* a);
@@ -264,8 +267,8 @@ mpc_parser_t* mpca_or(int n, ...);
 mpc_parser_t* mpca_and(int n, ...);
 mpc_parser_t* mpca_grammar(const char* grammar, ...);
 
-void mpca_lang(const char* language, ...);
-void mpca_lang_file(const char* filename, ...);
+mpc_err_t* mpca_lang(const char* language, ...);
+mpc_err_t* mpca_lang_file(const char* filename, ...);
 
 /*
 ** Testing

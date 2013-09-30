@@ -1,8 +1,11 @@
 - Test All Regex Features
 - Test Regex Range Feature
-- Parser Naming
-- Test Grammar Trees
-- Change Grammar Many Fold Operator
+- Add proper tests for everything in general
+
 - Find some good demo grammars to show
-- Add Tutorial Teaching from scratch
-- Add Reference
+
+- Write about how to use `mpca_lang` and `mpca_grammar`
+- Write about error reporting
+
+- Use while loop instead of recursion in parse function
+- Support for stream based input

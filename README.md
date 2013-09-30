@@ -9,13 +9,14 @@ Using _mpc_ might be of interest to you if you are...
 * Building a new data format
 * Parsing an existing data format
 * Embedding a Domain Specific Language
-* [Adding an ad-hoc embedded Lisp to your application](http://en.wikipedia.org/wiki/Greenspun%27s_tenth_rule)
+* Implementing [Greenspun's Tenth Rule](http://en.wikipedia.org/wiki/Greenspun%27s_tenth_rule)
 
 
 Features
 --------
 
 * Type-Generic Parser Combinators
+* Lookahead Recursive Descent
 * Error Message Support
 * Regular Expression Support
 * Abstract Syntax Tree Support
@@ -38,7 +39,7 @@ The main advantages of _mpc_ over this are:
 View From the Top
 -----------------
 
-In this example I specify a parse for a basic maths language. This function takes as input some mathematical expression and outputs an instance of `mpc_ast_t`.
+In this example I create a parser for a basic maths language. This function takes as input some mathematical expression and outputs an instance of `mpc_ast_t`.
 
 ```c
 #include "mpc.h"
@@ -51,18 +52,18 @@ mpc_ast_t* parse_maths(const char* input) {
   mpc_parser_t* Maths = mpc_new("maths");
   
   mpca_lang(
-    "                                                    \
-        expression : <product> (('+' | '-') <product>)*; \
-        product : <value>   (('*' | '/')   <value>)*;    \
-        value : /[0-9]+/ | '(' <expression> ')';         \
-        maths : /^/ <expression> /$/;                    \
+    "                                                       \
+        expression : <product> (('+' | '-') <product>)*;    \
+        product :    <value>   (('*' | '/') <value>  )*;    \
+        value : /[0-9]+/ | '(' <expression> ')';            \
+        maths : /^/ <expression> /$/;                       \
     ",
     Expr, Prod, Value, Maths);
   
   mpc_result_t r;  
   if (!mpc_parse("parse_maths", input, Maths, &r)) {
     mpc_err_print(r.error);
-    abort();
+    exit(EXIT_FAILURE);
   }
   
   mpc_cleanup(4, Expr, Prod, Value, Maths);
@@ -73,29 +74,29 @@ mpc_ast_t* parse_maths(const char* input) {
 
 The output for some input like `(4 * 2 * 11 + 2) - 5` might look something like this
 
-```xml
-<root>
-    <value>
-        <char> '('
-        <expression>
-            <product>
-                <value> '4'
-                <char> '*'
-                <value> '2'
-                <char> '*'
-                <value> '11'
-            <char> '+'
-            <value> '2'
-        <char> ')'
-    <char> '-'
-    <value> '5'
+```c
+root:
+    value:
+        char: '('
+        expression:
+            product:
+                value: '4'
+                char: '*'
+                value: '2'
+                char: '*'
+                value: '11'
+            char: '+'
+            value: '2'
+        char: ')'
+    char: '-'
+    value: '5'
 ```
 
 
 View From the Bottom
 --------------------
 
-Parser Combinators are structures that encode how to parse a particular language. They can be combined using a number of intuitive operators to create new parsers of ever increasing complexity. With these, detailed grammars and languages can be processed easily.
+Parser Combinators are structures that encode how to parse a particular language. They can be combined using intuitive operators to create new parsers of increasing complexity. With these - detailed grammars and languages can be parsed and processed easily.
 
 The trick behind Parser Combinators is the observation that by structuring the library in a particular way, one can make building parser combinators look like writing a grammar itself. Therefore instead of describing _how to parse a language_, a user must only specify _the language itself_, and the computer will work out how to parse it ... as if by magic!
 
@@ -201,10 +202,10 @@ Consumes no input, always successful, always returns `NULL`
 * * *
 
 ```c
-mpc_parser_t* mpc_fail(void);
+mpc_parser_t* mpc_fail(const char* m);
 ```
 
-Consumes no input, always fails
+Consumes no input, always fails with message `m`.
 
 * * *
 
@@ -248,6 +249,14 @@ mpc_parser_t* mpc_apply_to(mpc_parser_t* a, mpc_apply_to_t f, void* x);
 ```
 
 Returns a parser that applies function `f` (optionality taking extra input `x`) to the result of parser `a`.
+
+* * *
+
+```c
+mpc_parser_t* mpc_predict(mpc_parser_t* a);
+```
+
+Returns a parser that runs `a` with backtracking disabled. This means if `a` consumes any input, it will not be reverted. Turning backtracking off has good performance benefits for grammars which are `LL(1)`. These are grammars where the first character completely determines the parse result - such as the decision of parsing either a C identifier, number, or string literal.
 
 * * *
 
@@ -551,8 +560,8 @@ A number of common fold functions a user might want are included. They reside un
 * `mpc_val_t* mpcf_maths(int n, mpc_val_t** xs);` Examines second argument as string to see which operator it is, then operators on first and third argument as if they are `int*`.
 
 
-Secod Example
--------------
+Second Example
+--------------
 
 Passing around all these function pointers might seem clumsy, but having parsers be type-generic is important as it lets users define their own syntax tree types, as well as allows them perform specific house-keeping or data processing in the parsing phase. For example we can specify a simple maths grammar that computes the result of the expression as it goes along.
 
