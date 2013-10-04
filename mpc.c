@@ -775,9 +775,15 @@ static mpc_result_t* mpc_stack_results(mpc_stack_t* s) {
 ** I also love the way in which each parsing type
 ** concisely matches some construct or pattern.
 **
-** Particularly nice is are the `either` and `also`
+** Particularly nice are the `either` and `also`
 ** types which have a broken but mirrored structure
 ** with return value and error reflected.
+**
+** When this function was written in recursive form
+** it looked pretty nice. But I've since switched
+** it around to an akward while loop. It was an
+** unfortunate change but in the name of performance
+** (and not smashing the stack).
 **
 */
 
@@ -789,14 +795,14 @@ static mpc_result_t* mpc_stack_results(mpc_stack_t* s) {
 int mpc_parse_input(mpc_input_t* i, mpc_parser_t* init, mpc_result_t* final) {
   
   /* Stack */
-  mpc_stack_t* stk = mpc_stack_new();
-  mpc_parser_t* p = NULL;
   int st = 0;
+  mpc_parser_t* p = NULL;
+  mpc_stack_t* stk = mpc_stack_new();
   
   /* Variables */
-  mpc_result_t x, y;
-  mpc_val_t* t;
   char* s;
+  mpc_val_t* t;
+  mpc_result_t x, y;
 
   /* Go! */
   mpc_stack_pushp(stk, init);
