@@ -1,12 +1,12 @@
 CC = gcc
-CFLAGS = -ansi -Wall -Wpedantic -Werror -Wno-unused -g
+CFLAGS = -ansi -pedantic -Wall -Werror -Wno-unused -g
 
 TESTS = $(wildcard tests/*.c)
 
 all: check 
   
 check: $(TESTS) mpc.c
-	$(CC) $(CFLAGS) $^ -o test
+	$(CC) $(CFLAGS) $^ -lm -o test
 	./test
   
 clean:
