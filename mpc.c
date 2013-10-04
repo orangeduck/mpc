@@ -1,5 +1,22 @@
 #include "mpc.h"
 
+#ifndef snprintf
+int snprintf(char* str, size_t size, const char* fmt, ...) {
+  int x;
+  va_list va;
+  va_start(va, fmt);
+  x = vsprintf(str, fmt, va);
+  va_end(va);
+  return x;
+}
+#endif
+
+#ifndef vsnprintf
+int vsnprintf(char* str, size_t size, const char* fmt, va_list args) {
+  return vsprintf(str, fmt, args);
+}
+#endif
+
 /*
 ** State Type
 */
@@ -699,6 +716,39 @@ static int mpc_stack_empty(mpc_stack_t* s) {
 
 /* Stack Result Stuff */
 
+static mpc_result_t mpc_result_err(mpc_err_t* e) {
+  mpc_result_t r;
+  r.error = e;
+  return r;
+}
+
+static mpc_result_t mpc_result_out(mpc_val_t* x) {
+  mpc_result_t r;
+  r.output = x;
+  return r;
+}
+
+static void mpc_stack_print(mpc_stack_t* s) {
+  
+  int i;  
+  printf("= Results  ");
+  for (i = 0; i < s->results_num; i++) {
+    if (s->returns[i]) {
+      printf("[%s] ", (char*)s->results[i].output);
+    } else {
+      printf("[ERROR] ");
+    }
+  }
+  
+  printf("\n");
+  printf("= Parsers  ");
+  for (i = 0; i < s->parsers_num; i++) {
+    printf("[%p] ", (void*)s->parsers[i]);
+  }
+  printf("\n\n");
+  
+}
+
 static void mpc_stack_results_reserve_more(mpc_stack_t* s) {
   int old_size;
   if (s->results_num > s->results_slots) {
@@ -717,11 +767,11 @@ static void mpc_stack_results_reserve_less(mpc_stack_t* s) {
   }
 }
 
-static void mpc_stack_pushr(mpc_stack_t* s, mpc_result_t* x, int r) {
+static void mpc_stack_pushr(mpc_stack_t* s, mpc_result_t x, int r) {
   s->results_num++;
   mpc_stack_results_reserve_more(s);
-  s->results[s->results_num-1] = *x;
-  s->returns[s->results_num-1] = r; 
+  s->results[s->results_num-1] = x;
+  s->returns[s->results_num-1] = r;
 }
 
 static int mpc_stack_popr(mpc_stack_t* s, mpc_result_t* x) {
@@ -751,7 +801,7 @@ static void mpc_stack_popr_out(mpc_stack_t* s, int n, mpc_dtor_t* ds) {
   mpc_result_t x;
   while (n) {
     mpc_stack_popr(s, &x);
-    ds[n](x.output);
+    ds[n-1](x.output);
     n--;
   }
 }
@@ -764,8 +814,20 @@ static void mpc_stack_popr_n(mpc_stack_t* s, int n) {
   }
 }
 
-static mpc_result_t* mpc_stack_results(mpc_stack_t* s) {
-  return s->results;
+static mpc_result_t* mpc_stack_results(mpc_stack_t* s, int n) {
+  return &s->results[s->results_num-n];
+}
+
+static mpc_val_t* mpc_stack_merger_out(mpc_stack_t* s, int n, mpc_afold_t f) {
+  mpc_val_t* x = f(n, (mpc_val_t**)(&s->results[s->results_num-n]));
+  mpc_stack_popr_n(s, n);
+  return x;
+}
+
+static mpc_err_t* mpc_stack_merger_err(mpc_stack_t* s, int n) {
+  mpc_err_t* x = mpc_err_or((mpc_err_t**)(&s->results[s->results_num-n]), n);
+  mpc_stack_popr_n(s, n);
+  return x;
 }
 
 /*
@@ -782,8 +844,8 @@ static mpc_result_t* mpc_stack_results(mpc_stack_t* s) {
 */
 
 #define MPC_RETURN(st, x) mpc_stack_set_state(stk, st); mpc_stack_pushp(stk, x); continue
-#define MPC_SUCCESS(x) mpc_stack_popp(stk, &p, &st); mpc_stack_pushr(stk, (mpc_result_t*)x, 1); continue
-#define MPC_FAILURE(x) mpc_stack_popp(stk, &p, &st); mpc_stack_pushr(stk, (mpc_result_t*)x, 0); continue
+#define MPC_SUCCESS(x) mpc_stack_popp(stk, &p, &st); mpc_stack_pushr(stk, mpc_result_out(x), 1); continue
+#define MPC_FAILURE(x) mpc_stack_popp(stk, &p, &st); mpc_stack_pushr(stk, mpc_result_err(x), 0); continue
 #define MPC_FUNCTION(x, f) if (f) { MPC_SUCCESS(x); } else { MPC_FAILURE(mpc_err_new_fail(i->filename, i->state, "Incorrect Input")); }
 
 int mpc_parse_input(mpc_input_t* i, mpc_parser_t* init, mpc_result_t* final) {
@@ -898,40 +960,47 @@ int mpc_parse_input(mpc_input_t* i, mpc_parser_t* init, mpc_result_t* final) {
         }
       
       case MPC_TYPE_MANY:
-        if (st == 0) { mpc_stack_pushr(stk, NULL, 1); MPC_RETURN(st+1, p->data.repeat.x); }
+        if (st == 0) { mpc_stack_pushr(stk, mpc_result_out(NULL), 1); MPC_RETURN(st+1, p->data.repeat.x); }
         if (st >  0) {
-          if (mpc_stack_popr(stk, &x) && mpc_stack_popr(stk, &y)) {
-            mpc_stack_pushr(stk, (mpc_result_t*)p->data.repeat.f(y.output, x.output), 1);
+          if (mpc_stack_popr(stk, &x)) {
+            mpc_stack_popr(stk, &y);
+            mpc_stack_pushr(stk, mpc_result_out(p->data.repeat.f(y.output, x.output)), 1);
             MPC_RETURN(st+1, p->data.repeat.x);
           } else {
+            mpc_stack_popr(stk, &y);
             mpc_err_delete(x.error);
             MPC_SUCCESS(y.output ? y.output : p->data.repeat.lf());
           }
         }
       
       case MPC_TYPE_MANY1:
-        if (st == 0) { mpc_stack_pushr(stk, NULL, 1); MPC_RETURN(st+1, p->data.repeat.x); }
+        if (st == 0) { mpc_stack_pushr(stk, mpc_result_out(NULL), 1); MPC_RETURN(st+1, p->data.repeat.x); }
         if (st >  0) {
-          if (mpc_stack_popr(stk, &x) && mpc_stack_popr(stk, &y)) {
-            mpc_stack_pushr(stk, (mpc_result_t*)p->data.repeat.f(y.output, x.output), 1);
+          if (mpc_stack_popr(stk, &x)) {
+            mpc_stack_popr(stk, &y);
+            mpc_stack_pushr(stk, mpc_result_out(p->data.repeat.f(y.output, x.output)), 1);
             MPC_RETURN(st+1, p->data.repeat.x);
           } else {
             if (st > 1) {
+              mpc_stack_popr(stk, &y);
               mpc_err_delete(x.error);
               MPC_SUCCESS(y.output);
             } else {
+              mpc_stack_popr(stk, &y);
               MPC_FAILURE(mpc_err_many1(x.error));
             }
           }
         }
       
       case MPC_TYPE_COUNT:
-        if (st == 0) { mpc_input_mark(i); mpc_stack_pushr(stk, NULL, 1); MPC_RETURN(st+1, p->data.repeat.x); }
+        if (st == 0) { mpc_input_mark(i); mpc_stack_pushr(stk, mpc_result_out(NULL), 1); MPC_RETURN(st+1, p->data.repeat.x); }
         if (st >  0) {
-          if (mpc_stack_popr(stk, &x) && mpc_stack_popr(stk, &y)) {
-            mpc_stack_pushr(stk, (mpc_result_t*)p->data.repeat.f(y.output, x.output), 1);
+          if (mpc_stack_popr(stk, &x)) {
+            mpc_stack_popr(stk, &y);
+            mpc_stack_pushr(stk, mpc_result_out(p->data.repeat.f(y.output, x.output)), 1);
             MPC_RETURN(st+1, p->data.repeat.x);
           } else {
+            mpc_stack_popr(stk, &y);
             if (st == (p->data.repeat.n+1)) {
               mpc_input_unmark(i);
               MPC_SUCCESS(y.output ? y.output : p->data.repeat.lf());
@@ -980,7 +1049,7 @@ int mpc_parse_input(mpc_input_t* i, mpc_parser_t* init, mpc_result_t* final) {
         if (st <= p->data.or.n) {
           if (mpc_stack_peekr(stk, &x)) { mpc_stack_popr(stk, &x); mpc_stack_popr_err(stk, st-1); MPC_SUCCESS(x.output); }
           if (st <  p->data.or.n) { MPC_RETURN(st+1, p->data.or.xs[st]); }
-          if (st == p->data.or.n) { t = mpc_err_or((mpc_err_t**)mpc_stack_results(stk), p->data.or.n); mpc_stack_popr_n(stk, st-1); MPC_FAILURE(t); }
+          if (st == p->data.or.n) { MPC_FAILURE(mpc_stack_merger_err(stk, p->data.or.n)); }
         }
       
       case MPC_TYPE_AND:
@@ -991,7 +1060,7 @@ int mpc_parse_input(mpc_input_t* i, mpc_parser_t* init, mpc_result_t* final) {
         if (st <= p->data.and.n) {
           if (!mpc_stack_peekr(stk, &x)) { mpc_input_rewind(i); mpc_stack_popr(stk, &x); mpc_stack_popr_out(stk, st-1, p->data.and.dxs); MPC_FAILURE(x.error); }
           if (st <  p->data.and.n) { MPC_RETURN(st+1, p->data.and.xs[st]); }
-          if (st == p->data.and.n) { mpc_input_unmark(i); t = p->data.and.f(p->data.and.n, (mpc_val_t**)mpc_stack_results(stk)); mpc_stack_popr_n(stk, st-1); MPC_SUCCESS(t); }
+          if (st == p->data.and.n) { mpc_input_unmark(i); MPC_SUCCESS(mpc_stack_merger_out(stk, p->data.and.n, p->data.and.f)); }
         }
       
       /* End */
