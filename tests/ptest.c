@@ -121,7 +121,7 @@ static void ptest_signal(int sig) {
   assert_err_num++;
   strcat(assert_err, assert_err_buff);
   
-  pt_color(RED); printf("Failed! \n\n%s\n", assert_err); pt_color(WHITE);
+  pt_color(WHITE); pt_color(RED); printf("Failed! \n\n%s\n", assert_err); pt_color(WHITE);
   
   printf("    | Stopping Execution.\n");
   fflush(stdout);
@@ -147,11 +147,13 @@ static void pt_title_case(char* output, const char* input) {
     } 
     
     if (space && output[i] >= 'a' && output[i] <= 'z') {
+      space = 0;
       output[i] = output[i] - 32;
       continue;
     }
     
     space = 0;
+    
   }
   
 }

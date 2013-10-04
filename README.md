@@ -16,7 +16,7 @@ Features
 --------
 
 * Type-Generic Parser Combinators
-* Lookahead Recursive Descent
+* Predictive Recursive Descent Parsers
 * Error Message Support
 * Regular Expression Support
 * Abstract Syntax Tree Support
@@ -39,7 +39,7 @@ The main advantages of _mpc_ over this are:
 View From the Top
 -----------------
 
-In this example I create a parser for a basic maths language. This function takes as input some mathematical expression and outputs an instance of `mpc_ast_t`.
+In this example I create a parser for a basic maths language. The function `parse_maths` takes as input some mathematical expression and outputs an instance of `mpc_ast_t`.
 
 ```c
 #include "mpc.h"
@@ -61,8 +61,9 @@ mpc_ast_t* parse_maths(const char* input) {
     Expr, Prod, Value, Maths);
   
   mpc_result_t r;  
-  if (!mpc_parse("parse_maths", input, Maths, &r)) {
+  if (!mpc_parse("<parse_maths>", input, Maths, &r)) {
     mpc_err_print(r.error);
+    mpc_err_delete(r.error);
     exit(EXIT_FAILURE);
   }
   
@@ -72,7 +73,7 @@ mpc_ast_t* parse_maths(const char* input) {
 }
 ```
 
-The output for some input like `(4 * 2 * 11 + 2) - 5` might look something like this
+If you were to input something like `"(4 * 2 * 11 + 2) - 5"` into this function the `mpc_ast_t` you get out would look something like this:
 
 ```c
 root:
@@ -109,10 +110,10 @@ The Parser Combinator type in _mpc_ is `mpc_parser_t`. This encodes a function t
 * * *
 
 ```c
-bool mpc_parse(const char* f, const char* s, mpc_parser_t* p, mpc_result_t* r);
+int mpc_parse(const char* f, const char* s, mpc_parser_t* p, mpc_result_t* r);
 ```
 
-This function returns `true` on success and `false` on failure. It takes as input some parser `p`, some input string `s`, and some filename `f`. It outputs into `r` the result of the parse - which is either a pointer to some data object, or an error. The type `mpc_result_t` is a union type defined as follows.
+This function returns `1` on success and `0` on failure. It takes as input some parser `p`, some input string `s`, and some filename `f`. It outputs into `r` the result of the parse - which is either a pointer to some data object, or an error. The type `mpc_result_t` is a union type defined as follows.
 
 ```c
 typedef union {
@@ -121,7 +122,23 @@ typedef union {
 } mpc_result_t;
 ```
 
-where `mpc_val_t` is synonymous with `void*` and simply represents some pointer to data - the exact type of which is dependant on the parser.
+where `mpc_val_t` is synonymous with `void*` and simply represents some pointer to data - the exact type of which is dependant on the parser. Some variations on the above also exist.
+
+* * *
+
+```c
+int mpc_parse_file(const char* filename, FILE* f, mpc_parser_t* p, mpc_result_t* r);
+```
+
+Parses the contents of file `f` with parser `p` and returns the result in `r`. Again returns `1` on success and `0` on failure.
+
+* * *
+
+```c
+int mpc_parse_filename(const char* filename, mpc_parser_t* p, mpc_result_t* r);
+```
+
+Opens file `filename` and parsers contents with `p`. Returns result in `r`. Returns `1` on success and `0` on failure;
 
 
 Basic Parsers
@@ -129,7 +146,7 @@ Basic Parsers
 
 ### String Parsers
 
-All the following functions return basic parsers. All of those parsers return strings with the character(s) they manage to match. They have the following functionality.
+All the following functions return basic parsers. All of those parsers return strings with the character(s) they manage to match or an error on failure. They have the following functionality.
 
 * * * 
 
@@ -145,7 +162,7 @@ Matches any single character
 mpc_parser_t* mpc_char(char c);
 ```
 
-Matches a single character `c`
+Matches a single given character `c`
 
 * * *
 
@@ -153,7 +170,7 @@ Matches a single character `c`
 mpc_parser_t* mpc_range(char s, char e);
 ```
 
-Matches any single character in the range `s` to `e` (inclusive)
+Matches any single given character in the range `s` to `e` (inclusive)
 
 * * *
 
@@ -161,22 +178,22 @@ Matches any single character in the range `s` to `e` (inclusive)
 mpc_parser_t* mpc_oneof(const char* s);
 ```
 
-Matches any single character in the string  `s`
+Matches any single given character in the string  `s`
 
 * * *
 
 ```c
 mpc_parser_t* mpc_noneof(const char* s);
 ```
-Matches any single character not in the string `s`
+Matches any single given character not in the string `s`
 
 * * *
 
 ```c
-mpc_parser_t* mpc_satisfy(bool(*f)(char));
+mpc_parser_t* mpc_satisfy(int(*f)(char));
 ```
 
-Matches any single character satisfying function `f`
+Matches any single given character satisfying function `f`
 
 * * *
 
@@ -197,7 +214,7 @@ Several other functions exist that return basic parsers with some other special 
 mpc_parser_t* mpc_pass(void);
 ```
 
-Consumes no input, always successful, always returns `NULL`
+Consumes no input, always successful, returns `NULL`
 
 * * *
 
@@ -213,7 +230,7 @@ Consumes no input, always fails with message `m`.
 mpc_parser_t* mpc_lift(mpc_lift_t f);
 ```
 
-Consumes no input, always successful, always returns the result of function `f`
+Consumes no input, always successful, returns the result of function `f`
 
 * * *
 
@@ -221,13 +238,13 @@ Consumes no input, always successful, always returns the result of function `f`
 mpc_parser_t* mpc_lift_val(mpc_val_t* x);
 ```
 
-Consumes no input, always successful, always returns `x`
+Consumes no input, always successful, returns `x`
 
 
 Combinators
 -----------
 
-Combinators are functions that take one or more parsers and return a new parser. These combinators work independent of what exactly those input parsers return on success. In languages such as Haskell ensuring you don't input one type of data into a parser requiring a different type of data is done by the compiler. But in C we don't have that luxury. So it is at the discretion of the programmer to ensure that he or she deals correctly with the outputs of different parser types.
+Combinators are functions that take one or more parsers and return a new parser. These combinators work independent of exactly what data type those input parsers return on success. In languages such as Haskell ensuring you don't input one type of data into a parser requiring a different type of data is done by the compiler. But in C we don't have that luxury. So it is at the discretion of the programmer to ensure that he or she deals correctly with the outputs of different parser types.
 
 A second annoyance in C is that of manual memory management. Some parsers might get half-way and then fail. This means they need to clean up any partial data that has been collected in the parse. In Haskell this is handled by the Garbage Collector, but in C these combinators will need to take _destructor_ functions as input, which say how clean up any partial data that has been collected.
 
@@ -256,7 +273,9 @@ Returns a parser that applies function `f` (optionality taking extra input `x`) 
 mpc_parser_t* mpc_predict(mpc_parser_t* a);
 ```
 
-Returns a parser that runs `a` with backtracking disabled. This means if `a` consumes any input, it will not be reverted. Turning backtracking off has good performance benefits for grammars which are `LL(1)`. These are grammars where the first character completely determines the parse result - such as the decision of parsing either a C identifier, number, or string literal.
+Returns a parser that runs `a` with backtracking disabled. This means if `a` consumes any input, it will not be reverted, even on failure. Turning backtracking off has good performance benefits for grammars which are `LL(1)`. These are grammars where the first character completely determines the parse result - such as the decision of parsing either a C identifier, number, or string literal. This option should not be used for non `LL(1)` grammars or it will produce incorrect results or crash the parser.
+
+Another way to think of `mpc_predict` is that it can be applied to a parser (for a performance improvement) if either successfully parsing the first character will result in a completely successful parse, or all of the referenced sub-parsers are also `LL(1)`.
 
 * * *
 
@@ -265,7 +284,7 @@ mpc_parser_t* mpc_not(mpc_parser_t* a, mpc_dtor_t da);
 mpc_parser_t* mpc_not_else(mpc_parser_t* a, mpc_dtor_t da, mpc_lift_t lf);
 ```
 
-Returns a parser with the following behaviour. If parser `a` succeeds, the it fails and consumes no input. If parser `a` fails, then it succeeds, consumes no input and returns `NULL` (or the result of lift function `lf`). Destructor `da` is used to destroy the result of `a` on success.
+Returns a parser with the following behaviour. If parser `a` succeeds, then it fails and consumes no input. If parser `a` fails, then it succeeds, consumes no input and returns `NULL` (or the result of lift function `lf`). Destructor `da` is used to destroy the result of `a` on success.
 
 * * *
 
@@ -420,7 +439,8 @@ char* parse_ident(char* input) {
   mpc_result_t r;  
   if (!mpc_parse("parse_ident", input, ident, &r)) {
     mpc_err_print(r.error);
-    abort();
+    mpc_err_delete(r.error);
+    exit(EXIT_FAILURE);
   }
   
   mpc_delete(ident);
@@ -435,9 +455,11 @@ Note that only `ident` must be deleted. This is because in referencing other par
 Self Reference
 --------------
 
-Building parsers in the above way can have issues with self reference and left handed recursion.
+Building parsers in the above way can have issues with self-reference or cyclic-reference.
 
 To overcome this we can separate the construction of parsers into two different steps. Construction and Definition.
+
+Note that _mpc_ does not detect [left-recursive grammars](http://en.wikipedia.org/wiki/Left_recursion). These will go into an infinite loop when they attempt to parse input, and so should specified instead in right-recursive form.
 
 * * *
 
@@ -642,11 +664,29 @@ A cute thing about this is that it uses previous parts of the library to parse t
 Abstract Syntax Tree
 --------------------
 
-For those that really do not care what data they get out a basic abstract syntax tree type `mpc_ast_t` has been included. Along with this are included some combinator functions which work specifically on this type. They reside under `mpca_*` and you will notice they do not require fold functions or destructors to be specified.
+One can avoid passing in and around all those clumbsy function pointer if they don't care what type is output by _mpc_. For this generic Abstract Syntax Tree type `mpc_ast_t` is included. The combinator functions which act on this don't need information on how to destruct instances of the result as they know it will be a `mpc_ast_t`. So there are a number of combinator functions which work specifically (and only) on this type. They reside under `mpca_*`.
 
-Doing things via this method means that all the data processing must take place after the parsing - but to many this will be preferable. It also allows for one more trick...
+Doing things via this method means that all the data processing must take place after the parsing - but to many this will be preferable.
 
-If all the fold and destructor functions are implicit then the user can simply specify the grammar in some nice way and the system can try to build an AST for them from this alone.
+It also allows for one more trick. As all the fold and destructor functions are implicit then the user can simply specify the grammar of the language in some nice way and the system can try to build an AST for them from this alone. For this there are two functions supplied which take in a string and output a parser. The format for these grammars is simple and familar to those who have used parser generators before. It looks something like this.
+
+```
+expression : <product> (('+' | '-') <product>)*;
+
+product : <value>   (('*' | '/')   <value>)*;
+
+value : /[0-9]+/ | '(' <expression> ')';
+
+maths : /^/ <expression> /$/;
+```
+
+String literals are surrounded in double quotes `"`. Character literals in single quotes `'` and regex literals in slashes `/`. References to other parsers are surrounded in braces `<>` and referred to by name.
+
+Parts specified one after another are parsed in order (like `mpc_and`), while parts separated by a pipe `|` are alternatives (like `mpc_or`). Parenthesis `()` are used to specify precidence. `*` can be used to mean zero or more of. `+` for one or more of. `?` for zero or one of. And a number inside braces `{5}` to mean N counts of.
+
+Rules are specified by rule name followed by a colon `:`, followed by the definition, and ending in a semicolon `;`.
+
+In a cute bootstrapping this user input is parsed by existing parts of the _mpc_ library. It provides one of the more powerful features of the library.
 
 * * *
 
@@ -654,5 +694,29 @@ If all the fold and destructor functions are implicit then the user can simply s
 mpc_parser_t* mpca_grammar(const char* grammar, ...);
 ```
 
-This can be used to do exactly that. It takes in some grammar, as well as a list of named parsers - and outputs a parser that does exactly what is specified.
+This takes in some single right hand side of a rule, as well as a list of any of the parsers it refers to, and outputs a parser that does exactly what is specified by the rule.
+
+* * *
+
+```c
+mpc_err_t* mpca_lang(const char* lang, ...);
+```
+
+This takes in a full language (one or more rules) as well as any parsers referred to by either the right or left hand sides. Any parsers specified on the left hand side of any rule will be assigned a parser equivalent to what is specified on the right. On valid user input this returns `NULL`, while if there are any errors in the user input it will return an instance of `mpc_err_t` describing the issues.
+
+
+Error Reporting
+---------------
+
+_mpc_ provides some automatic generation of error messages. These can be enhanced by the user by use of `mpc_expect` but even many of the defaults should provide both useful and readable. An example of an error message might look something like this:
+
+```
+<test>:0:3: error: expected one or more of 'a' or 'd' at 'k'
+```
+
+
+
+
+
+
 

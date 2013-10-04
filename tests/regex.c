@@ -26,6 +26,7 @@ void test_regex_basic(void) {
   PT_ASSERT(mpc_match(re2, "abc", "abc", string_eq, free, string_print));
   PT_ASSERT(mpc_match(re2, "abcabab", "abcabab", string_eq, free, string_print));
   PT_ASSERT(mpc_match(re2, "abcababd", "abcabab", string_eq, free, string_print));
+  PT_ASSERT(mpc_match(re5, "abck", "", string_eq, free, string_print));
   
   mpc_delete(re0);
   mpc_delete(re1);
