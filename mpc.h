@@ -102,7 +102,7 @@ mpc_parser_t* mpc_string(const char* s);
 mpc_parser_t* mpc_expect(mpc_parser_t* a, const char* expected);
 mpc_parser_t* mpc_apply(mpc_parser_t* a, mpc_apply_t f);
 mpc_parser_t* mpc_apply_to(mpc_parser_t* a, mpc_apply_to_t f, void* x);
-mpc_parser_t* mpc_predict(mpc_parser_t* a);
+mpc_parser_t* mpc_predictive(mpc_parser_t* a);
 mpc_parser_t* mpc_not(mpc_parser_t* a, mpc_dtor_t da);
 mpc_parser_t* mpc_not_else(mpc_parser_t* a, mpc_dtor_t da, mpc_lift_t lf);
 mpc_parser_t* mpc_maybe(mpc_parser_t* a);

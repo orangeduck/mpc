@@ -1,7 +1,7 @@
 #include "mpc.h"
 
-#ifndef snprintf
-int snprintf(char* str, size_t size, const char* fmt, ...) {
+#ifndef _WIN32
+static int snprintf(char* str, size_t size, const char* fmt, ...) {
   int x;
   va_list va;
   va_start(va, fmt);
@@ -9,10 +9,8 @@ int snprintf(char* str, size_t size, const char* fmt, ...) {
   va_end(va);
   return x;
 }
-#endif
 
-#ifndef vsnprintf
-int vsnprintf(char* str, size_t size, const char* fmt, va_list args) {
+static int vsnprintf(char* str, size_t size, const char* fmt, va_list args) {
   return vsprintf(str, fmt, args);
 }
 #endif
@@ -339,77 +337,236 @@ char mpc_err_unexpected(mpc_err_t* x) {
 ** Input Type
 */
 
+/*
+** In mpc the input type has three modes of 
+** operation: String, File and Pipe.
+**
+** String is easy. The whole contents are 
+** loaded into a buffer and scanned through.
+** The cursor can jump around at will making 
+** backtracking easy.
+**
+** The second is a File which is also somewhat
+** easy. The contents are never loaded into 
+** memory but backtracking can still be achieved
+** by seeking in the file at different positions.
+**
+** The final mode is Pipe. This is the difficult
+** one. As we assume pipes cannot be seeked - and 
+** only support a single character lookahead at 
+** any point where the input is marked for a 
+** potential backtracking we start buffering any 
+** input.
+**
+** This means that if we are requested to seek
+** back we can simply start reading from the
+** buffer instead of the input.
+**
+** Of course using `mpc_predictive` will disable
+** backtracking and make LL(1) grammars easy
+** to parse for all input methods.
+**
+*/
+
+enum {
+  MPC_INPUT_STRING = 0,
+  MPC_INPUT_FILE   = 1,
+  MPC_INPUT_PIPE   = 2
+};
+
 typedef struct {
 
   char* filename;
-  char* str;
+  int type;
+  
   mpc_state_t state;
+
+  char* str;
+  FILE* file;
   
   int backtrack;
   int marks_num;
-  mpc_state_t* marks;
+  mpc_state_t* marks_state;
+  char** marks_buff;
   
 } mpc_input_t;
 
-static mpc_input_t* mpc_input_new(const char* filename, const char* str) {
+static mpc_input_t* mpc_input_new_string(const char* filename, const char* str) {
 
   mpc_input_t* i = malloc(sizeof(mpc_input_t));
+  
+  i->filename = malloc(strlen(filename) + 1);
+  strcpy(i->filename, filename);
+  i->type = MPC_INPUT_STRING;
+  
+  i->state = mpc_state_null();
+  
   i->str = malloc(strlen(str) + 1);
   strcpy(i->str, str);
+  i->buffer = NULL;
+  i->file = NULL;
+  
+  i->backtrack = 1;
+  i->marks_num = 0;
+  i->marks_state = NULL;
+  i->marks_buff = NULL;
+  
+  return i;
+}
+
+static mpc_input_t* mpc_input_new_file(const char* filename, FILE* f) {
+  
+  mpc_input_t* i = malloc(sizeof(mpc_input_t));
   
   i->filename = malloc(strlen(filename) + 1);
   strcpy(i->filename, filename);
   
-  i->state.next = i->str[0];
-  i->state.last = '\0';
-  i->state.pos = 0;
-  i->state.row = 0;
-  i->state.col = 0;
+  if (fseek(f, 0, SEEK_CUR) != 0) {
+    i->type = MPC_INPUT_PIPE;
+  } else {
+    i->type = MPC_INPUT_FILE;
+  }
+  
+  i->state = mpc_state_null();
+  
+  i->str = NULL;
+  i->buffer = NULL;
+  i->file = f;
   
   i->backtrack = 1;
   i->marks_num = 0;
   i->marks = NULL;
   
-  return i;
+  
 }
 
 static void mpc_input_delete(mpc_input_t* i) {
+  
+  int j;
   free(i->filename);
-  free(i->str);
-  free(i->marks);
+  
+  if (i->type == MPC_INPUT_STRING) { free(i->str); }
+  if (i->type == MPC_INPUT_PIPE) { free(i->buffer); }
+  
+  free(i->marks)
   free(i);
 }
 
-static void mpc_input_backtrack_disable(mpc_input_t* i) {
-  i->backtrack = 0;
-}
-
-static void mpc_input_backtrack_enable(mpc_input_t* i) {
-  i->backtrack = 1;
-}
+static void mpc_input_backtrack_disable(mpc_input_t* i) { i->backtrack = 0; }
+static void mpc_input_backtrack_enable(mpc_input_t* i) { i->backtrack = 1; }
 
 static void mpc_input_mark(mpc_input_t* i) {
+  
   if (!i->backtrack) { return; }
+  
   i->marks_num++;
   i->marks = realloc(i->marks, sizeof(mpc_state_t) * i->marks_num);
   i->marks[i->marks_num-1] = i->state;
+  
+  if (i->type == MPC_INPUT_PIPE && i->marks_num == 1) {
+    i->buffer = calloc(1, 1);
+  }
+  
 }
 
 static void mpc_input_unmark(mpc_input_t* i) {
+  
   if (!i->backtrack) { return; }
+  
   i->marks_num--;
   i->marks = realloc(i->marks, sizeof(mpc_state_t) * i->marks_num);
+  
+  if (i->type == MPC_INPUT_PIPE && i->marks_num == 0) {
+    free(i->buffer);
+    i->buffer = NULL;
+  }
+  
 }
 
 static void mpc_input_rewind(mpc_input_t* i) {
+  
   if (!i->backtrack) { return; }
+  
   i->state = i->marks[i->marks_num-1];
+  
+  if (i->type == MPC_INPUT_FILE) {
+    fseek(f, i->state.pos, SEEK_SET);
+  }
+  
   mpc_input_unmark(i);
 }
 
-static int mpc_input_next(mpc_input_t* i, char** o) {
+static int mpc_input_buffer_in_range(mpc_input_t* i) {
+  return i->state.pos < (strlen(i->buffer) + i->marks[0].state.pos);
+}
 
-  i->state.last = i->str[i->state.pos];
+static char mpc_input_buffer_get(mpc_input_t* i) {
+  return i->buffer[i->state.pos - i->marks[0].state.pos];
+}
+
+static int mpc_input_eoi(mpc_input_t* i) {
+  if (i->type == MPC_INPUT_STRING && i->state.pos == strlen(i->str)) { return 1; }
+  if (i->type == MPC_INPUT_FILE && feof(i->file)) { return 1; }
+  if (i->type == MPC_INPUT_PIPE && feof(i->file)) { return 1; }
+  return 0;
+}
+
+static int mpc_input_soi(mpc_input_t* i) {
+  if (i->state.pos == 0) { return 1; }
+  return 0;
+}
+
+static char mpc_input_getc(mpc_input_t* i) {
+  
+  char c;
+  switch (i->type) {
+    
+    case MPC_INPUT_STRING: c = i->str[i->state.pos]; break;
+    case MPC_INPUT_FILE: c = fgetc(i->file); break;
+    case MPC_INPUT_PIPE:
+    
+      if (!i->buffer) { c = getc(i->file); }
+      
+      if (i->buffer && mpc_input_buffer_in_range(i)) {
+        c = mpc_input_buffer_get(i);
+      } else {
+        c = getc(i->file);
+      }
+    
+    break;
+    
+  }
+  
+  return c;
+
+}
+
+static void mpc_input_ungetc(mpc_input_t* i) {
+  switch (i->type) {
+    case MPC_INPUT_STRING: break;
+    case MPC_INPUT_FILE: fseek(i->file, -1, SEEK_CUR); break;
+    case MPC_INPUT_PIPE: ungetc(i->file, c); break;
+  }
+}
+
+static int mpc_input_failure(mpc_input_t* i, char c, char** o) {
+  *o = NULL;
+  i->state.next = c;
+  return 0;
+}
+
+static int mpc_input_success(mpc_input_t* i, char c, char** o) {
+  
+  if (i->type == MPC_INPUT_PIPE &&
+      i->buffer &&
+      !mpc_input_buffer_in_range(i)) {
+    
+    i->buffer = realloc(strlen(i->buffer) + 2);
+    i->buffer[strlen(i->buffer) + 1] = '\0';
+    i->buffer[strlen(i->buffer) + 0] = c;
+  }
+
+  i->state.last = c;
   i->state.pos++;
   i->state.col++;
   
@@ -419,33 +576,26 @@ static int mpc_input_next(mpc_input_t* i, char** o) {
   }
   
   (*o) = malloc(2);
-  (*o)[0] = i->state.last;
+  (*o)[0] = c;
   (*o)[1] = '\0';
   return 1;
-
+  
 }
 
 static int mpc_input_any(mpc_input_t* i, char** o) {
-
-  if (i->state.pos >= strlen(i->str)) { i->state.next = '\0'; return 0; }
-  if (i->str[i->state.pos] == '\0') {
-    i->state.next = i->str[i->state.pos];
-    return 0;
-  }
-
-  return mpc_input_next(i, o);
-  
+  if (mpc_input_eoi(i)) { return mpc_input_failure(i, '\0', o); }
+  return mpc_input_update(i, mpc_input_getc(i), o);
 }
 
 static int mpc_input_char(mpc_input_t* i, char c, char** o) {
   
-  if (i->state.pos >= strlen(i->str)) { i->state.next = '\0'; return 0; }
-  if (i->str[i->state.pos] != c) {
-    i->state.next = i->str[i->state.pos];
-    return 0; 
-  }
+  char x;
+  if (mpc_input_eoi(i)) { return mpc_input_failure(i, '\0', o); }
   
-  return mpc_input_next(i, o);
+  x = mpc_input_getc(i);
+  if (x != c) { mpc_input_ungetc(i); return mpc_input_failure(i, x, o); }
+  
+  return mpc_input_success(i, x, o);
 
 }
 
@@ -659,8 +809,8 @@ static void mpc_stack_delete(mpc_stack_t* s) {
 
 static int mpc_stack_terminate(mpc_stack_t* s, mpc_result_t* r) {
   int ret;
-  if (s->parsers_num != 0) { fprintf(stderr, "Still Parsers on stack!\n"); abort(); }
-  if (s->results_num != 1) { fprintf(stderr, "Still Results on stack!\n"); abort(); }
+  if (s->parsers_num != 0) { fprintf(stderr, "Fatal Error: Still Parsers on stack!\n"); abort(); }
+  if (s->results_num != 1) { fprintf(stderr, "Fatal Error: Still Results on stack!\n"); abort(); }
   *r = s->results[0];
   ret = s->returns[0];
   mpc_stack_delete(s);
@@ -844,9 +994,10 @@ static mpc_err_t* mpc_stack_merger_err(mpc_stack_t* s, int n) {
 ** When this function was written in recursive form
 ** it looked pretty nice. But I've since switched
 ** it around to an akward while loop. It was an
-** unfortunate change but in the name of performance
-** (and not smashing the stack).
+** unfortunate change but if was a noble attempt
+** in the name of performance (and not smashing the stack).
 **
+** But it is now a pretty ugly beast...
 */
 
 #define MPC_RETURN(st, x) mpc_stack_set_state(stk, st); mpc_stack_pushp(stk, x); continue
@@ -875,10 +1026,9 @@ int mpc_parse_input(mpc_input_t* i, mpc_parser_t* init, mpc_result_t* final) {
     
     switch (p->type) {
       
-      case MPC_TYPE_UNDEFINED:  MPC_FAILURE(mpc_err_new_fail(i->filename, i->state, "Parser Undefined!"));
-    
       /* Trivial Parsers */
-      
+
+      case MPC_TYPE_UNDEFINED:  MPC_FAILURE(mpc_err_new_fail(i->filename, i->state, "Parser Undefined!"));      
       case MPC_TYPE_PASS:       MPC_SUCCESS(NULL);
       case MPC_TYPE_FAIL:       MPC_FAILURE(mpc_err_new_fail(i->filename, i->state, p->data.fail.m));
       case MPC_TYPE_LIFT:       MPC_SUCCESS(p->data.lift.lf());
@@ -888,7 +1038,6 @@ int mpc_parse_input(mpc_input_t* i, mpc_parser_t* init, mpc_result_t* final) {
 
       case MPC_TYPE_SOI:        MPC_FUNCTION(NULL, mpc_input_soi(i));
       case MPC_TYPE_EOI:        MPC_FUNCTION(NULL, mpc_input_eoi(i));
-
       case MPC_TYPE_ANY:        MPC_FUNCTION(s, mpc_input_any(i, &s));
       case MPC_TYPE_SINGLE:     MPC_FUNCTION(s, mpc_input_char(i, p->data.single.x, &s));
       case MPC_TYPE_RANGE:      MPC_FUNCTION(s, mpc_input_range(i, p->data.range.x, p->data.range.y, &s));
@@ -1510,7 +1659,7 @@ mpc_parser_t* mpc_apply_to(mpc_parser_t* a, mpc_apply_to_t f, void* x) {
   return p;
 }
 
-mpc_parser_t* mpc_predict(mpc_parser_t* a) {
+mpc_parser_t* mpc_predictive(mpc_parser_t* a) {
   mpc_parser_t* p = mpc_undefined();
   p->type = MPC_TYPE_PREDICT;
   p->data.predict.x = a;
@@ -1800,7 +1949,7 @@ mpc_parser_t* mpc_tok_squares(mpc_parser_t* a, mpc_dtor_t ad)  { return mpc_tok_
 **
 **  ### Regular Expression Grammar
 **
-**      <regex> : (<term> "|" <regex>) | <term>
+**      <regex> : <term> | (<term> "|" <regex>)
 **     
 **      <term> : <factor>*
 **
@@ -1988,7 +2137,7 @@ mpc_parser_t* mpc_re(const char* re) {
     mpc_re_range
   ));
   
-  RegexEnclose = mpc_enclose(mpc_predict(Regex), (mpc_dtor_t)mpc_delete);
+  RegexEnclose = mpc_enclose(mpc_predictive(Regex), (mpc_dtor_t)mpc_delete);
   
   if(!mpc_parse("<mpc_re_compiler>", re, RegexEnclose, &r)) {
     err_msg = mpc_err_string_new(r.error);
@@ -2839,7 +2988,7 @@ mpc_parser_t* mpca_grammar_st(const char* grammar, mpca_grammar_st_t* st) {
   Base = mpc_new("base");
   
   mpc_define(GrammarTotal,
-    mpc_apply(mpc_predict(mpc_total(Grammar, mpc_soft_delete)), mpcf_make_root)
+    mpc_apply(mpc_predictive(mpc_total(Grammar, mpc_soft_delete)), mpcf_make_root)
   );
   
   mpc_define(Grammar, mpc_also(
@@ -2990,7 +3139,7 @@ static mpc_err_t* mpca_lang_st(const char* language, mpca_grammar_st_t* st) {
   Base = mpc_new("base");
   
   mpc_define(Lang, mpc_apply_to(
-    mpc_total(mpc_predict(mpc_many(Stmt, mpca_stmt_fold)), mpca_stmt_list_delete),
+    mpc_total(mpc_predictive(mpc_many(Stmt, mpca_stmt_fold)), mpca_stmt_list_delete),
     mpca_stmt_list_apply_to, st
   ));
   

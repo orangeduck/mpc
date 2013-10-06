@@ -270,12 +270,12 @@ Returns a parser that applies function `f` (optionality taking extra input `x`) 
 * * *
 
 ```c
-mpc_parser_t* mpc_predict(mpc_parser_t* a);
+mpc_parser_t* mpc_predictive(mpc_parser_t* a);
 ```
 
 Returns a parser that runs `a` with backtracking disabled. This means if `a` consumes any input, it will not be reverted, even on failure. Turning backtracking off has good performance benefits for grammars which are `LL(1)`. These are grammars where the first character completely determines the parse result - such as the decision of parsing either a C identifier, number, or string literal. This option should not be used for non `LL(1)` grammars or it will produce incorrect results or crash the parser.
 
-Another way to think of `mpc_predict` is that it can be applied to a parser (for a performance improvement) if either successfully parsing the first character will result in a completely successful parse, or all of the referenced sub-parsers are also `LL(1)`.
+Another way to think of `mpc_predictive` is that it can be applied to a parser (for a performance improvement) if either successfully parsing the first character will result in a completely successful parse, or all of the referenced sub-parsers are also `LL(1)`.
 
 * * *
 

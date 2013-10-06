@@ -4,7 +4,4 @@
 
 - Find some good demo grammars to show
 
-- Use while loop instead of recursion in parse function
 - Support for stream based input
-
-- Make RE stuff predictive where possible
