@@ -4,4 +4,3 @@
 
 - Find some good demo grammars to show
 
-- Support for stream based input

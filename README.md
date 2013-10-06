@@ -110,10 +110,10 @@ The Parser Combinator type in _mpc_ is `mpc_parser_t`. This encodes a function t
 * * *
 
 ```c
-int mpc_parse(const char* f, const char* s, mpc_parser_t* p, mpc_result_t* r);
+int mpc_parse(const char* filename, const char* string, mpc_parser_t* p, mpc_result_t* r);
 ```
 
-This function returns `1` on success and `0` on failure. It takes as input some parser `p`, some input string `s`, and some filename `f`. It outputs into `r` the result of the parse - which is either a pointer to some data object, or an error. The type `mpc_result_t` is a union type defined as follows.
+This function returns `1` on success and `0` on failure. It takes as input some parser `p`, some input `string`, and some `filename`. It outputs into `r` the result of the parse - which is either a pointer to some data object, or an error. The type `mpc_result_t` is a union type defined as follows.
 
 ```c
 typedef union {
@@ -127,15 +127,15 @@ where `mpc_val_t` is synonymous with `void*` and simply represents some pointer 
 * * *
 
 ```c
-int mpc_parse_file(const char* filename, FILE* f, mpc_parser_t* p, mpc_result_t* r);
+int mpc_fparse(const char* filename, FILE* file, mpc_parser_t* p, mpc_result_t* r);
 ```
 
-Parses the contents of file `f` with parser `p` and returns the result in `r`. Again returns `1` on success and `0` on failure.
+Parses the contents of `file` with parser `p` and returns the result in `r`. Returns `1` on success and `0` on failure. This is also the correct method to parse input from pipes or streams.
 
 * * *
 
 ```c
-int mpc_parse_filename(const char* filename, mpc_parser_t* p, mpc_result_t* r);
+int mpc_fparse_contents(const char* filename, mpc_parser_t* p, mpc_result_t* r);
 ```
 
 Opens file `filename` and parsers contents with `p`. Returns result in `r`. Returns `1` on success and `0` on failure;

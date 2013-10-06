@@ -49,9 +49,9 @@ typedef union {
 struct mpc_parser_t;
 typedef struct mpc_parser_t mpc_parser_t;
 
-int mpc_parse(const char* filename, const char* s, mpc_parser_t* p, mpc_result_t* r);
-int mpc_parse_file(const char* filename, FILE* f, mpc_parser_t* p, mpc_result_t* r);
-int mpc_parse_filename(const char* filename, mpc_parser_t* p, mpc_result_t* r);
+int mpc_parse(const char* filename, const char* string, mpc_parser_t* p, mpc_result_t* r);
+int mpc_fparse(const char* filename, FILE* file, mpc_parser_t* p, mpc_result_t* r);
+int mpc_fparse_contents(const char* filename, mpc_parser_t* p, mpc_result_t* r);
 
 /*
 ** Function Types

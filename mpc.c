@@ -228,16 +228,8 @@ static mpc_err_t* mpc_err_either(mpc_err_t* x, mpc_err_t* y) {
   
   int i;
 
-  if (x->state.pos > y->state.pos) {
-    mpc_err_delete(y);
-    return x;
-  }
-  
-  if (x->state.pos < y->state.pos) {
-    mpc_err_delete(x);
-    return y;
-  }
-  
+  if (x->state.pos > y->state.pos) { mpc_err_delete(y); return x; }
+  if (x->state.pos < y->state.pos) { mpc_err_delete(x); return y; }
   if (x->state.pos == y->state.pos) {  
     
     for (i = 0; i < y->expected_num; i++) {
@@ -380,18 +372,18 @@ typedef struct {
   int type;
   
   mpc_state_t state;
-
-  char* str;
+  
+  char* string;
+  char* buffer;
   FILE* file;
   
   int backtrack;
   int marks_num;
-  mpc_state_t* marks_state;
-  char** marks_buff;
+  mpc_state_t* marks;
   
 } mpc_input_t;
 
-static mpc_input_t* mpc_input_new_string(const char* filename, const char* str) {
+static mpc_input_t* mpc_input_new_string(const char* filename, const char* string) {
 
   mpc_input_t* i = malloc(sizeof(mpc_input_t));
   
@@ -401,27 +393,26 @@ static mpc_input_t* mpc_input_new_string(const char* filename, const char* str) 
   
   i->state = mpc_state_null();
   
-  i->str = malloc(strlen(str) + 1);
-  strcpy(i->str, str);
+  i->string = malloc(strlen(string) + 1);
+  strcpy(i->string, string);
   i->buffer = NULL;
   i->file = NULL;
   
   i->backtrack = 1;
   i->marks_num = 0;
-  i->marks_state = NULL;
-  i->marks_buff = NULL;
+  i->marks = NULL;
   
   return i;
 }
 
-static mpc_input_t* mpc_input_new_file(const char* filename, FILE* f) {
+static mpc_input_t* mpc_input_new_file(const char* filename, FILE* file) {
   
   mpc_input_t* i = malloc(sizeof(mpc_input_t));
   
   i->filename = malloc(strlen(filename) + 1);
   strcpy(i->filename, filename);
   
-  if (fseek(f, 0, SEEK_CUR) != 0) {
+  if (fseek(file, 0, SEEK_CUR) != 0) {
     i->type = MPC_INPUT_PIPE;
   } else {
     i->type = MPC_INPUT_FILE;
@@ -429,15 +420,15 @@ static mpc_input_t* mpc_input_new_file(const char* filename, FILE* f) {
   
   i->state = mpc_state_null();
   
-  i->str = NULL;
+  i->string = NULL;
   i->buffer = NULL;
-  i->file = f;
+  i->file = file;
   
   i->backtrack = 1;
   i->marks_num = 0;
   i->marks = NULL;
   
-  
+  return i;
 }
 
 static void mpc_input_delete(mpc_input_t* i) {
@@ -445,10 +436,10 @@ static void mpc_input_delete(mpc_input_t* i) {
   int j;
   free(i->filename);
   
-  if (i->type == MPC_INPUT_STRING) { free(i->str); }
+  if (i->type == MPC_INPUT_STRING) { free(i->string); }
   if (i->type == MPC_INPUT_PIPE) { free(i->buffer); }
   
-  free(i->marks)
+  free(i->marks);
   free(i);
 }
 
@@ -490,22 +481,22 @@ static void mpc_input_rewind(mpc_input_t* i) {
   i->state = i->marks[i->marks_num-1];
   
   if (i->type == MPC_INPUT_FILE) {
-    fseek(f, i->state.pos, SEEK_SET);
+    fseek(i->file, i->state.pos, SEEK_SET);
   }
   
   mpc_input_unmark(i);
 }
 
 static int mpc_input_buffer_in_range(mpc_input_t* i) {
-  return i->state.pos < (strlen(i->buffer) + i->marks[0].state.pos);
+  return i->state.pos < (strlen(i->buffer) + i->marks[0].pos);
 }
 
 static char mpc_input_buffer_get(mpc_input_t* i) {
-  return i->buffer[i->state.pos - i->marks[0].state.pos];
+  return i->buffer[i->state.pos - i->marks[0].pos];
 }
 
 static int mpc_input_eoi(mpc_input_t* i) {
-  if (i->type == MPC_INPUT_STRING && i->state.pos == strlen(i->str)) { return 1; }
+  if (i->type == MPC_INPUT_STRING && i->state.pos == strlen(i->string)) { return 1; }
   if (i->type == MPC_INPUT_FILE && feof(i->file)) { return 1; }
   if (i->type == MPC_INPUT_PIPE && feof(i->file)) { return 1; }
   return 0;
@@ -521,7 +512,7 @@ static char mpc_input_getc(mpc_input_t* i) {
   char c;
   switch (i->type) {
     
-    case MPC_INPUT_STRING: c = i->str[i->state.pos]; break;
+    case MPC_INPUT_STRING: c = i->string[i->state.pos]; break;
     case MPC_INPUT_FILE: c = fgetc(i->file); break;
     case MPC_INPUT_PIPE:
     
@@ -541,15 +532,14 @@ static char mpc_input_getc(mpc_input_t* i) {
 
 }
 
-static void mpc_input_ungetc(mpc_input_t* i) {
+static int mpc_input_failure(mpc_input_t* i, char c, char** o) {
+
   switch (i->type) {
     case MPC_INPUT_STRING: break;
     case MPC_INPUT_FILE: fseek(i->file, -1, SEEK_CUR); break;
-    case MPC_INPUT_PIPE: ungetc(i->file, c); break;
+    case MPC_INPUT_PIPE: ungetc(c, i->file); break;
   }
-}
-
-static int mpc_input_failure(mpc_input_t* i, char c, char** o) {
+  
   *o = NULL;
   i->state.next = c;
   return 0;
@@ -561,7 +551,7 @@ static int mpc_input_success(mpc_input_t* i, char c, char** o) {
       i->buffer &&
       !mpc_input_buffer_in_range(i)) {
     
-    i->buffer = realloc(strlen(i->buffer) + 2);
+    i->buffer = realloc(i->buffer, strlen(i->buffer) + 2);
     i->buffer[strlen(i->buffer) + 1] = '\0';
     i->buffer[strlen(i->buffer) + 0] = c;
   }
@@ -583,84 +573,53 @@ static int mpc_input_success(mpc_input_t* i, char c, char** o) {
 }
 
 static int mpc_input_any(mpc_input_t* i, char** o) {
-  if (mpc_input_eoi(i)) { return mpc_input_failure(i, '\0', o); }
-  return mpc_input_update(i, mpc_input_getc(i), o);
+  if (mpc_input_eoi(i)) { i->state.next = '\0'; return 0; }
+  return mpc_input_success(i, mpc_input_getc(i), o);
 }
 
 static int mpc_input_char(mpc_input_t* i, char c, char** o) {
   
   char x;
-  if (mpc_input_eoi(i)) { return mpc_input_failure(i, '\0', o); }
+  if (mpc_input_eoi(i)) { i->state.next = '\0'; return 0; }
   
   x = mpc_input_getc(i);
-  if (x != c) { mpc_input_ungetc(i); return mpc_input_failure(i, x, o); }
-  
-  return mpc_input_success(i, x, o);
-
+  return x == c ? mpc_input_success(i, x, o) : mpc_input_failure(i, x, o);
 }
 
 static int mpc_input_range(mpc_input_t* i, char c, char d, char** o) {
-
-  if (i->state.pos >= strlen(i->str)) { i->state.next = '\0'; return 0; }
-  if (i->str[i->state.pos] < c ||
-      i->str[i->state.pos] > d) {
-    i->state.next = i->str[i->state.pos];
-    return 0;
-  }
   
-  return mpc_input_next(i, o);
+  char x;
+  if (mpc_input_eoi(i)) { i->state.next = '\0'; return 0; }
 
-}
-
-static int char_in_string(char c, const char* x) {
-  
-  while (*x) {
-    if (*x == c) { return 1; }
-    x++;
-  }
-  
-  return 0;
+  x = mpc_input_getc(i);
+  return x >= c && x <= d ? mpc_input_success(i, x, o) : mpc_input_failure(i, x, o);  
 }
 
 static int mpc_input_oneof(mpc_input_t* i, const char* c, char** o) {
   
-  if (i->state.pos >= strlen(i->str)) { i->state.next = '\0'; return 0; }
-  if (!char_in_string(i->str[i->state.pos], c)) {
-    i->state.next = i->str[i->state.pos];
-    return 0;
-  }
-  
-  return mpc_input_next(i, o);
+  char x;
+  if (mpc_input_eoi(i)) { i->state.next = '\0'; return 0; }
 
+  x = mpc_input_getc(i);
+  return strchr(c, x) != 0 ? mpc_input_success(i, x, o) : mpc_input_failure(i, x, o);  
 }
 
 static int mpc_input_noneof(mpc_input_t* i, const char* c, char** o) {
   
-  if (i->state.pos >= strlen(i->str)) { i->state.next = '\0'; return 0; }
-  if (char_in_string(i->str[i->state.pos], c)	|| (i->str[i->state.pos] == '\0')) {
-    i->state.next = i->str[i->state.pos]; 
-    return 0;
-  }
+  char x;
+  if (mpc_input_eoi(i)) { i->state.next = '\0'; return 0; }
   
-  return mpc_input_next(i, o);
-
+  x = mpc_input_getc(i);
+  return strchr(c, x) == 0 ? mpc_input_success(i, x, o) : mpc_input_failure(i, x, o);  
 }
 
 static int mpc_input_satisfy(mpc_input_t* i, int(*cond)(char), char** o) {
-  
-  if (i->state.pos >= strlen(i->str)) { i->state.next = '\0'; return 0; }
-  if (!cond(i->str[i->state.pos])) { i->state.next = i->str[i->state.pos]; return 0; }
-  
-  return mpc_input_next(i, o);
-  
-}
 
-static int mpc_input_eoi(mpc_input_t* i) {
-  return i->state.pos == strlen(i->str);
-}
-
-static int mpc_input_soi(mpc_input_t* i) {
-  return i->state.pos == 0;
+  char x;
+  if (mpc_input_eoi(i)) { i->state.next = '\0'; return 0; }
+  
+  x = mpc_input_getc(i);
+  return cond(x) ? mpc_input_success(i, x, o) : mpc_input_failure(i, x, o);  
 }
 
 static int mpc_input_string(mpc_input_t* i, const char* c, char** o) {
@@ -1235,34 +1194,23 @@ int mpc_parse_input(mpc_input_t* i, mpc_parser_t* init, mpc_result_t* final) {
 #undef MPC_FAILURE
 #undef MPC_FUNCTION
 
-int mpc_parse(const char* filename, const char* s, mpc_parser_t* p, mpc_result_t* r) {
+int mpc_parse(const char* filename, const char* string, mpc_parser_t* p, mpc_result_t* r) {
   int x;
-  mpc_input_t* i = mpc_input_new(filename, s);
+  mpc_input_t* i = mpc_input_new_string(filename, string);
   x = mpc_parse_input(i, p, r);
   mpc_input_delete(i);
   return x;
 }
 
-int mpc_parse_file(const char* filename, FILE* f, mpc_parser_t* p, mpc_result_t* r) {
-  
-  int len;
-  char* buff;
+int mpc_fparse(const char* filename, FILE* file, mpc_parser_t* p, mpc_result_t* r) {
   int x;
-  
-  fseek(f, 0, SEEK_END);
-  len = ftell(f);
-  fseek(f, 0, SEEK_SET);
-  buff = malloc(len + 1);
-  fread(buff, 1, len, f);
-  buff[len] = '\0';
-  
-  x = mpc_parse(filename, buff, p, r);
-  
-  free(buff);
+  mpc_input_t* i = mpc_input_new_file(filename, file);
+  x = mpc_parse_input(i, p, r);
+  mpc_input_delete(i);
   return x;
 }
 
-int mpc_parse_filename(const char* filename, mpc_parser_t* p, mpc_result_t* r) {
+int mpc_fparse_contents(const char* filename, mpc_parser_t* p, mpc_result_t* r) {
   
   FILE* f = fopen(filename, "r");
   int res;
@@ -1273,7 +1221,7 @@ int mpc_parse_filename(const char* filename, mpc_parser_t* p, mpc_result_t* r) {
     return 0;
   }
   
-  res = mpc_parse_file(filename, f, p, r);
+  res = mpc_fparse(filename, f, p, r);
   fclose(f);
   return res;
 }
