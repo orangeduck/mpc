@@ -249,6 +249,7 @@ mpc_ast_t* mpc_ast_build(int n, const char* tag, ...);
 mpc_ast_t* mpc_ast_insert_root(mpc_ast_t* a);
 
 void mpc_ast_add_child(mpc_ast_t* r, mpc_ast_t* a);
+void mpc_ast_add_tag(mpc_ast_t* a, const char* t);
 void mpc_ast_tag(mpc_ast_t* a, const char* t);
 void mpc_ast_print(mpc_ast_t* a);
 int mpc_ast_eq(mpc_ast_t* a, mpc_ast_t* b);
@@ -258,6 +259,7 @@ mpc_val_t* mpcf_afold_ast(int n, mpc_val_t** as);
 mpc_val_t* mpcf_apply_str_ast(mpc_val_t* c);
 
 mpc_parser_t* mpca_tag(mpc_parser_t* a, const char* t);
+mpc_parser_t* mpca_add_tag(mpc_parser_t* a, const char* t);
 mpc_parser_t* mpca_total(mpc_parser_t* a);
 mpc_parser_t* mpca_not(mpc_parser_t* a);
 mpc_parser_t* mpca_maybe(mpc_parser_t* a);

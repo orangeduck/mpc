@@ -1907,9 +1907,7 @@ static mpc_val_t* mpc_re_fold_many(mpc_val_t* t, mpc_val_t* x) {
 
 static mpc_val_t* mpc_re_escape(mpc_val_t* x) {
   
-  printf("Unescaped '%s'\n", (char*)x);
   char* s = mpcf_unescape(x);
-  printf("Escaped '%s'\n", s);
   mpc_parser_t* p;
   
   /* Regex Special Characters */
@@ -1941,22 +1939,25 @@ static mpc_val_t* mpc_re_escape(mpc_val_t* x) {
 
 static mpc_val_t* mpc_re_range(mpc_val_t* x) {
   
-  char* s = mpcf_unescape(x);
+  char* unescaped = mpcf_unescape(x);
+  char* s = unescaped;
   int i;
   int comp = 0;
   char* range;
   char start, end;
-  char buff[3];
+  char buff[2];
   mpc_parser_t* p;
   
-  if (*s == '\0') { free(s); return mpc_failf("Invalid Regex Range Specifier '%s'", s); } 
+  /* TODO: Print Escaped String */
+  if (*s == '\0') { free(unescaped); return mpc_failf("Invalid Regex Range Specifier '%s'", s); } 
   
   if (*s == '^') {
     comp = 1;
     s++;
   }
   
-  if (*s == '\0') { free(s); return mpc_failf("Invalid Regex Range Specifier '%s'", s); }
+  /* TODO: Print Escaped String */
+  if (*s == '\0') { free(unescaped); return mpc_failf("Invalid Regex Range Specifier '%s'", s); }
   
   range = calloc(1, 1);
   
@@ -1965,7 +1966,7 @@ static mpc_val_t* mpc_re_range(mpc_val_t* x) {
     if (*s == '\\') {
       if (*(s+1) == '\0') { break; }
       range = realloc(range, strlen(range) + 2);
-      buff[0] = *(s+0); buff[1] = *(s+1); buff[2] = '\0';
+      buff[0] = *(s+1); buff[1] = '\0';
       strcat(range, buff);
       s++;
     }
@@ -2000,7 +2001,7 @@ static mpc_val_t* mpc_re_range(mpc_val_t* x) {
   p = (comp ? mpc_noneof(range) : mpc_oneof(range));
   
   free(range);
-  free(s);
+  free(unescaped);
   return p;
 }
 
@@ -2275,6 +2276,8 @@ mpc_val_t* mpcf_maths(int n, mpc_val_t** xs) {
 */
 
 static void mpc_print_unretained(mpc_parser_t* p, int force) {
+  
+  /* TODO: Print Everything Escaped */
   
   int i;
   char *s, *e;
@@ -2559,6 +2562,13 @@ void mpc_ast_add_child(mpc_ast_t* r, mpc_ast_t* a) {
   
 }
 
+void mpc_ast_add_tag(mpc_ast_t* a, const char* t) {
+  a->tag = realloc(a->tag, strlen(t) + 1 + strlen(a->tag) + 1);
+  memmove(a->tag + strlen(t) + 1, a->tag, strlen(a->tag)+1);
+  memmove(a->tag, t, strlen(t));
+  memmove(a->tag + strlen(t), "|", 1);
+}
+
 void mpc_ast_tag(mpc_ast_t* a, const char* t) {
   a->tag = realloc(a->tag, strlen(t) + 1);
   strcpy(a->tag, t);
@@ -2589,7 +2599,7 @@ void mpc_ast_print(mpc_ast_t* a) {
 mpc_val_t* mpcf_fold_ast(mpc_val_t* a, mpc_val_t* b) {
   
   int i;
-  mpc_ast_t* r = mpc_ast_new("", "");
+  mpc_ast_t* r = mpc_ast_new(">", "");
   mpc_ast_t* x = a;
   mpc_ast_t* y = b;
   
@@ -2633,8 +2643,17 @@ static mpc_val_t* mpcf_apply_tag(mpc_val_t* x, void* d) {
   return x;
 }
 
+static mpc_val_t* mpcf_apply_add_tag(mpc_val_t* x, void* d) {
+  mpc_ast_add_tag(x, d);
+  return x;
+}
+
 mpc_parser_t* mpca_tag(mpc_parser_t* a, const char* t) {
   return mpc_apply_to(a, mpcf_apply_tag, (void*)t);
+}
+
+mpc_parser_t* mpca_add_tag(mpc_parser_t* a, const char* t) {
+  return mpc_apply_to(a, mpcf_apply_add_tag, (void*)t);
 }
 
 mpc_parser_t* mpca_not(mpc_parser_t* a) { return mpc_not(a, (mpc_dtor_t)mpc_ast_delete); }
@@ -2855,14 +2874,12 @@ static mpc_val_t* mpca_grammar_apply_id(mpc_val_t* x, void* y) {
   free(x);
   
   if (p->name) {
-    return mpc_apply(mpca_tag(p, p->name), (mpc_apply_t)mpc_ast_insert_root);
+    return mpc_apply(mpca_add_tag(p, p->name), (mpc_apply_t)mpc_ast_insert_root);
   } else {
     return mpc_apply(p, (mpc_apply_t)mpc_ast_insert_root);
   }
 
 }
-
-static mpc_val_t* mpcf_make_root(mpc_val_t* x) { return mpca_tag(x, "root"); }
 
 mpc_parser_t* mpca_grammar_st(const char* grammar, mpca_grammar_st_t* st) {
   
@@ -2877,7 +2894,7 @@ mpc_parser_t* mpca_grammar_st(const char* grammar, mpca_grammar_st_t* st) {
   Base = mpc_new("base");
   
   mpc_define(GrammarTotal,
-    mpc_apply(mpc_predictive(mpc_total(Grammar, mpc_soft_delete)), mpcf_make_root)
+    mpc_predictive(mpc_total(Grammar, mpc_soft_delete))
   );
   
   mpc_define(Grammar, mpc_also(
@@ -3038,14 +3055,12 @@ static mpc_err_t* mpca_lang_st(mpc_input_t* i, mpca_grammar_st_t* st) {
     free, free, mpc_soft_delete
   ));
   
-  mpc_define(Grammar, mpc_apply(
-    mpc_also(
+  mpc_define(Grammar, mpc_also(
       Term,
       mpc_maybe(mpc_also(mpc_sym("|"), Grammar, free, mpcf_snd_free)),
       mpc_soft_delete,
-      mpca_grammar_fold_or),
-    mpcf_make_root
-  ));
+      mpca_grammar_fold_or)
+  );
   
   mpc_define(Term, mpc_many_else(Factor, mpca_grammar_fold_many, mpca_grammar_lift));
   
