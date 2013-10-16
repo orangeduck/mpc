@@ -272,7 +272,8 @@ mpc_parser_t* mpca_and(int n, ...);
 mpc_parser_t* mpca_grammar(const char* grammar, ...);
 
 mpc_err_t* mpca_lang(const char* language, ...);
-mpc_err_t* mpca_lang_file(const char* filename, ...);
+mpc_err_t* mpca_lang_file(FILE* f, ...);
+mpc_err_t* mpca_lang_filename(const char* filename, ...);
 
 /*
 ** Testing

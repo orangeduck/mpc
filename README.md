@@ -428,8 +428,8 @@ Then we can actually specify the grammar using combinators to say how the basic 
 ```c
 char* parse_ident(char* input) {
   
-  mpc_parser_t* alpha = mpc_oneof("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
-  mpc_parser_t* digit = mpc_oneof("0123456789");
+  mpc_parser_t* alpha = mpc_else(mpc_range('a', 'z'), mpc_range('A', 'Z'));
+  mpc_parser_t* digit = mpc_range('0', '9');
   mpc_parser_t* underscore = mpc_char('_');
   
   mpc_parser_t* ident0 = mpc_else(alpha, underscore);
@@ -703,6 +703,22 @@ mpc_err_t* mpca_lang(const char* lang, ...);
 ```
 
 This takes in a full language (one or more rules) as well as any parsers referred to by either the right or left hand sides. Any parsers specified on the left hand side of any rule will be assigned a parser equivalent to what is specified on the right. On valid user input this returns `NULL`, while if there are any errors in the user input it will return an instance of `mpc_err_t` describing the issues.
+
+* * *
+
+```c
+mpc_err_t* mpca_lang_file(FILE* f, ...);
+```
+
+This reads in the contents of file `f` and inputs it into `mpca_lang`.
+
+* * *
+
+```c
+mpc_err_t* mpca_lang_filename(const char* filename, ...);
+```
+
+This opens and reads in the contents of the file given by `filename` and passes it to `mpca_lang`.
 
 
 Error Reporting
