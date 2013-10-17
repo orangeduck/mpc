@@ -16,32 +16,32 @@ void test_grammar(void) {
   mpc_define(Value, mpca_grammar(" /[0-9]+/ | '(' <expression> ')' ", Expr));
   mpc_define(Maths, mpca_total(Expr));
   
-  t0 = mpc_ast_build(1, "root", mpc_ast_new("value", "24"));
-  t1 = mpc_ast_build(1, "root",
-    mpc_ast_build(3, "value",
+  t0 = mpc_ast_build(1, ">", mpc_ast_new("value|regex", "24"));
+  t1 = mpc_ast_build(1, ">",
+    mpc_ast_build(3, "value|>",
       mpc_ast_new("char", "("),
-      mpc_ast_new("value", "5"),
+      mpc_ast_new("value|regex", "5"),
       mpc_ast_new("char", ")")));
   
-  t2 = mpc_ast_build(3, "root",
+  t2 = mpc_ast_build(3, ">",
       
-      mpc_ast_build(3, "value", 
+      mpc_ast_build(3, "value|>", 
         mpc_ast_new("char", "("),
-        mpc_ast_build(3, "expression",
+        mpc_ast_build(3, "expression|>",
           
-          mpc_ast_build(5, "product", 
-            mpc_ast_new("value", "4"),
+          mpc_ast_build(5, "product|>", 
+            mpc_ast_new("value|regex", "4"),
             mpc_ast_new("char", "*"),
-            mpc_ast_new("value", "2"),
+            mpc_ast_new("value|regex", "2"),
             mpc_ast_new("char", "*"),
-            mpc_ast_new("value", "11")),
+            mpc_ast_new("value|regex", "11")),
             
           mpc_ast_new("char", "+"),
-          mpc_ast_new("value", "2")),
+          mpc_ast_new("value|regex", "2")),
         mpc_ast_new("char", ")")),
       
       mpc_ast_new("char", "+"),
-      mpc_ast_new("value", "5"));
+      mpc_ast_new("value|regex", "5"));
   
   PT_ASSERT(mpc_match(Maths, "  24 ", t0, (int(*)(void*,void*))mpc_ast_eq, (mpc_dtor_t)mpc_ast_delete, (void(*)(void*))mpc_ast_print));
   PT_ASSERT(mpc_match(Maths, "(5)", t1, (int(*)(void*,void*))mpc_ast_eq, (mpc_dtor_t)mpc_ast_delete, (void(*)(void*))mpc_ast_print));
