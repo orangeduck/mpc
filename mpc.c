@@ -2219,6 +2219,15 @@ mpc_val_t* mpcf_unescape_regex(mpc_val_t* x) {
   return y;  
 }
 
+mpc_val_t* mpcf_strcrop(mpc_val_t* x) {
+  char* copy = malloc(strlen(x));
+  strcpy(copy, x);
+  memmove(copy, copy+1, strlen(copy)-1);
+  copy[strlen(copy)-2] = '\0';
+  free(x);
+  return copy;
+}
+
 mpc_val_t* mpcf_fst(mpc_val_t* x, mpc_val_t* y) { return x; }
 mpc_val_t* mpcf_snd(mpc_val_t* x, mpc_val_t* y) { return y; }
 mpc_val_t* mpcf_fst_free(mpc_val_t* x, mpc_val_t* y) { free(y); return x; }
