@@ -1937,9 +1937,14 @@ static mpc_val_t* mpc_re_escape(mpc_val_t* x) {
   
 }
 
+static mpc_val_t* mpcf_unescape_rechars(mpc_val_t* x);
+
 static mpc_val_t* mpc_re_range(mpc_val_t* x) {
   
-  char* unescaped = mpcf_unescape(x);
+  char* unescaped = mpcf_unescape_rechars(x);
+  
+  printf("###%s###\n", unescaped);
+  
   char* s = unescaped;
   int i;
   int comp = 0;
@@ -1962,16 +1967,8 @@ static mpc_val_t* mpc_re_range(mpc_val_t* x) {
   range = calloc(1, 1);
   
   while (*s) {
-    
-    if (*s == '\\') {
-      if (*(s+1) == '\0') { break; }
-      range = realloc(range, strlen(range) + 2);
-      buff[0] = *(s+1); buff[1] = '\0';
-      strcat(range, buff);
-      s++;
-    }
         
-    else if (*s == '-') {
+    if (*s == '-') {
       
       start = *(s-1);
       end = *(s+1);
@@ -2217,6 +2214,10 @@ mpc_val_t* mpcf_unescape_regex(mpc_val_t* x) {
   mpc_val_t* y = mpcf_unescape_new(x, mpc_escape_input_raw_re, mpc_escape_output_raw_re);
   free(x);
   return y;  
+}
+
+mpc_val_t* mpcf_unescape_regexchars(mpc_val_t* x) {
+
 }
 
 mpc_val_t* mpcf_strcrop(mpc_val_t* x) {
@@ -2814,6 +2815,7 @@ static mpc_val_t* mpca_grammar_apply_char(mpc_val_t* x) {
 
 static mpc_val_t* mpca_grammar_apply_regex(mpc_val_t* x) {
   char* y = mpcf_unescape_regex(x);
+  printf("||%s||\n", y);
   mpc_parser_t* p = mpc_tok(mpc_re(y));
   free(y);
   return mpca_tag(mpc_apply(p, mpcf_apply_str_ast), "regex");
