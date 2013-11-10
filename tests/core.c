@@ -14,10 +14,10 @@ void test_ident(void) {
   /* ^[a-zA-Z_][a-zA-Z0-9_]*$ */
   
   mpc_parser_t* Ident = mpc_enclose(
-    mpc_also(
-      mpc_else(mpc_alpha(), mpc_underscore()),
+    mpc_and(2, mpcf_astrfold,
+      mpc_or(2, mpc_alpha(), mpc_underscore()),
       mpc_many1(mpc_or(3, mpc_alpha(), mpc_underscore(), mpc_digit()), mpcf_strfold),
-      free, mpcf_strfold),
+      free),
     free
   );
   
@@ -47,17 +47,17 @@ void test_maths(void) {
   Term   = mpc_new("term");
   Maths  = mpc_new("maths");
 
-  mpc_define(Expr, mpc_else(
+  mpc_define(Expr, mpc_or(2, 
     mpc_and(3, mpcf_maths, Factor, mpc_oneof("*/"), Factor, free, free),
     Factor
   ));
   
-  mpc_define(Factor, mpc_else(
+  mpc_define(Factor, mpc_or(2, 
     mpc_and(3, mpcf_maths, Term, mpc_oneof("+-"), Term, free, free),
     Term
   ));
   
-  mpc_define(Term, mpc_else(
+  mpc_define(Term, mpc_or(2, 
     mpc_int(),
     mpc_parens(Expr, free)
   ));
