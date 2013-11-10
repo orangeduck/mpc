@@ -247,8 +247,7 @@ void mpc_ast_tag(mpc_ast_t* a, const char* t);
 void mpc_ast_print(mpc_ast_t* a);
 int mpc_ast_eq(mpc_ast_t* a, mpc_ast_t* b);
 
-mpc_val_t* mpcf_fold_ast(mpc_val_t* a, mpc_val_t* b);
-mpc_val_t* mpcf_afold_ast(int n, mpc_val_t** as);
+mpc_val_t* mpcf_fold_ast(int n, mpc_val_t** as);
 mpc_val_t* mpcf_apply_str_ast(mpc_val_t* c);
 
 mpc_parser_t* mpca_tag(mpc_parser_t* a, const char* t);
