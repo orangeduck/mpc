@@ -1400,7 +1400,7 @@ mpc_parser_t* mpc_failf(const char* fmt, ...) {
   va_end(va);
   
   buffer = realloc(buffer, strlen(buffer) + 1);
-  
+  p->data.fail.m = buffer;
   return p;
 
 }
@@ -1905,101 +1905,92 @@ static mpc_val_t* mpc_re_fold_many(mpc_val_t* t, mpc_val_t* x) {
   return mpc_also(t, x, free, mpcf_strfold);
 }
 
+static mpc_parser_t* mpc_re_escape_char(char c, int range) {
+  switch (c) {
+    case 'a': return mpc_char('\a');
+    case 'f': return mpc_char('\f');
+    case 'n': return mpc_char('\n');
+    case 't': return mpc_char('\t');
+    case 'v': return mpc_char('\v');
+    case 'A': return mpc_also(mpc_eoi(), mpc_lift(mpcf_lift_emptystr), free, mpcf_snd);
+    case 'b': if (range) { mpc_char('\b'); } else { return mpc_failf("In Regex '\\b' escape character unsupported!"); }
+    case 'B': return mpc_failf("In Regex '\\B' escape character unsupported!");
+    case 'd': return mpc_digit();
+    case 'D': return mpc_not_else(mpc_digit(), free, mpcf_lift_emptystr);
+    case 's': return mpc_space();
+    case 'S': return mpc_not_else(mpc_space(), free, mpcf_lift_emptystr);
+    case 'w': return mpc_alphanum();
+    case 'W': return mpc_not_else(mpc_alphanum(), free, mpcf_lift_emptystr);
+    case 'Z': return mpc_also(mpc_soi(), mpc_lift(mpcf_lift_emptystr), free, mpcf_snd);
+    default: return NULL;
+  }
+}
+
 static mpc_val_t* mpc_re_escape(mpc_val_t* x) {
   
-  char* s = mpcf_unescape(x);
+  char* s = x;
   mpc_parser_t* p;
   
   /* Regex Special Characters */
   if (s[0] == '.') { free(s); return mpc_any(); }
-  if (s[0] == '$') { free(s); return mpc_also(mpc_eoi(), mpc_lift(mpcf_lift_emptystr), free, mpcf_snd); }
   if (s[0] == '^') { free(s); return mpc_also(mpc_soi(), mpc_lift(mpcf_lift_emptystr), free, mpcf_snd); }
+  if (s[0] == '$') { free(s); return mpc_also(mpc_eoi(), mpc_lift(mpcf_lift_emptystr), free, mpcf_snd); }
   
-  /* Extra Regex Escapes */
+  /* Regex Escape */
   if (s[0] == '\\') {
-    
-    if (s[1] == 'd') { free(s); return mpc_digit(); }
-    if (s[1] == 'D') { free(s); return mpc_not_else(mpc_digit(), free, mpcf_lift_emptystr); }
-    if (s[1] == 's') { free(s); return mpc_space(); }
-    if (s[1] == 'S') { free(s); return mpc_not_else(mpc_space(), free, mpcf_lift_emptystr); }
-    if (s[1] == 'w') { free(s); return mpc_alphanum(); }
-    if (s[1] == 'W') { free(s); return mpc_not_else(mpc_alphanum(), free, mpcf_lift_emptystr); }
-    if (s[1] == 'Z') { free(s); return mpc_eoi(); }
-    
-    p = mpc_char(s[1]);
+    p = mpc_re_escape_char(s[1], 0);
+    p = (p == NULL) ? mpc_char(s[1]) : p;
     free(s);
     return p;
-    
-  } else {
-    p = mpc_char(s[0]);
-    free(s); return p;
   }
   
+  /* Regex Standard */
+  p = mpc_char(s[0]);
+  free(s);
+  return p;
 }
 
-static mpc_val_t* mpcf_unescape_rechars(mpc_val_t* x);
-
 static mpc_val_t* mpc_re_range(mpc_val_t* x) {
-  
-  char* unescaped = mpcf_unescape_rechars(x);
-  
-  printf("###%s###\n", unescaped);
-  
-  char* s = unescaped;
-  int i;
+    
+  char* s = x;
+  int i = 0;
   int comp = 0;
-  char* range;
-  char start, end;
-  char buff[2];
-  mpc_parser_t* p;
   
-  /* TODO: Print Escaped String */
-  if (*s == '\0') { free(unescaped); return mpc_failf("Invalid Regex Range Specifier '%s'", s); } 
+  mpc_parser_t* q = NULL;
+  mpc_parser_t* p = mpc_failf("Invalid Range Specifier");
   
-  if (*s == '^') {
-    comp = 1;
-    s++;
-  }
+  if (s[0] == '\0') { free(x); return p; } 
+  if (s[0] == '^' && 
+      s[1] == '\0') { free(x); return p; }
   
-  /* TODO: Print Escaped String */
-  if (*s == '\0') { free(unescaped); return mpc_failf("Invalid Regex Range Specifier '%s'", s); }
+  if (s[0] == '^') { comp = 1;}
   
-  range = calloc(1, 1);
-  
-  while (*s) {
-        
-    if (*s == '-') {
-      
-      start = *(s-1);
-      end = *(s+1);
-      
-      if (end == '\0') { break; }
-      if (end < start) { s++; continue; }
-      
-      range = realloc(range, strlen(range) + 1 + (end-start));
-      
-      for (i = 0; i < (end-start); i++) {
-        buff[0] = start+i+1; buff[1] = '\0';
-        strcat(range, buff);
-      }
-      
-      s++;
+  for (i = comp; i < strlen(s); i++){
+    
+    /* Regex Range Escape */
+    if (s[i] == '\\') {
+      q = mpc_re_escape_char(s[i+1], 1);
+      q = (q == NULL) ? mpc_char(s[i+1]) : q;
+      p = mpc_else(p, q);
+      i++;
     }
     
-    else {
-      range = realloc(range, strlen(range) + 2);
-      buff[0] = *s; buff[1] = '\0';
-      strcat(range, buff);
+    /* Regex Range...Range */
+    else if (s[i] == '-') {
+      if (s[i+1] == '\0' || i == 0) {
+        p = mpc_else(p, mpc_char('-'));
+      } else {
+        p = mpc_else(p, mpc_range(s[i-1]+1, s[i+1]-1));
+      }
     }
+    
+    /* Regex Range Normal */
+    else { p = mpc_else(p, mpc_char(s[i])); }
   
-    s++;
   }
   
-  p = (comp ? mpc_noneof(range) : mpc_oneof(range));
-  
-  free(range);
-  free(unescaped);
-  return p;
+  free(x);
+  return comp ? mpc_not_else(p, free, mpcf_lift_emptystr) : p;
 }
 
 static mpc_val_t* mpc_re_lift(void) {
@@ -2110,7 +2101,7 @@ static char mpc_escape_input_c[]  = {
   '\t', '\v', '\\', '\'', '\"', '\0'};
     
 static char* mpc_escape_output_c[] = {
-  "\\a", "\\b", "\\f", "\\n", "\\r",  "\\t", 
+  "\\a", "\\b", "\\f", "\\n", "\\r", "\\t", 
   "\\v", "\\\\", "\\'", "\\\"", "\\0", NULL};
 
 static char mpc_escape_input_raw_re[] = { '/' };
@@ -2214,10 +2205,6 @@ mpc_val_t* mpcf_unescape_regex(mpc_val_t* x) {
   mpc_val_t* y = mpcf_unescape_new(x, mpc_escape_input_raw_re, mpc_escape_output_raw_re);
   free(x);
   return y;  
-}
-
-mpc_val_t* mpcf_unescape_regexchars(mpc_val_t* x) {
-
 }
 
 mpc_val_t* mpcf_strcrop(mpc_val_t* x) {
@@ -2815,7 +2802,6 @@ static mpc_val_t* mpca_grammar_apply_char(mpc_val_t* x) {
 
 static mpc_val_t* mpca_grammar_apply_regex(mpc_val_t* x) {
   char* y = mpcf_unescape_regex(x);
-  printf("||%s||\n", y);
   mpc_parser_t* p = mpc_tok(mpc_re(y));
   free(y);
   return mpca_tag(mpc_apply(p, mpcf_apply_str_ast), "regex");

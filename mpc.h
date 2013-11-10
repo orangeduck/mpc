@@ -208,7 +208,6 @@ mpc_val_t* mpcf_float(mpc_val_t* x);
 mpc_val_t* mpcf_escape(mpc_val_t* x);
 mpc_val_t* mpcf_unescape(mpc_val_t* x);
 mpc_val_t* mpcf_unescape_regex(mpc_val_t* x);
-mpc_val_t* mpcf_unescape_regexchars(mpc_val_t* x);
 
 mpc_val_t* mpcf_strcrop(mpc_val_t* x);
 
