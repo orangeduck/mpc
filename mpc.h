@@ -60,8 +60,7 @@ int mpc_fparse_contents(const char* filename, mpc_parser_t* p, mpc_result_t* r);
 typedef void(*mpc_dtor_t)(mpc_val_t*);
 typedef mpc_val_t*(*mpc_apply_t)(mpc_val_t*);
 typedef mpc_val_t*(*mpc_apply_to_t)(mpc_val_t*,void*);
-typedef mpc_val_t*(*mpc_fold_t)(mpc_val_t*,mpc_val_t*);
-typedef mpc_val_t*(*mpc_afold_t)(int,mpc_val_t**);
+typedef mpc_val_t*(*mpc_fold_t)(int,mpc_val_t**);
 typedef mpc_val_t*(*mpc_lift_t)(void);
 
 /*
@@ -104,16 +103,14 @@ mpc_parser_t* mpc_apply(mpc_parser_t* a, mpc_apply_t f);
 mpc_parser_t* mpc_apply_to(mpc_parser_t* a, mpc_apply_to_t f, void* x);
 mpc_parser_t* mpc_predictive(mpc_parser_t* a);
 mpc_parser_t* mpc_not(mpc_parser_t* a, mpc_dtor_t da);
-mpc_parser_t* mpc_not_else(mpc_parser_t* a, mpc_dtor_t da, mpc_lift_t lf);
+mpc_parser_t* mpc_not_lift(mpc_parser_t* a, mpc_dtor_t da, mpc_lift_t lf);
 mpc_parser_t* mpc_maybe(mpc_parser_t* a);
-mpc_parser_t* mpc_maybe_else(mpc_parser_t* a, mpc_lift_t lf);
+mpc_parser_t* mpc_maybe_lift(mpc_parser_t* a, mpc_lift_t lf);
 mpc_parser_t* mpc_many(mpc_fold_t f, mpc_parser_t* a);
-mpc_parser_t* mpc_many_else(mpc_fold_t f, mpc_parser_t* a, mpc_lift_t lf);
 mpc_parser_t* mpc_many1(mpc_fold_t f, mpc_parser_t* a);
 mpc_parser_t* mpc_count(int n, mpc_fold_t f, mpc_parser_t* a, mpc_dtor_t da);
-mpc_parser_t* mpc_count_else(int n, mpc_fold_t f, mpc_parser_t* a, mpc_dtor_t da, mpc_lift_t lf);
 mpc_parser_t* mpc_or(int n, ...);
-mpc_parser_t* mpc_and(int n, mpc_afold_t f, ...);
+mpc_parser_t* mpc_and(int n, mpc_fold_t f, ...);
 
 /*
 ** Common Parsers
@@ -193,8 +190,9 @@ mpc_parser_t* mpc_re(const char* re);
 */
 
 void mpcf_dtor_null(mpc_val_t* x);
+
 mpc_val_t* mpcf_lift_null(void);
-mpc_val_t* mpcf_lift_emptystr(void);
+mpc_val_t* mpcf_lift_str(void);
 
 mpc_val_t* mpcf_free(mpc_val_t* x);
 mpc_val_t* mpcf_int(mpc_val_t* x);
@@ -208,25 +206,15 @@ mpc_val_t* mpcf_unescape_regex(mpc_val_t* x);
 
 mpc_val_t* mpcf_strcrop(mpc_val_t* x);
 
-mpc_val_t* mpcf_fst(mpc_val_t* x, mpc_val_t* y);
-mpc_val_t* mpcf_snd(mpc_val_t* x, mpc_val_t* y);
+mpc_val_t* mpcf_fst(int n, mpc_val_t** xs);
+mpc_val_t* mpcf_snd(int n, mpc_val_t** xs);
+mpc_val_t* mpcf_trd(int n, mpc_val_t** xs);
 
-mpc_val_t* mpcf_fst_free(mpc_val_t* x, mpc_val_t* y);
-mpc_val_t* mpcf_snd_free(mpc_val_t* x, mpc_val_t* y);
+mpc_val_t* mpcf_fst_free(int n, mpc_val_t** xs);
+mpc_val_t* mpcf_snd_free(int n, mpc_val_t** xs);
+mpc_val_t* mpcf_trd_free(int n, mpc_val_t** xs);
 
-mpc_val_t* mpcf_freefold(mpc_val_t* t, mpc_val_t* x);
-mpc_val_t* mpcf_strfold(mpc_val_t* t, mpc_val_t* x);
-
-mpc_val_t* mpcf_afst(int n, mpc_val_t** xs);
-mpc_val_t* mpcf_asnd(int n, mpc_val_t** xs);
-mpc_val_t* mpcf_atrd(int n, mpc_val_t** xs);
-
-mpc_val_t* mpcf_afst_free(int n, mpc_val_t** xs);
-mpc_val_t* mpcf_asnd_free(int n, mpc_val_t** xs);
-mpc_val_t* mpcf_atrd_free(int n, mpc_val_t** xs);
-
-mpc_val_t* mpcf_astrfold(int n, mpc_val_t** xs);
-mpc_val_t* mpcf_between_free(int n, mpc_val_t** xs);
+mpc_val_t* mpcf_strfold(int n, mpc_val_t** xs);
 mpc_val_t* mpcf_maths(int n, mpc_val_t** xs);
 
 

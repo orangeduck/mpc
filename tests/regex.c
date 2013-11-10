@@ -18,6 +18,13 @@ void test_regex_basic(void) {
   re4 = mpc_re("ab|c(abdd)?");
   re5 = mpc_re("abc(ab|dd)+g$");
   
+  mpc_print(re0);
+  mpc_print(re1);
+  mpc_print(re2);
+  mpc_print(re3);
+  mpc_print(re4);
+  mpc_print(re5);
+  
   PT_ASSERT(mpc_match(re0, "abc", "abc", string_eq, free, string_print));
   PT_ASSERT(mpc_match(re0, "bcd", "bcd", string_eq, free, string_print));
   PT_ASSERT(mpc_unmatch(re0, "bc", "bc", string_eq, free, string_print));

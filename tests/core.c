@@ -14,7 +14,7 @@ void test_ident(void) {
   /* ^[a-zA-Z_][a-zA-Z0-9_]*$ */
   
   mpc_parser_t* Ident = mpc_enclose(
-    mpc_and(2, mpcf_astrfold,
+    mpc_and(2, mpcf_strfold,
       mpc_or(2, mpc_alpha(), mpc_underscore()),
       mpc_many1(mpcf_strfold, mpc_or(3, mpc_alpha(), mpc_underscore(), mpc_digit())),
       free),

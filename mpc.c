@@ -679,9 +679,9 @@ typedef struct { mpc_parser_t* x; mpc_apply_t f; } mpc_pdata_apply_t;
 typedef struct { mpc_parser_t* x; mpc_apply_to_t f; void* d; } mpc_pdata_apply_to_t;
 typedef struct { mpc_parser_t* x; } mpc_pdata_predict_t;
 typedef struct { mpc_parser_t* x; mpc_dtor_t dx; mpc_lift_t lf; } mpc_pdata_not_t;
-typedef struct { mpc_parser_t* x; mpc_fold_t f; int n; mpc_dtor_t dx; mpc_lift_t lf; } mpc_pdata_repeat_t;
+typedef struct { int n; mpc_fold_t f; mpc_parser_t* x; mpc_dtor_t dx; } mpc_pdata_repeat_t;
 typedef struct { int n; mpc_parser_t** xs; } mpc_pdata_or_t;
-typedef struct { int n; mpc_parser_t** xs; mpc_dtor_t* dxs; mpc_afold_t f; } mpc_pdata_and_t;
+typedef struct { int n; mpc_fold_t f; mpc_parser_t** xs; mpc_dtor_t* dxs;  } mpc_pdata_and_t;
 
 typedef union {
   mpc_pdata_fail_t fail;
@@ -871,6 +871,15 @@ static void mpc_stack_popr_out(mpc_stack_t* s, int n, mpc_dtor_t* ds) {
   }
 }
 
+static void mpc_stack_popr_out_single(mpc_stack_t* s, int n, mpc_dtor_t dx) {
+  mpc_result_t x;
+  while (n) {
+    mpc_stack_popr(s, &x);
+    dx(x.output);
+    n--;
+  }
+}
+
 static void mpc_stack_popr_n(mpc_stack_t* s, int n) {
   mpc_result_t x;
   while (n) {
@@ -883,7 +892,7 @@ static mpc_result_t* mpc_stack_results(mpc_stack_t* s, int n) {
   return &s->results[s->results_num-n];
 }
 
-static mpc_val_t* mpc_stack_merger_out(mpc_stack_t* s, int n, mpc_afold_t f) {
+static mpc_val_t* mpc_stack_merger_out(mpc_stack_t* s, int n, mpc_fold_t f) {
   mpc_val_t* x = f(n, (mpc_val_t**)(&s->results[s->results_num-n]));
   mpc_stack_popr_n(s, n);
   return x;
@@ -930,7 +939,7 @@ int mpc_parse_input(mpc_input_t* i, mpc_parser_t* init, mpc_result_t* final) {
   /* Variables */
   char* s;
   mpc_val_t* t;
-  mpc_result_t x, y;
+  mpc_result_t r;
 
   /* Go! */
   mpc_stack_pushp(stk, init);
@@ -966,10 +975,10 @@ int mpc_parse_input(mpc_input_t* i, mpc_parser_t* init, mpc_result_t* final) {
       case MPC_TYPE_EXPECT:
         if (st == 0) { MPC_RETURN(1, p->data.expect.x); }
         if (st == 1) {
-          if (mpc_stack_popr(stk, &x)) {
-            MPC_SUCCESS(x.output);
+          if (mpc_stack_popr(stk, &r)) {
+            MPC_SUCCESS(r.output);
           } else {
-            mpc_err_delete(x.error); 
+            mpc_err_delete(r.error); 
             MPC_FAILURE(mpc_err_new(i->filename, i->state, p->data.expect.m));
           }
         }
@@ -977,20 +986,20 @@ int mpc_parse_input(mpc_input_t* i, mpc_parser_t* init, mpc_result_t* final) {
       case MPC_TYPE_APPLY:
         if (st == 0) { MPC_RETURN(1, p->data.apply.x); }
         if (st == 1) {
-          if (mpc_stack_popr(stk, &x)) {
-            MPC_SUCCESS(p->data.apply.f(x.output));
+          if (mpc_stack_popr(stk, &r)) {
+            MPC_SUCCESS(p->data.apply.f(r.output));
           } else {
-            MPC_FAILURE(x.error);
+            MPC_FAILURE(r.error);
           }
         }
       
       case MPC_TYPE_APPLY_TO:
         if (st == 0) { MPC_RETURN(1, p->data.apply_to.x); }
         if (st == 1) {
-          if (mpc_stack_popr(stk, &x)) {
-            MPC_SUCCESS(p->data.apply_to.f(x.output, p->data.apply_to.d));
+          if (mpc_stack_popr(stk, &r)) {
+            MPC_SUCCESS(p->data.apply_to.f(r.output, p->data.apply_to.d));
           } else {
-            MPC_FAILURE(x.error);
+            MPC_FAILURE(r.error);
           }
         }
       
@@ -1002,82 +1011,82 @@ int mpc_parse_input(mpc_input_t* i, mpc_parser_t* init, mpc_result_t* final) {
           continue;
         }
       
+      /* Optional Parsers */
+      
+      /* TODO: Update Not Error Message */
+      
       case MPC_TYPE_NOT:
         if (st == 0) { mpc_input_mark(i); MPC_RETURN(1, p->data.not.x); }
         if (st == 1) {
-          if (mpc_stack_popr(stk, &x)) {
+          if (mpc_stack_popr(stk, &r)) {
             mpc_input_rewind(i);
-            p->data.not.dx(x.output);
+            p->data.not.dx(r.output);
             MPC_FAILURE(mpc_err_new(i->filename, i->state, "opposite"));
           } else {
             mpc_input_unmark(i);
-            mpc_err_delete(x.error);
+            mpc_err_delete(r.error);
+            MPC_SUCCESS(p->data.not.lf());
+          }
+        }
+      
+      case MPC_TYPE_MAYBE:
+        if (st == 0) { MPC_RETURN(1, p->data.not.x); }
+        if (st == 1) {
+          if (mpc_stack_popr(stk, &r)) {
+            MPC_SUCCESS(r.output);
+          } else {
+            mpc_err_delete(r.error);
             MPC_SUCCESS(p->data.not.lf());
           }
         }
       
       /* Repeat Parsers */
       
-      case MPC_TYPE_MAYBE:
-        if (st == 0) { MPC_RETURN(1, p->data.repeat.x); }
-        if (st == 1) {
-          if (mpc_stack_popr(stk, &x)) {
-            MPC_SUCCESS(x.output);
-          } else {
-            mpc_err_delete(x.error);
-            MPC_SUCCESS(p->data.repeat.lf());
-          }
-        }
-      
       case MPC_TYPE_MANY:
-        if (st == 0) { mpc_stack_pushr(stk, mpc_result_out(NULL), 1); MPC_RETURN(st+1, p->data.repeat.x); }
+        if (st == 0) { MPC_RETURN(st+1, p->data.repeat.x); }
         if (st >  0) {
-          if (mpc_stack_popr(stk, &x)) {
-            mpc_stack_popr(stk, &y);
-            mpc_stack_pushr(stk, mpc_result_out(p->data.repeat.f(y.output, x.output)), 1);
+          if (mpc_stack_peekr(stk, &r)) {
             MPC_RETURN(st+1, p->data.repeat.x);
           } else {
-            mpc_stack_popr(stk, &y);
-            mpc_err_delete(x.error);
-            MPC_SUCCESS(y.output ? y.output : p->data.repeat.lf());
+            mpc_stack_popr(stk, &r);
+            mpc_err_delete(r.error);
+            MPC_SUCCESS(mpc_stack_merger_out(stk, st-1, p->data.repeat.f));
           }
         }
       
       case MPC_TYPE_MANY1:
-        if (st == 0) { mpc_stack_pushr(stk, mpc_result_out(NULL), 1); MPC_RETURN(st+1, p->data.repeat.x); }
+        if (st == 0) { MPC_RETURN(st+1, p->data.repeat.x); }
         if (st >  0) {
-          if (mpc_stack_popr(stk, &x)) {
-            mpc_stack_popr(stk, &y);
-            mpc_stack_pushr(stk, mpc_result_out(p->data.repeat.f(y.output, x.output)), 1);
+          if (mpc_stack_peekr(stk, &r)) {
             MPC_RETURN(st+1, p->data.repeat.x);
           } else {
-            if (st > 1) {
-              mpc_stack_popr(stk, &y);
-              mpc_err_delete(x.error);
-              MPC_SUCCESS(y.output);
+            if (st == 1) {
+              mpc_stack_popr(stk, &r);
+              MPC_FAILURE(mpc_err_many1(r.error));
             } else {
-              mpc_stack_popr(stk, &y);
-              MPC_FAILURE(mpc_err_many1(x.error));
+              mpc_stack_popr(stk, &r);
+              mpc_err_delete(r.error);
+              MPC_SUCCESS(mpc_stack_merger_out(stk, st-1, p->data.repeat.f));
             }
           }
         }
       
       case MPC_TYPE_COUNT:
-        if (st == 0) { mpc_input_mark(i); mpc_stack_pushr(stk, mpc_result_out(NULL), 1); MPC_RETURN(st+1, p->data.repeat.x); }
+        if (st == 0) { mpc_input_mark(i); MPC_RETURN(st+1, p->data.repeat.x); }
         if (st >  0) {
-          if (mpc_stack_popr(stk, &x)) {
-            mpc_stack_popr(stk, &y);
-            mpc_stack_pushr(stk, mpc_result_out(p->data.repeat.f(y.output, x.output)), 1);
+          if (mpc_stack_peekr(stk, &r)) {
             MPC_RETURN(st+1, p->data.repeat.x);
           } else {
-            mpc_stack_popr(stk, &y);
-            if (st == (p->data.repeat.n+1)) {
-              mpc_input_unmark(i);
-              MPC_SUCCESS(y.output ? y.output : p->data.repeat.lf());
-            } else {
-              p->data.repeat.dx(y.output);
+            if (st != (p->data.repeat.n+1)) {
+              mpc_stack_popr(stk, &r);
+              mpc_stack_popr_out_single(stk, st-1, p->data.repeat.dx);
               mpc_input_rewind(i);
-              MPC_FAILURE(mpc_err_count(x.error, p->data.repeat.n));
+              MPC_FAILURE(mpc_err_count(r.error, p->data.repeat.n));
+            } else {
+              mpc_stack_popr(stk, &r);
+              mpc_err_delete(r.error);
+              mpc_input_unmark(i);
+              MPC_SUCCESS(mpc_stack_merger_out(stk, st-1, p->data.repeat.f));
             }
           }
         }
@@ -1090,18 +1099,27 @@ int mpc_parse_input(mpc_input_t* i, mpc_parser_t* init, mpc_result_t* final) {
         
         if (st == 0) { MPC_RETURN(st+1, p->data.or.xs[st]); }
         if (st <= p->data.or.n) {
-          if (mpc_stack_peekr(stk, &x)) { mpc_stack_popr(stk, &x); mpc_stack_popr_err(stk, st-1); MPC_SUCCESS(x.output); }
+          if (mpc_stack_peekr(stk, &r)) {
+            mpc_stack_popr(stk, &r);
+            mpc_stack_popr_err(stk, st-1);
+            MPC_SUCCESS(r.output);
+          }
           if (st <  p->data.or.n) { MPC_RETURN(st+1, p->data.or.xs[st]); }
           if (st == p->data.or.n) { MPC_FAILURE(mpc_stack_merger_err(stk, p->data.or.n)); }
         }
       
       case MPC_TYPE_AND:
         
-        if (p->data.or.n == 0) { MPC_SUCCESS(NULL); }
+        if (p->data.or.n == 0) { MPC_SUCCESS(p->data.and.f(0, NULL)); }
         
         if (st == 0) { mpc_input_mark(i); MPC_RETURN(st+1, p->data.and.xs[st]); }
         if (st <= p->data.and.n) {
-          if (!mpc_stack_peekr(stk, &x)) { mpc_input_rewind(i); mpc_stack_popr(stk, &x); mpc_stack_popr_out(stk, st-1, p->data.and.dxs); MPC_FAILURE(x.error); }
+          if (!mpc_stack_peekr(stk, &r)) {
+            mpc_input_rewind(i);
+            mpc_stack_popr(stk, &r);
+            mpc_stack_popr_out(stk, st-1, p->data.and.dxs);
+            MPC_FAILURE(r.error);
+          }
           if (st <  p->data.and.n) { MPC_RETURN(st+1, p->data.and.xs[st]); }
           if (st == p->data.and.n) { mpc_input_unmark(i); MPC_SUCCESS(mpc_stack_merger_out(stk, p->data.and.n, p->data.and.f)); }
         }
@@ -1533,7 +1551,7 @@ mpc_parser_t* mpc_predictive(mpc_parser_t* a) {
   return p;
 }
 
-mpc_parser_t* mpc_not_else(mpc_parser_t* a, mpc_dtor_t da, mpc_lift_t lf) {
+mpc_parser_t* mpc_not_lift(mpc_parser_t* a, mpc_dtor_t da, mpc_lift_t lf) {
   mpc_parser_t* p = mpc_undefined();
   p->type = MPC_TYPE_NOT;
   p->data.not.x = a;
@@ -1543,31 +1561,26 @@ mpc_parser_t* mpc_not_else(mpc_parser_t* a, mpc_dtor_t da, mpc_lift_t lf) {
 }
 
 mpc_parser_t* mpc_not(mpc_parser_t* a, mpc_dtor_t da) {
-  return mpc_not_else(a, da, mpcf_lift_null);
+  return mpc_not_lift(a, da, mpcf_lift_null);
 }
 
-mpc_parser_t* mpc_maybe_else(mpc_parser_t* a, mpc_lift_t lf) {
+mpc_parser_t* mpc_maybe_lift(mpc_parser_t* a, mpc_lift_t lf) {
   mpc_parser_t* p = mpc_undefined();
   p->type = MPC_TYPE_MAYBE;
-  p->data.repeat.x = a;
-  p->data.repeat.lf = lf;
+  p->data.not.x = a;
+  p->data.not.lf = lf;
   return p;
 }
 
 mpc_parser_t* mpc_maybe(mpc_parser_t* a) {
-  return mpc_maybe_else(a, mpcf_lift_null);
+  return mpc_maybe_lift(a, mpcf_lift_null);
 }
 
 mpc_parser_t* mpc_many(mpc_fold_t f, mpc_parser_t* a) {
-  return mpc_many_else(f, a, mpcf_lift_null);
-}
-
-mpc_parser_t* mpc_many_else(mpc_fold_t f, mpc_parser_t* a, mpc_lift_t lf) {
   mpc_parser_t* p = mpc_undefined();
   p->type = MPC_TYPE_MANY;
   p->data.repeat.x = a;
   p->data.repeat.f = f;
-  p->data.repeat.lf = lf;
   return p;
 }
 
@@ -1579,19 +1592,14 @@ mpc_parser_t* mpc_many1(mpc_fold_t f, mpc_parser_t* a) {
   return p;
 }
 
-mpc_parser_t* mpc_count_else(int n, mpc_fold_t f, mpc_parser_t* a, mpc_dtor_t da, mpc_lift_t lf) {
+mpc_parser_t* mpc_count(int n, mpc_fold_t f, mpc_parser_t* a, mpc_dtor_t da) {
   mpc_parser_t* p = mpc_undefined();
   p->type = MPC_TYPE_COUNT;
+  p->data.repeat.n = n;
+  p->data.repeat.f = f;
   p->data.repeat.x = a;
   p->data.repeat.dx = da;
-  p->data.repeat.f = f;
-  p->data.repeat.n = n;
-  p->data.repeat.lf = lf;
   return p;
-}
-
-mpc_parser_t* mpc_count(int n, mpc_fold_t f, mpc_parser_t* a, mpc_dtor_t da) {
-  return mpc_count_else(n, f, a, da, mpcf_lift_null);
 }
 
 mpc_parser_t* mpc_or(int n, ...) {
@@ -1614,7 +1622,7 @@ mpc_parser_t* mpc_or(int n, ...) {
   return p;
 }
 
-mpc_parser_t* mpc_and(int n, mpc_afold_t f, ...) {
+mpc_parser_t* mpc_and(int n, mpc_fold_t f, ...) {
 
   int i;
   va_list va;
@@ -1661,7 +1669,7 @@ mpc_parser_t* mpc_whitespace(void) { return mpc_expect(mpc_apply(mpc_spaces(), m
 
 mpc_parser_t* mpc_newline(void) { return mpc_expect(mpc_char('\n'), "newline"); }
 mpc_parser_t* mpc_tab(void) { return mpc_expect(mpc_char('\t'), "tab"); }
-mpc_parser_t* mpc_escape(void) { return mpc_and(2, mpcf_astrfold, mpc_char('\\'), mpc_any(), free); }
+mpc_parser_t* mpc_escape(void) { return mpc_and(2, mpcf_strfold, mpc_char('\\'), mpc_any(), free); }
 
 mpc_parser_t* mpc_digit(void) { return mpc_expect(mpc_oneof("012345689"), "digit"); }
 mpc_parser_t* mpc_hexdigit(void) { return mpc_expect(mpc_oneof("0123456789ABCDEFabcdef"), "hex digit"); }
@@ -1687,15 +1695,15 @@ mpc_parser_t* mpc_real(void) {
   
   mpc_parser_t *p0, *p1, *p2, *p30, *p31, *p32, *p3;
   
-  p0 = mpc_maybe_else(mpc_oneof("+-"), mpcf_lift_emptystr);
+  p0 = mpc_maybe_lift(mpc_oneof("+-"), mpcf_lift_str);
   p1 = mpc_digits();
-  p2 = mpc_maybe_else(mpc_and(2, mpcf_astrfold, mpc_char('.'), mpc_digits(), free), mpcf_lift_emptystr);
+  p2 = mpc_maybe_lift(mpc_and(2, mpcf_strfold, mpc_char('.'), mpc_digits(), free), mpcf_lift_str);
   p30 = mpc_oneof("eE");
-  p31 = mpc_maybe_else(mpc_oneof("+-"), mpcf_lift_emptystr);
+  p31 = mpc_maybe_lift(mpc_oneof("+-"), mpcf_lift_str);
   p32 = mpc_digits();
-  p3 = mpc_maybe_else(mpc_and(3, mpcf_astrfold, p30, p31, p32, free, free), mpcf_lift_emptystr);
+  p3 = mpc_maybe_lift(mpc_and(3, mpcf_strfold, p30, p31, p32, free, free), mpcf_lift_str);
   
-  return mpc_expect(mpc_and(4, mpcf_astrfold, p0, p1, p2, p3, free, free, free), "real");
+  return mpc_expect(mpc_and(4, mpcf_strfold, p0, p1, p2, p3, free, free, free), "real");
 
 }
 
@@ -1709,37 +1717,37 @@ mpc_parser_t* mpc_char_lit(void) {
 
 mpc_parser_t* mpc_string_lit(void) {
   mpc_parser_t* strchar = mpc_or(2, mpc_escape(), mpc_noneof("\""));
-  return mpc_expect(mpc_between(mpc_many_else(mpcf_strfold, strchar, mpcf_lift_emptystr), free, "\"", "\""), "string");
+  return mpc_expect(mpc_between(mpc_many(mpcf_strfold, strchar), free, "\"", "\""), "string");
 }
 
 mpc_parser_t* mpc_regex_lit(void) {  
   mpc_parser_t* regexchar = mpc_or(2, mpc_escape(), mpc_noneof("/"));
-  return mpc_expect(mpc_between(mpc_many_else(mpcf_strfold, regexchar, mpcf_lift_emptystr), free, "/", "/"), "regex");
+  return mpc_expect(mpc_between(mpc_many(mpcf_strfold, regexchar), free, "/", "/"), "regex");
 }
 
 mpc_parser_t* mpc_ident(void) {
   mpc_parser_t *p0, *p1; 
   p0 = mpc_or(2, mpc_alpha(), mpc_underscore());
-  p1 = mpc_many_else(mpcf_strfold, mpc_alphanum(), mpcf_lift_emptystr); 
-  return mpc_and(2, mpcf_astrfold, p0, p1, free);
+  p1 = mpc_many(mpcf_strfold, mpc_alphanum()); 
+  return mpc_and(2, mpcf_strfold, p0, p1, free);
 }
 
 /*
 ** Useful Parsers
 */
 
-mpc_parser_t* mpc_start(mpc_parser_t* a) { return mpc_and(2, mpcf_asnd, mpc_soi(), a, mpcf_dtor_null); }
-mpc_parser_t* mpc_end(mpc_parser_t* a, mpc_dtor_t da) { return mpc_and(2, mpcf_afst, a, mpc_eoi(), da); }
-mpc_parser_t* mpc_enclose(mpc_parser_t* a, mpc_dtor_t da) { return mpc_and(3, mpcf_asnd, mpc_soi(), a, mpc_eoi(), mpcf_dtor_null, da); }
+mpc_parser_t* mpc_start(mpc_parser_t* a) { return mpc_and(2, mpcf_snd, mpc_soi(), a, mpcf_dtor_null); }
+mpc_parser_t* mpc_end(mpc_parser_t* a, mpc_dtor_t da) { return mpc_and(2, mpcf_fst, a, mpc_eoi(), da); }
+mpc_parser_t* mpc_enclose(mpc_parser_t* a, mpc_dtor_t da) { return mpc_and(3, mpcf_snd, mpc_soi(), a, mpc_eoi(), mpcf_dtor_null, da); }
 
-mpc_parser_t* mpc_strip(mpc_parser_t* a) { return mpc_and(3, mpcf_asnd, mpc_whitespace(), a, mpc_whitespace(), mpcf_dtor_null, mpcf_dtor_null); }
-mpc_parser_t* mpc_tok(mpc_parser_t* a) { return mpc_and(2, mpcf_afst, a, mpc_whitespace(), mpcf_dtor_null); }
+mpc_parser_t* mpc_strip(mpc_parser_t* a) { return mpc_and(3, mpcf_snd, mpc_whitespace(), a, mpc_whitespace(), mpcf_dtor_null, mpcf_dtor_null); }
+mpc_parser_t* mpc_tok(mpc_parser_t* a) { return mpc_and(2, mpcf_fst, a, mpc_whitespace(), mpcf_dtor_null); }
 mpc_parser_t* mpc_sym(const char* s) { return mpc_tok(mpc_string(s)); }
 
 mpc_parser_t* mpc_total(mpc_parser_t* a, mpc_dtor_t da) { return mpc_enclose(mpc_strip(a), da); }
 
 mpc_parser_t* mpc_between(mpc_parser_t* a, mpc_dtor_t ad, const char* o, const char* c) {
-  return mpc_and(3, mpcf_between_free,
+  return mpc_and(3, mpcf_snd_free,
     mpc_string(o), a, mpc_string(c),
     free, ad);
 }
@@ -1750,7 +1758,7 @@ mpc_parser_t* mpc_brackets(mpc_parser_t* a, mpc_dtor_t ad) { return mpc_between(
 mpc_parser_t* mpc_squares(mpc_parser_t* a, mpc_dtor_t ad)  { return mpc_between(a, ad, "[", "]"); }
 
 mpc_parser_t* mpc_tok_between(mpc_parser_t* a, mpc_dtor_t ad, const char* o, const char* c) {
-  return mpc_and(3, mpcf_between_free,
+  return mpc_and(3, mpcf_snd_free,
     mpc_sym(o), mpc_tok(a), mpc_sym(c),
     free, ad);
 }
@@ -1810,33 +1818,31 @@ mpc_parser_t* mpc_tok_squares(mpc_parser_t* a, mpc_dtor_t ad)  { return mpc_tok_
 **             | "[" <range> "]"
 */
 
-static mpc_val_t* mpc_re_fold_or(int n, mpc_val_t** xs) {
-  
-  if (xs[1] == NULL) {
-    return xs[0];
-  } else {
-    return mpc_or(2, xs[0], xs[1]);
-  }
-  
+static mpc_val_t* mpcf_re_or(int n, mpc_val_t** xs) {
+  if (xs[1] == NULL) { return xs[0]; }
+  else { return mpc_or(2, xs[0], xs[1]); }
 }
 
-static mpc_val_t* mpc_re_fold_repeat(int n, mpc_val_t** xs) {
+static mpc_val_t* mpcf_re_and(int n, mpc_val_t** xs) {
+  int i;
+  mpc_parser_t* p = mpc_lift(mpcf_lift_str);
+  for (i = 0; i < n; i++) {
+    p = mpc_and(2, mpcf_strfold, p, xs[i], free);
+  }
+  return p;
+}
+
+static mpc_val_t* mpcf_re_repeat(int n, mpc_val_t** xs) {
   
   int num;
-  if (xs[1] == NULL) { return xs[0]; }  
-  if (strcmp(xs[1], "*") == 0) { free(xs[1]); return mpc_many_else(mpcf_strfold, xs[0], mpcf_lift_emptystr); }
+  if (xs[1] == NULL) { return xs[0]; }
+  if (strcmp(xs[1], "*") == 0) { free(xs[1]); return mpc_many(mpcf_strfold, xs[0]); }
   if (strcmp(xs[1], "+") == 0) { free(xs[1]); return mpc_many1(mpcf_strfold, xs[0]); }
-  if (strcmp(xs[1], "?") == 0) { free(xs[1]); return mpc_maybe_else(xs[0], mpcf_lift_emptystr); }
+  if (strcmp(xs[1], "?") == 0) { free(xs[1]); return mpc_maybe_lift(xs[0], mpcf_lift_str); }
   num = *(int*)xs[1];
   free(xs[1]);
   
-  return mpc_count_else(num, mpcf_strfold, xs[0], free, mpcf_lift_emptystr);
-}
-
-static mpc_val_t* mpc_re_fold_many(mpc_val_t* t, mpc_val_t* x) {
-  if (t == NULL) { return x; }
-  if (x == NULL) { return t; }
-  return mpc_and(2, mpcf_astrfold, t, x, free);
+  return mpc_count(num, mpcf_strfold, xs[0], free);
 }
 
 static mpc_parser_t* mpc_re_escape_char(char c, int range) {
@@ -1846,29 +1852,28 @@ static mpc_parser_t* mpc_re_escape_char(char c, int range) {
     case 'n': return mpc_char('\n');
     case 't': return mpc_char('\t');
     case 'v': return mpc_char('\v');
-    case 'A': return mpc_and(2, mpcf_asnd, mpc_eoi(), mpc_lift(mpcf_lift_emptystr), free);
-    case 'b': if (range) { mpc_char('\b'); } else { return mpc_failf("In Regex '\\b' escape character unsupported!"); }
-    case 'B': return mpc_failf("In Regex '\\B' escape character unsupported!");
+    case 'b': return mpc_char('\b');
+    case 'A': return mpc_and(2, mpcf_snd, mpc_soi(), mpc_lift(mpcf_lift_str), free);
+    case 'Z': return mpc_and(2, mpcf_snd, mpc_eoi(), mpc_lift(mpcf_lift_str), free);
     case 'd': return mpc_digit();
-    case 'D': return mpc_not_else(mpc_digit(), free, mpcf_lift_emptystr);
+    case 'D': return mpc_not_lift(mpc_digit(), free, mpcf_lift_str);
     case 's': return mpc_space();
-    case 'S': return mpc_not_else(mpc_space(), free, mpcf_lift_emptystr);
+    case 'S': return mpc_not_lift(mpc_space(), free, mpcf_lift_str);
     case 'w': return mpc_alphanum();
-    case 'W': return mpc_not_else(mpc_alphanum(), free, mpcf_lift_emptystr);
-    case 'Z': return mpc_and(2, mpcf_asnd, mpc_soi(), mpc_lift(mpcf_lift_emptystr), free);
+    case 'W': return mpc_not_lift(mpc_alphanum(), free, mpcf_lift_str);
     default: return NULL;
   }
 }
 
-static mpc_val_t* mpc_re_escape(mpc_val_t* x) {
+static mpc_val_t* mpcf_re_escape(mpc_val_t* x) {
   
   char* s = x;
   mpc_parser_t* p;
   
   /* Regex Special Characters */
   if (s[0] == '.') { free(s); return mpc_any(); }
-  if (s[0] == '^') { free(s); return mpc_and(2, mpcf_asnd, mpc_soi(), mpc_lift(mpcf_lift_emptystr), free); }
-  if (s[0] == '$') { free(s); return mpc_and(2, mpcf_asnd, mpc_eoi(), mpc_lift(mpcf_lift_emptystr), free); }
+  if (s[0] == '^') { free(s); return mpc_and(2, mpcf_snd, mpc_soi(), mpc_lift(mpcf_lift_str), free); }
+  if (s[0] == '$') { free(s); return mpc_and(2, mpcf_snd, mpc_eoi(), mpc_lift(mpcf_lift_str), free); }
   
   /* Regex Escape */
   if (s[0] == '\\') {
@@ -1884,7 +1889,7 @@ static mpc_val_t* mpc_re_escape(mpc_val_t* x) {
   return p;
 }
 
-static mpc_val_t* mpc_re_range(mpc_val_t* x) {
+static mpc_val_t* mpcf_re_range(mpc_val_t* x) {
     
   char* s = x;
   int i = 0;
@@ -1924,11 +1929,11 @@ static mpc_val_t* mpc_re_range(mpc_val_t* x) {
   }
   
   free(x);
-  return comp ? mpc_not_else(p, free, mpcf_lift_emptystr) : p;
+  return comp ? mpc_not_lift(p, free, mpcf_lift_str) : p;
 }
 
-static mpc_val_t* mpc_re_lift(void) {
-  return mpc_pass();
+static mpc_val_t* mpcf_re_invalid(void) {
+  return mpc_fail("Invalid Regex");
 }
 
 mpc_parser_t* mpc_re(const char* re) {
@@ -1944,21 +1949,19 @@ mpc_parser_t* mpc_re(const char* re) {
   Range  = mpc_new("range");
   
   mpc_define(Regex, mpc_and(2, 
-    mpc_re_fold_or,
+    mpcf_re_or,
     Term, 
-    mpc_maybe(mpc_and(2, mpcf_asnd_free, mpc_char('|'), Regex, free)),
+    mpc_maybe(mpc_and(2, mpcf_snd_free, mpc_char('|'), Regex, free)),
     (mpc_dtor_t)mpc_delete
   ));
   
-  mpc_define(Term, mpc_many_else(mpc_re_fold_many, Factor, mpc_re_lift));
+  mpc_define(Term, mpc_many(mpcf_re_and, Factor));
   
   mpc_define(Factor, mpc_and(2, 
-    mpc_re_fold_repeat,
+    mpcf_re_repeat,
     Base,
     mpc_or(5,
-      mpc_char('*'),
-      mpc_char('+'),
-      mpc_char('?'),
+      mpc_char('*'), mpc_char('+'), mpc_char('?'),
       mpc_brackets(mpc_int(), free),
       mpc_pass()),
     (mpc_dtor_t)mpc_delete
@@ -1967,13 +1970,13 @@ mpc_parser_t* mpc_re(const char* re) {
   mpc_define(Base, mpc_or(4,
     mpc_parens(Regex, (mpc_dtor_t)mpc_delete),
     mpc_squares(Range, (mpc_dtor_t)mpc_delete),
-    mpc_apply(mpc_escape(), mpc_re_escape),
-    mpc_apply(mpc_noneof(")|"), mpc_re_escape)
+    mpc_apply(mpc_escape(), mpcf_re_escape),
+    mpc_apply(mpc_noneof(")|"), mpcf_re_escape)
   ));
   
   mpc_define(Range, mpc_apply(
-    mpc_many_else(mpcf_strfold, mpc_or(2, mpc_escape(), mpc_noneof("]")), mpcf_lift_emptystr),
-    mpc_re_range
+    mpc_many(mpcf_strfold, mpc_or(2, mpc_escape(), mpc_noneof("]"))),
+    mpcf_re_range
   ));
   
   RegexEnclose = mpc_enclose(mpc_predictive(Regex), (mpc_dtor_t)mpc_delete);
@@ -1999,7 +2002,7 @@ mpc_parser_t* mpc_re(const char* re) {
 void mpcf_dtor_null(mpc_val_t* x) { return; }
 
 mpc_val_t* mpcf_lift_null(void) { return NULL; }
-mpc_val_t* mpcf_lift_emptystr(void) { return calloc(1, 1); }
+mpc_val_t* mpcf_lift_str(void) { return calloc(1, 1); }
 mpc_val_t* mpcf_free(mpc_val_t* x) { free(x); return NULL; }
 
 mpc_val_t* mpcf_int(mpc_val_t* x) {
@@ -2150,29 +2153,11 @@ mpc_val_t* mpcf_strcrop(mpc_val_t* x) {
   return copy;
 }
 
-mpc_val_t* mpcf_fst(mpc_val_t* x, mpc_val_t* y) { return x; }
-mpc_val_t* mpcf_snd(mpc_val_t* x, mpc_val_t* y) { return y; }
-mpc_val_t* mpcf_fst_free(mpc_val_t* x, mpc_val_t* y) { free(y); return x; }
-mpc_val_t* mpcf_snd_free(mpc_val_t* x, mpc_val_t* y) { free(x); return y; }
-mpc_val_t* mpcf_freefold(mpc_val_t* t, mpc_val_t* x) { free(x); return NULL; }
+mpc_val_t* mpcf_fst(int n, mpc_val_t** xs) { return xs[0]; }
+mpc_val_t* mpcf_snd(int n, mpc_val_t** xs) { return xs[1]; }
+mpc_val_t* mpcf_trd(int n, mpc_val_t** xs) { return xs[2]; }
 
-mpc_val_t* mpcf_strfold(mpc_val_t* t, mpc_val_t* x) {
-  
-  if (t == NULL) { return x; }
-  if (x == NULL) { return t; }
-  
-  t = realloc(t, strlen(t) + strlen(x) + 1);
-  strcat(t, x);
-  free(x);
-  
-  return t;
-}
-
-mpc_val_t* mpcf_afst(int n, mpc_val_t** xs) { return xs[0]; }
-mpc_val_t* mpcf_asnd(int n, mpc_val_t** xs) { return xs[1]; }
-mpc_val_t* mpcf_atrd(int n, mpc_val_t** xs) { return xs[2]; }
-
-static mpc_val_t* mpcf_anth_free(int n, mpc_val_t** xs, int x) {
+static mpc_val_t* mpcf_nth_free(int n, mpc_val_t** xs, int x) {
   int i;
   for (i = 0; i < n; i++) {
     if (i != x) { free(xs[i]); }
@@ -2180,23 +2165,19 @@ static mpc_val_t* mpcf_anth_free(int n, mpc_val_t** xs, int x) {
   return xs[x];
 }
  
-mpc_val_t* mpcf_afst_free(int n, mpc_val_t** xs) { return mpcf_anth_free(n, xs, 0); }
-mpc_val_t* mpcf_asnd_free(int n, mpc_val_t** xs) { return mpcf_anth_free(n, xs, 1); }
-mpc_val_t* mpcf_atrd_free(int n, mpc_val_t** xs) { return mpcf_anth_free(n, xs, 2); }
+mpc_val_t* mpcf_fst_free(int n, mpc_val_t** xs) { return mpcf_nth_free(n, xs, 0); }
+mpc_val_t* mpcf_snd_free(int n, mpc_val_t** xs) { return mpcf_nth_free(n, xs, 1); }
+mpc_val_t* mpcf_trd_free(int n, mpc_val_t** xs) { return mpcf_nth_free(n, xs, 2); }
 
-mpc_val_t* mpcf_astrfold(int n, mpc_val_t** xs) {
-  mpc_val_t* t = NULL;
+mpc_val_t* mpcf_strfold(int n, mpc_val_t** xs) {
+  char* x = calloc(1, 1);
   int i;
   for (i = 0; i < n; i++) {
-    t = mpcf_strfold(t, xs[i]);
+    x = realloc(x, strlen(x) + strlen(xs[i]) + 1);
+    strcat(x, xs[i]);
+    free(xs[i]);
   }
-  return t;
-}
-
-mpc_val_t* mpcf_between_free(int n, mpc_val_t** xs) {
-  free(xs[0]);
-  free(xs[2]);
-  return xs[1];
+  return x;
 }
 
 mpc_val_t* mpcf_maths(int n, mpc_val_t** xs) {
@@ -2227,25 +2208,26 @@ static void mpc_print_unretained(mpc_parser_t* p, int force) {
   char buff[2];
   
   if (p->retained && !force) {
+    printf("~%p~%i~", (void*)p, p->retained);
     if (p->name) { printf("<%s>", p->name); }
     else { printf("<anon>"); }
     return;
   }
   
-  if (p->type == MPC_TYPE_UNDEFINED) { printf("<undefined>"); }
-  if (p->type == MPC_TYPE_PASS)   { printf("<pass>"); }
-  if (p->type == MPC_TYPE_FAIL)   { printf("<fail>"); }
-  if (p->type == MPC_TYPE_LIFT)   { printf("<lift>"); }
+  if (p->type == MPC_TYPE_UNDEFINED) { printf("<?>"); }
+  if (p->type == MPC_TYPE_PASS)   { printf("<:>"); }
+  if (p->type == MPC_TYPE_FAIL)   { printf("<!>"); }
+  if (p->type == MPC_TYPE_LIFT)   { printf("<#>"); }
   if (p->type == MPC_TYPE_EXPECT) {
     printf("%s", p->data.expect.m);
     /*mpc_print_unretained(p->data.expect.x, 0);*/
   }
   
-  if (p->type == MPC_TYPE_SOI) { printf("<soi>"); }
-  if (p->type == MPC_TYPE_EOI) { printf("<eoi>"); }
+  if (p->type == MPC_TYPE_SOI) { printf("<^>"); }
+  if (p->type == MPC_TYPE_EOI) { printf("<$>"); }
   
-  if (p->type == MPC_TYPE_ANY) { printf("<any>"); }
-  if (p->type == MPC_TYPE_SATISFY) { printf("<satisfy>"); }
+  if (p->type == MPC_TYPE_ANY) { printf("<.>"); }
+  if (p->type == MPC_TYPE_SATISFY) { printf("<f>"); }
 
   if (p->type == MPC_TYPE_SINGLE) {
     buff[0] = p->data.single.x; buff[1] = '\0';
@@ -2598,9 +2580,9 @@ mpc_parser_t* mpca_add_tag(mpc_parser_t* a, const char* t) {
 
 mpc_parser_t* mpca_not(mpc_parser_t* a) { return mpc_not(a, (mpc_dtor_t)mpc_ast_delete); }
 mpc_parser_t* mpca_maybe(mpc_parser_t* a) { return mpc_maybe(a); }
-mpc_parser_t* mpca_many(mpc_parser_t* a) { return mpc_many(mpcf_fold_ast, a); }
-mpc_parser_t* mpca_many1(mpc_parser_t* a) { return mpc_many1(mpcf_fold_ast, a); }
-mpc_parser_t* mpca_count(int n, mpc_parser_t* a) { return mpc_count(n, mpcf_fold_ast, a, (mpc_dtor_t)mpc_ast_delete); }
+mpc_parser_t* mpca_many(mpc_parser_t* a) { return mpc_many(mpcf_afold_ast, a); }
+mpc_parser_t* mpca_many1(mpc_parser_t* a) { return mpc_many1(mpcf_afold_ast, a); }
+mpc_parser_t* mpca_count(int n, mpc_parser_t* a) { return mpc_count(n, mpcf_afold_ast, a, (mpc_dtor_t)mpc_ast_delete); }
 
 mpc_parser_t* mpca_or(int n, ...) {
 
@@ -2695,23 +2677,21 @@ mpc_parser_t* mpca_total(mpc_parser_t* a) { return mpc_total(a, (mpc_dtor_t)mpc_
 */
 
 static mpc_val_t* mpca_grammar_fold_or(int n, mpc_val_t** xs) {
-  
-  if (xs[1] == NULL) {
-    return xs[0];
-  } else {
-    return mpca_or(2, xs[0], xs[1]);
+  int i;
+  mpc_parser_t* p = mpc_pass();  
+  for (i = 0; i < n; i++) {
+    if (xs[i] != NULL) { p = mpca_or(2, p, xs[i]); }
   }
-  
+  return p;
 }
 
-static mpc_val_t* mpca_grammar_fold_many(mpc_val_t* x, mpc_val_t* y) {
-  if (x == NULL) { return y; }
-  if (y == NULL) { return x; }
-  return mpca_and(2, x, y);
-}
-
-static mpc_val_t* mpca_grammar_lift(void) {
-  return mpc_pass();
+static mpc_val_t* mpca_grammar_fold_and(int n, mpc_val_t** xs) {
+  int i;
+  mpc_parser_t* p = mpc_pass();  
+  for (i = 0; i < n; i++) {
+    if (xs[i] != NULL) { p = mpca_and(2, p, xs[i]); }
+  }
+  return p;
 }
 
 static mpc_val_t* mpca_grammar_fold_repeat(int n, mpc_val_t** xs) {
@@ -2836,11 +2816,11 @@ mpc_parser_t* mpca_grammar_st(const char* grammar, mpca_grammar_st_t* st) {
   mpc_define(Grammar, mpc_and(2, 
     mpca_grammar_fold_or,
     Term,
-    mpc_maybe(mpc_and(2, mpcf_asnd_free, mpc_sym("|"), Grammar, free)),
+    mpc_maybe(mpc_and(2, mpcf_snd_free, mpc_sym("|"), Grammar, free)),
     mpc_soft_delete
   ));
   
-  mpc_define(Term, mpc_many_else(mpca_grammar_fold_many, Factor, mpca_grammar_lift));
+  mpc_define(Term, mpc_many(mpca_grammar_fold_and, Factor));
   
   mpc_define(Factor, mpc_and(2, 
     mpca_grammar_fold_repeat,
@@ -2915,22 +2895,17 @@ static int mpca_stmt_list_count(mpc_val_t* x) {
   return i;
 }
 
-static mpc_val_t* mpca_stmt_fold(mpc_val_t* t, mpc_val_t* x) {
+static mpc_val_t* mpca_stmt_fold(int n, mpc_val_t** xs) {
   
-  int count;
-  mpca_stmt_t** stmts = t;
-
-  if (stmts == NULL) {
-    stmts = calloc(1, sizeof(mpca_stmt_t*));
+  int i;
+  mpca_stmt_t** stmts = malloc(sizeof(mpca_stmt_t*) * (n+1));
+  
+  for (i = 0; i < n; i++) {
+    stmts[i] = xs[i];
   }
-  
-  count = mpca_stmt_list_count(stmts);
-  stmts = realloc(stmts, (count + 2) * sizeof(mpca_stmt_t*));
-  stmts[count] = x;
-  stmts[count+1] = NULL;
+  stmts[n] = NULL;  
   
   return stmts;
-  
 }
 
 static void mpca_stmt_list_delete(mpc_val_t* x) {
@@ -2994,11 +2969,11 @@ static mpc_err_t* mpca_lang_st(mpc_input_t* i, mpca_grammar_st_t* st) {
   mpc_define(Grammar, mpc_and(2, 
       mpca_grammar_fold_or,
       Term,
-      mpc_maybe(mpc_and(2, mpcf_asnd_free, mpc_sym("|"), Grammar, free)),
+      mpc_maybe(mpc_and(2, mpcf_snd_free, mpc_sym("|"), Grammar, free)),
       mpc_soft_delete
   ));
   
-  mpc_define(Term, mpc_many_else(mpca_grammar_fold_many, Factor, mpca_grammar_lift));
+  mpc_define(Term, mpc_many(mpca_grammar_fold_and, Factor));
   
   mpc_define(Factor, mpc_and(2, 
     mpca_grammar_fold_repeat,
