@@ -9,7 +9,7 @@ static void string_print(void* x) { printf("'%s'", (char*)x); }
 
 void test_regex_basic(void) {
 
-  mpc_parser_t *re0, *re1, *re2, *re3, *re4, *re5;
+  mpc_parser_t *re0, *re1, *re2, *re3, *re4, *re5, *re6, *re7;
 
   re0 = mpc_re("abc|bcd");
   re1 = mpc_re("abc|bcd|e");
@@ -17,6 +17,8 @@ void test_regex_basic(void) {
   re3 = mpc_re("abc(abdd)?");
   re4 = mpc_re("ab|c(abdd)?");
   re5 = mpc_re("abc(ab|dd)+g$");
+  re6 = mpc_re("\"(\\\\.|[^\"])*\"");
+  re7 = mpc_re(";[^\\n\\r]*");
   
   PT_ASSERT(mpc_match(re0, "abc", "abc", string_eq, free, string_print));
   PT_ASSERT(mpc_match(re0, "bcd", "bcd", string_eq, free, string_print));
@@ -26,7 +28,13 @@ void test_regex_basic(void) {
   PT_ASSERT(mpc_match(re2, "abc", "abc", string_eq, free, string_print));
   PT_ASSERT(mpc_match(re2, "abcabab", "abcabab", string_eq, free, string_print));
   PT_ASSERT(mpc_match(re2, "abcababd", "abcabab", string_eq, free, string_print));
-  PT_ASSERT(mpc_match(re5, "abck", "", string_eq, free, string_print));
+  PT_ASSERT(mpc_match(re5, "abcddg", "abcddg", string_eq, free, string_print));
+  PT_ASSERT(mpc_match(re6, "\"there\"", "\"there\"", string_eq, free, string_print));
+  PT_ASSERT(mpc_match(re6, "\"hello\"", "\"hello\"", string_eq, free, string_print));
+  PT_ASSERT(mpc_match(re6, "\"i am dan\"", "\"i am dan\"", string_eq, free, string_print));
+  PT_ASSERT(mpc_match(re6, "\"i a\\\"m dan\"", "\"i a\\\"m dan\"", string_eq, free, string_print));
+  PT_ASSERT(mpc_match(re7, ";comment", ";comment", string_eq, free, string_print));
+  PT_ASSERT(mpc_match(re7, ";i am the\nman", ";i am the", string_eq, free, string_print));
   
   mpc_delete(re0);
   mpc_delete(re1);
@@ -34,6 +42,8 @@ void test_regex_basic(void) {
   mpc_delete(re3);
   mpc_delete(re4);
   mpc_delete(re5);
+  mpc_delete(re6);
+  mpc_delete(re7);
 
 }
 

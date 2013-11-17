@@ -75,7 +75,7 @@ mpc_ast_t* parse_maths(const char* input) {
 
 If you were to input something like `"(4 * 2 * 11 + 2) - 5"` into this function the `mpc_ast_t` you get out would look something like this:
 
-```c
+```python
 >:
   value|>:
     char: '('

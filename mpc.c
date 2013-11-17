@@ -1804,11 +1804,12 @@ static mpc_val_t* mpcf_re_repeat(int n, mpc_val_t** xs) {
   return mpc_count(num, mpcf_strfold, xs[0], free);
 }
 
-static mpc_parser_t* mpc_re_escape_char(char c, int range) {
+static mpc_parser_t* mpc_re_escape_char(char c) {
   switch (c) {
     case 'a': return mpc_char('\a');
     case 'f': return mpc_char('\f');
     case 'n': return mpc_char('\n');
+    case 'r': return mpc_char('\r');
     case 't': return mpc_char('\t');
     case 'v': return mpc_char('\v');
     case 'b': return mpc_char('\b');
@@ -1836,7 +1837,7 @@ static mpc_val_t* mpcf_re_escape(mpc_val_t* x) {
   
   /* Regex Escape */
   if (s[0] == '\\') {
-    p = mpc_re_escape_char(s[1], 0);
+    p = mpc_re_escape_char(s[1]);
     p = (p == NULL) ? mpc_char(s[1]) : p;
     free(s);
     return p;
@@ -1848,18 +1849,35 @@ static mpc_val_t* mpcf_re_escape(mpc_val_t* x) {
   return p;
 }
 
+static char* mpc_re_range_escape_char(char c) {
+  switch (c) {
+    case '-': return "-";
+    case 'a': return "\a";
+    case 'f': return "\f";
+    case 'n': return "\n";
+    case 'r': return "\r";
+    case 't': return "\t";
+    case 'v': return "\v";
+    case 'b': return "\b";
+    case 'd': return "0123456789";
+    case 's': return " \f\n\r\t\v";
+    case 'w': return "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_";
+    default: return NULL;
+  }
+}
+
 static mpc_val_t* mpcf_re_range(mpc_val_t* x) {
     
+  char* range = calloc(1,1);
+  char* tmp = NULL;
   char* s = x;
-  int i = 0;
+  char start, end;
+  int i, j;
   int comp = 0;
   
-  mpc_parser_t* q = NULL;
-  mpc_parser_t* p = mpc_failf("Invalid Range Specifier");
-  
-  if (s[0] == '\0') { free(x); return p; } 
+  if (s[0] == '\0') { free(x); return mpc_fail("Invalid Regex Range Expression"); } 
   if (s[0] == '^' && 
-      s[1] == '\0') { free(x); return p; }
+      s[1] == '\0') { free(x); return mpc_fail("Invalid Regex Range Expression"); }
   
   if (s[0] == '^') { comp = 1;}
   
@@ -1867,28 +1885,41 @@ static mpc_val_t* mpcf_re_range(mpc_val_t* x) {
     
     /* Regex Range Escape */
     if (s[i] == '\\') {
-      q = mpc_re_escape_char(s[i+1], 1);
-      q = (q == NULL) ? mpc_char(s[i+1]) : q;
-      p = mpc_or(2, p, q);
+      tmp = mpc_re_range_escape_char(s[i+1]);
+      if (tmp != NULL) {
+        range = realloc(range, strlen(range) + strlen(tmp) + 1);
+        strcat(range, tmp);
+      }
       i++;
     }
     
     /* Regex Range...Range */
     else if (s[i] == '-') {
       if (s[i+1] == '\0' || i == 0) {
-        p = mpc_or(2, p, mpc_char('-'));
+          range = realloc(range, strlen(range) + strlen("-") + 1);
+          strcat(range, "-");
       } else {
-        p = mpc_or(2, p, mpc_range(s[i-1]+1, s[i+1]-1));
+        start = s[i-1]+1;
+        end = s[i+1]-1;
+        for (j = start; j <= end; j++) {
+          range = realloc(range, strlen(range) + 1 + 1);
+          range[strlen(range) + 1] = '\0';
+          range[strlen(range) + 0] = j;
+        }        
       }
     }
     
     /* Regex Range Normal */
-    else { p = mpc_or(2, p, mpc_char(s[i])); }
+    else {
+      range = realloc(range, strlen(range) + 1 + 1);
+      range[strlen(range) + 1] = '\0';
+      range[strlen(range) + 0] = s[i];
+    }
   
   }
   
   free(x);
-  return comp ? mpc_not_lift(p, free, mpcf_ctor_str) : p;
+  return comp ? mpc_noneof(range) : mpc_oneof(range);
 }
 
 static mpc_val_t* mpcf_re_invalid(void) {
