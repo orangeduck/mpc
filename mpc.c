@@ -269,10 +269,6 @@ static mpc_err_t* mpc_err_count(mpc_err_t* x, int n) {
   return y;
 }
 
-char* mpc_err_filename(mpc_err_t* x) {
-  return x->filename;
-}
-
 void mpc_err_expected(mpc_err_t* x, char** out, int* out_num, int out_max) {
   
   int i;
@@ -284,17 +280,10 @@ void mpc_err_expected(mpc_err_t* x, char** out, int* out_num, int out_max) {
   }
 }
 
-int mpc_err_line(mpc_err_t* x) {
-  return x->state.row;
-}
-
-int mpc_err_column(mpc_err_t* x) {
-  return x->state.col;
-}
-
-char mpc_err_unexpected(mpc_err_t* x) {
-  return x->state.next;
-}
+char* mpc_err_filename(mpc_err_t* x) { return x->filename; }
+int mpc_err_line(mpc_err_t* x) { return x->state.row; }
+int mpc_err_column(mpc_err_t* x) { return x->state.col; }
+char mpc_err_unexpected(mpc_err_t* x) { return x->state.next; }
 
 /*
 ** Input Type
@@ -878,20 +867,21 @@ static mpc_err_t* mpc_stack_merger_err(mpc_stack_t* s, int n) {
 
 /*
 ** This is rather pleasant. The core parsing routine
-** is written in about 300 lines of C.
+** is written in about 200 lines of C.
 **
 ** I also love the way in which each parsing type
 ** concisely matches some construct or pattern.
 **
-** Particularly nice are the `either` and `also`
+** Particularly nice are the `or` and `and`
 ** types which have a broken but mirrored structure
 ** with return value and error reflected.
 **
 ** When this function was written in recursive form
 ** it looked pretty nice. But I've since switched
 ** it around to an akward while loop. It was an
-** unfortunate change but if was a noble attempt
-** in the name of performance (and not smashing the stack).
+** unfortunate change for code simplicity but it
+** is noble in the name of performance (and 
+** not smashing the stack).
 **
 ** But it is now a pretty ugly beast...
 */
@@ -910,7 +900,6 @@ int mpc_parse_input(mpc_input_t* i, mpc_parser_t* init, mpc_result_t* final) {
   
   /* Variables */
   char* s;
-  mpc_val_t* t;
   mpc_result_t r;
 
   /* Go! */
@@ -924,23 +913,23 @@ int mpc_parse_input(mpc_input_t* i, mpc_parser_t* init, mpc_result_t* final) {
       
       /* Trivial Parsers */
 
-      case MPC_TYPE_UNDEFINED:  MPC_FAILURE(mpc_err_new_fail(i->filename, i->state, "Parser Undefined!"));      
-      case MPC_TYPE_PASS:       MPC_SUCCESS(NULL);
-      case MPC_TYPE_FAIL:       MPC_FAILURE(mpc_err_new_fail(i->filename, i->state, p->data.fail.m));
-      case MPC_TYPE_LIFT:       MPC_SUCCESS(p->data.lift.lf());
-      case MPC_TYPE_LIFT_VAL:   MPC_SUCCESS(p->data.lift.x);
+      case MPC_TYPE_UNDEFINED: MPC_FAILURE(mpc_err_new_fail(i->filename, i->state, "Parser Undefined!"));      
+      case MPC_TYPE_PASS:      MPC_SUCCESS(NULL);
+      case MPC_TYPE_FAIL:      MPC_FAILURE(mpc_err_new_fail(i->filename, i->state, p->data.fail.m));
+      case MPC_TYPE_LIFT:      MPC_SUCCESS(p->data.lift.lf());
+      case MPC_TYPE_LIFT_VAL:  MPC_SUCCESS(p->data.lift.x);
     
       /* Basic Parsers */
 
-      case MPC_TYPE_SOI:        MPC_FUNCTION(NULL, mpc_input_soi(i));
-      case MPC_TYPE_EOI:        MPC_FUNCTION(NULL, mpc_input_eoi(i));
-      case MPC_TYPE_ANY:        MPC_FUNCTION(s, mpc_input_any(i, &s));
-      case MPC_TYPE_SINGLE:     MPC_FUNCTION(s, mpc_input_char(i, p->data.single.x, &s));
-      case MPC_TYPE_RANGE:      MPC_FUNCTION(s, mpc_input_range(i, p->data.range.x, p->data.range.y, &s));
-      case MPC_TYPE_ONEOF:      MPC_FUNCTION(s, mpc_input_oneof(i, p->data.string.x, &s));
-      case MPC_TYPE_NONEOF:     MPC_FUNCTION(s, mpc_input_noneof(i, p->data.string.x, &s));
-      case MPC_TYPE_SATISFY:    MPC_FUNCTION(s, mpc_input_satisfy(i, p->data.satisfy.f, &s));
-      case MPC_TYPE_STRING:     MPC_FUNCTION(s, mpc_input_string(i, p->data.string.x, &s));
+      case MPC_TYPE_SOI:       MPC_FUNCTION(NULL, mpc_input_soi(i));
+      case MPC_TYPE_EOI:       MPC_FUNCTION(NULL, mpc_input_eoi(i));
+      case MPC_TYPE_ANY:       MPC_FUNCTION(s, mpc_input_any(i, &s));
+      case MPC_TYPE_SINGLE:    MPC_FUNCTION(s, mpc_input_char(i, p->data.single.x, &s));
+      case MPC_TYPE_RANGE:     MPC_FUNCTION(s, mpc_input_range(i, p->data.range.x, p->data.range.y, &s));
+      case MPC_TYPE_ONEOF:     MPC_FUNCTION(s, mpc_input_oneof(i, p->data.string.x, &s));
+      case MPC_TYPE_NONEOF:    MPC_FUNCTION(s, mpc_input_noneof(i, p->data.string.x, &s));
+      case MPC_TYPE_SATISFY:   MPC_FUNCTION(s, mpc_input_satisfy(i, p->data.satisfy.f, &s));
+      case MPC_TYPE_STRING:    MPC_FUNCTION(s, mpc_input_string(i, p->data.string.x, &s));
     
       /* Application Parsers */
       
@@ -1178,9 +1167,7 @@ static void mpc_undefine_unretained(mpc_parser_t* p, int force) {
   
   switch (p->type) {
     
-    case MPC_TYPE_FAIL:
-      free(p->data.fail.m);
-      break;
+    case MPC_TYPE_FAIL: free(p->data.fail.m); break;
     
     case MPC_TYPE_ONEOF: 
     case MPC_TYPE_NONEOF:
@@ -1188,17 +1175,9 @@ static void mpc_undefine_unretained(mpc_parser_t* p, int force) {
       free(p->data.string.x); 
       break;
     
-    case MPC_TYPE_APPLY:
-      mpc_undefine_unretained(p->data.apply.x, 0);
-      break;
-    
-    case MPC_TYPE_APPLY_TO:
-      mpc_undefine_unretained(p->data.apply_to.x, 0);
-      break;
-    
-    case MPC_TYPE_PREDICT:
-      mpc_undefine_unretained(p->data.predict.x, 0);
-      break;
+    case MPC_TYPE_APPLY:    mpc_undefine_unretained(p->data.apply.x, 0);    break;
+    case MPC_TYPE_APPLY_TO: mpc_undefine_unretained(p->data.apply_to.x, 0); break;
+    case MPC_TYPE_PREDICT:  mpc_undefine_unretained(p->data.predict.x, 0);  break;
     
     case MPC_TYPE_MAYBE:
     case MPC_TYPE_NOT:
@@ -1216,13 +1195,8 @@ static void mpc_undefine_unretained(mpc_parser_t* p, int force) {
       mpc_undefine_unretained(p->data.repeat.x, 0);
       break;
     
-    case MPC_TYPE_OR:
-      mpc_undefine_or(p);
-      break;
-    
-    case MPC_TYPE_AND:
-      mpc_undefine_and(p);
-      break;
+    case MPC_TYPE_OR:  mpc_undefine_or(p);  break;
+    case MPC_TYPE_AND: mpc_undefine_and(p); break;
     
     default: break;
   }
@@ -1889,6 +1863,10 @@ static mpc_val_t* mpcf_re_range(mpc_val_t* x) {
       if (tmp != NULL) {
         range = realloc(range, strlen(range) + strlen(tmp) + 1);
         strcat(range, tmp);
+      } else {
+        range = realloc(range, strlen(range) + 1 + 1);
+        range[strlen(range) + 1] = '\0';
+        range[strlen(range) + 0] = s[i+1];      
       }
       i++;
     }

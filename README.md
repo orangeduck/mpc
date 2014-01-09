@@ -7,6 +7,7 @@ Using _mpc_ might be of interest to you if you are...
 
 * Building a new programming language
 * Building a new data format
+* Parsing an existing programming languages
 * Parsing an existing data format
 * Embedding a Domain Specific Language
 * Implementing [Greenspun's Tenth Rule](http://en.wikipedia.org/wiki/Greenspun%27s_tenth_rule)
@@ -15,12 +16,12 @@ Using _mpc_ might be of interest to you if you are...
 Features
 --------
 
-* Type-Generic Parser Combinators
-* Predictive Recursive Descent Parsers
-* Error Message Support
-* Regular Expression Support
-* Grammar Support
+* Type-Generic
+* Predictive, Recursive Descent
 * Easy to Integrate (One Source File in ANSI C)
+* Error Messages
+* Regular Expression Parser Generator
+* Grammar Parser Generator
 
 
 Alternatives
@@ -28,7 +29,7 @@ Alternatives
 
 The current main alternative C based parser combinator is a branch of [Cesium3](https://github.com/wbhart/Cesium3/tree/combinators).
 
-This project has several downsides which _mpc_ overcomes:
+_mpc_ provides a number of features that this project does not offer, but it also overcomes a number of potential downsides:
 
 * _mpc_ Works for Generic Types
 * _mpc_ Doesn't rely on Boehm-Demers-Weiser Garbage Collection
@@ -73,7 +74,7 @@ mpc_ast_t* parse_maths(const char* input) {
 }
 ```
 
-If you were to input something like `"(4 * 2 * 11 + 2) - 5"` into this function the `mpc_ast_t` you get out would look something like this:
+If you were to input `"(4 * 2 * 11 + 2) - 5"` into this function, the `mpc_ast_t` output would look something like this:
 
 ```python
 >:
