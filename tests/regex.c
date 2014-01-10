@@ -49,7 +49,7 @@ void test_regex_basic(void) {
 
 void test_regex_range(void) {
 
-  mpc_parser_t *re0, *re1, *re2, *re3, *re4;
+  mpc_parser_t *re0, *re1, *re2, *re3;
   
   re0 = mpc_re("abg[abcdef]");
   re1 = mpc_re("y*[a-z]");
