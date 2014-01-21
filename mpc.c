@@ -5,16 +5,23 @@
 */
 
 typedef struct {
-  char last;
   char next;
   int pos;
   int row;
   int col;
 } mpc_state_t;
 
-static mpc_state_t mpc_state_null(void) {
+static mpc_state_t mpc_state_invalid(void) {
   mpc_state_t s;
-  s.last = '\0';
+  s.next = '\0';
+  s.pos = -1;
+  s.row = -1;
+  s.col = -1;
+  return s;
+}
+
+static mpc_state_t mpc_state_new(void) {
+  mpc_state_t s;
   s.next = '\0';
   s.pos = 0;
   s.row = 0;
@@ -47,11 +54,11 @@ static mpc_err_t *mpc_err_new(const char *filename, mpc_state_t s, const char *e
   return x;
 }
 
-static mpc_err_t *mpc_err_new_fail(const char *filename, mpc_state_t s, const char *failure) {
+static mpc_err_t *mpc_err_fail(const char *filename, const char *failure) {
   mpc_err_t *x = malloc(sizeof(mpc_err_t));
   x->filename = malloc(strlen(filename) + 1);
   strcpy(x->filename, filename);
-  x->state = s;
+  x->state = mpc_state_invalid();
   x->expected_num = 0;
   x->expected = NULL;
   x->failure = malloc(strlen(failure) + 1);
@@ -159,7 +166,7 @@ void mpc_err_string(mpc_err_t *x, char **out) {
   
   if (x->failure) {
     mpc_err_string_cat(buffer, &pos, &max,
-    "%s:%i:%i: error: %s\n", 
+    "error: %s\n", 
       x->filename, x->state.row, 
       x->state.col, x->failure);
     *out = buffer;
@@ -350,7 +357,7 @@ static mpc_input_t *mpc_input_new_string(const char *filename, const char *strin
   strcpy(i->filename, filename);
   i->type = MPC_INPUT_STRING;
   
-  i->state = mpc_state_null();
+  i->state = mpc_state_new();
   
   i->string = malloc(strlen(string) + 1);
   strcpy(i->string, string);
@@ -377,7 +384,7 @@ static mpc_input_t *mpc_input_new_file(const char *filename, FILE *file) {
     i->type = MPC_INPUT_FILE;
   }
   
-  i->state = mpc_state_null();
+  i->state = mpc_state_new();
   
   i->string = NULL;
   i->buffer = NULL;
@@ -507,11 +514,10 @@ static int mpc_input_success(mpc_input_t *i, char c, char **o) {
     i->buffer[strlen(i->buffer) + 0] = c;
   }
 
-  i->state.last = c;
   i->state.pos++;
   i->state.col++;
   
-  if (i->state.last == '\n') {
+  if (c == '\n') {
     i->state.col = 0;
     i->state.row++;
   }
@@ -683,9 +689,11 @@ typedef struct {
   mpc_result_t *results;
   int *returns;
   
+  mpc_err_t *err;
+  
 } mpc_stack_t;
 
-static mpc_stack_t *mpc_stack_new(void) {
+static mpc_stack_t *mpc_stack_new(const char *filename) {
   mpc_stack_t *s = malloc(sizeof(mpc_stack_t));
   
   s->parsers_num = 0;
@@ -698,23 +706,32 @@ static mpc_stack_t *mpc_stack_new(void) {
   s->results = NULL;
   s->returns = NULL;
   
+  s->err = mpc_err_fail(filename, "Unknown Error");
+  
   return s;
 }
 
-static void mpc_stack_delete(mpc_stack_t *s) {
+static int mpc_stack_terminate(mpc_stack_t *s, mpc_result_t *r) {
+  int success = s->returns[0];
+  
+  if (success) {
+    *r = s->results[0];
+    mpc_err_delete(s->err);
+  } else {
+    r->error = s->err;
+  }
+  
   free(s->parsers);
   free(s->states);
   free(s->results);
   free(s->returns);
   free(s);
+  
+  return success;
 }
 
-static int mpc_stack_terminate(mpc_stack_t *s, mpc_result_t *r) {
-  int ret;
-  *r = s->results[0];
-  ret = s->returns[0];
-  mpc_stack_delete(s);
-  return ret;
+static void mpc_stack_err(mpc_stack_t *s, mpc_err_t* e) {
+  s->err = mpc_err_either(s->err, e);
 }
 
 /* Stack Parser Stuff */
@@ -817,7 +834,7 @@ static void mpc_stack_popr_err(mpc_stack_t *s, int n) {
   mpc_result_t x;
   while (n) {
     mpc_stack_popr(s, &x);
-    mpc_err_delete(x.error);
+    mpc_stack_err(s, x.error);
     n--;
   }
 }
@@ -884,14 +901,14 @@ static mpc_err_t *mpc_stack_merger_err(mpc_stack_t *s, int n) {
 #define MPC_RETURN(st, x) mpc_stack_set_state(stk, st); mpc_stack_pushp(stk, x); continue
 #define MPC_SUCCESS(x) mpc_stack_popp(stk, &p, &st); mpc_stack_pushr(stk, mpc_result_out(x), 1); continue
 #define MPC_FAILURE(x) mpc_stack_popp(stk, &p, &st); mpc_stack_pushr(stk, mpc_result_err(x), 0); continue
-#define MPC_FUNCTION(x, f) if (f) { MPC_SUCCESS(x); } else { MPC_FAILURE(mpc_err_new_fail(i->filename, i->state, "Incorrect Input")); }
+#define MPC_FUNCTION(x, f) if (f) { MPC_SUCCESS(x); } else { MPC_FAILURE(mpc_err_fail(i->filename, "Incorrect Input")); }
 
 int mpc_parse_input(mpc_input_t *i, mpc_parser_t *init, mpc_result_t *final) {
   
   /* Stack */
   int st = 0;
   mpc_parser_t *p = NULL;
-  mpc_stack_t *stk = mpc_stack_new();
+  mpc_stack_t *stk = mpc_stack_new(i->filename);
   
   /* Variables */
   char *s;
@@ -908,9 +925,9 @@ int mpc_parse_input(mpc_input_t *i, mpc_parser_t *init, mpc_result_t *final) {
       
       /* Trivial Parsers */
 
-      case MPC_TYPE_UNDEFINED: MPC_FAILURE(mpc_err_new_fail(i->filename, i->state, "Parser Undefined!"));      
+      case MPC_TYPE_UNDEFINED: MPC_FAILURE(mpc_err_fail(i->filename, "Parser Undefined!"));      
       case MPC_TYPE_PASS:      MPC_SUCCESS(NULL);
-      case MPC_TYPE_FAIL:      MPC_FAILURE(mpc_err_new_fail(i->filename, i->state, p->data.fail.m));
+      case MPC_TYPE_FAIL:      MPC_FAILURE(mpc_err_fail(i->filename, p->data.fail.m));
       case MPC_TYPE_LIFT:      MPC_SUCCESS(p->data.lift.lf());
       case MPC_TYPE_LIFT_VAL:  MPC_SUCCESS(p->data.lift.x);
     
@@ -980,7 +997,7 @@ int mpc_parse_input(mpc_input_t *i, mpc_parser_t *init, mpc_result_t *final) {
             MPC_FAILURE(mpc_err_new(i->filename, i->state, "opposite"));
           } else {
             mpc_input_unmark(i);
-            mpc_err_delete(r.error);
+            mpc_stack_err(stk, r.error);
             MPC_SUCCESS(p->data.not.lf());
           }
         }
@@ -991,7 +1008,7 @@ int mpc_parse_input(mpc_input_t *i, mpc_parser_t *init, mpc_result_t *final) {
           if (mpc_stack_popr(stk, &r)) {
             MPC_SUCCESS(r.output);
           } else {
-            mpc_err_delete(r.error);
+            mpc_stack_err(stk, r.error);
             MPC_SUCCESS(p->data.not.lf());
           }
         }
@@ -1005,7 +1022,7 @@ int mpc_parse_input(mpc_input_t *i, mpc_parser_t *init, mpc_result_t *final) {
             MPC_RETURN(st+1, p->data.repeat.x);
           } else {
             mpc_stack_popr(stk, &r);
-            mpc_err_delete(r.error);
+            mpc_stack_err(stk, r.error);
             MPC_SUCCESS(mpc_stack_merger_out(stk, st-1, p->data.repeat.f));
           }
         }
@@ -1021,7 +1038,7 @@ int mpc_parse_input(mpc_input_t *i, mpc_parser_t *init, mpc_result_t *final) {
               MPC_FAILURE(mpc_err_many1(r.error));
             } else {
               mpc_stack_popr(stk, &r);
-              mpc_err_delete(r.error);
+              mpc_stack_err(stk, r.error);
               MPC_SUCCESS(mpc_stack_merger_out(stk, st-1, p->data.repeat.f));
             }
           }
@@ -1040,7 +1057,7 @@ int mpc_parse_input(mpc_input_t *i, mpc_parser_t *init, mpc_result_t *final) {
               MPC_FAILURE(mpc_err_count(r.error, p->data.repeat.n));
             } else {
               mpc_stack_popr(stk, &r);
-              mpc_err_delete(r.error);
+              mpc_stack_err(stk, r.error);
               mpc_input_unmark(i);
               MPC_SUCCESS(mpc_stack_merger_out(stk, st-1, p->data.repeat.f));
             }
@@ -1084,7 +1101,7 @@ int mpc_parse_input(mpc_input_t *i, mpc_parser_t *init, mpc_result_t *final) {
       
       default:
         
-        MPC_FAILURE(mpc_err_new_fail(i->filename, i->state, "Unknown Parser Type Id!"));
+        MPC_FAILURE(mpc_err_fail(i->filename, "Unknown Parser Type Id!"));
     }
   }
   
@@ -1120,7 +1137,7 @@ int mpc_fparse_contents(const char *filename, mpc_parser_t *p, mpc_result_t *r) 
   
   if (f == NULL) {
     r->output = NULL;
-    r->error = mpc_err_new_fail(filename, mpc_state_null(), "Unable to open file!");
+    r->error = mpc_err_fail(filename, "Unable to open file!");
     return 0;
   }
   
@@ -1585,7 +1602,7 @@ mpc_parser_t *mpc_soi(void) {
   return mpc_expect(p, "start of input");
 }
 
-mpc_parser_t *mpc_space(void) { return mpc_expect(mpc_oneof(" \f\n\r\t\v"), "space"); }
+mpc_parser_t *mpc_space(void) { return mpc_expect(mpc_oneof(" \f\n\r\t\v"), "whitespace"); }
 mpc_parser_t *mpc_spaces(void) { return mpc_expect(mpc_many(mpcf_strfold, mpc_space()), "spaces"); }
 mpc_parser_t *mpc_whitespace(void) { return mpc_expect(mpc_apply(mpc_spaces(), mpcf_free), "whitespace"); }
 
@@ -3006,7 +3023,7 @@ mpc_err_t *mpca_lang_filename(const char *filename, ...) {
   FILE *f = fopen(filename, "rb");
   
   if (f == NULL) {
-    return mpc_err_new_fail(filename, mpc_state_null(), "Unable to open file!");
+    return mpc_err_fail(filename, "Unable to open file!");
   }
   
   va_start(va, filename);
