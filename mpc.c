@@ -684,13 +684,21 @@ static mpc_stack_t *mpc_stack_new(const char *filename) {
   return s;
 }
 
+static void mpc_stack_err(mpc_stack_t *s, mpc_err_t* e) {
+  mpc_err_t *errs[2];
+  errs[0] = s->err;
+  errs[1] = e;
+  s->err = mpc_err_or(errs, 2);
+}
+
 static int mpc_stack_terminate(mpc_stack_t *s, mpc_result_t *r) {
   int success = s->returns[0];
   
   if (success) {
-    *r = s->results[0];
+    r->output = s->results[0].output;
     mpc_err_delete(s->err);
   } else {
+    mpc_stack_err(s, s->results[0].error);
     r->error = s->err;
   }
   
@@ -701,13 +709,6 @@ static int mpc_stack_terminate(mpc_stack_t *s, mpc_result_t *r) {
   free(s);
   
   return success;
-}
-
-static void mpc_stack_err(mpc_stack_t *s, mpc_err_t* e) {
-  mpc_err_t *errs[2];
-  errs[0] = s->err;
-  errs[1] = e;
-  s->err = mpc_err_or(errs, 2);
 }
 
 /* Stack Parser Stuff */
@@ -1823,7 +1824,8 @@ static char *mpc_re_range_escape_char(char c) {
 }
 
 static mpc_val_t *mpcf_re_range(mpc_val_t *x) {
-    
+  
+  mpc_parser_t *out;
   char *range = calloc(1,1);
   char *tmp = NULL;
   char *s = x;
@@ -1878,8 +1880,12 @@ static mpc_val_t *mpcf_re_range(mpc_val_t *x) {
   
   }
   
+  out = comp ? mpc_noneof(range) : mpc_oneof(range);
+  
   free(x);
-  return comp ? mpc_noneof(range) : mpc_oneof(range);
+  free(range);
+  
+  return out;
 }
 
 mpc_parser_t *mpc_re(const char *re) {

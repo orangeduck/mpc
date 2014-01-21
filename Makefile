@@ -10,4 +10,4 @@ check: $(TESTS) mpc.c
 	./test
   
 clean:
-	rm test.exe
+	rm test
