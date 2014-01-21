@@ -87,7 +87,7 @@ void test_language_file(void) {
   Value = mpc_new("value");
   Maths = mpc_new("maths");
   
-  mpca_lang_filename("./tests/maths.grammar", Expr, Prod, Value, Maths);
+  mpca_lang_contents("./tests/maths.grammar", Expr, Prod, Value, Maths);
   
   mpc_cleanup(4, Expr, Prod, Value, Maths);
   

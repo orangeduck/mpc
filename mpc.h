@@ -21,20 +21,25 @@
 ** Error Type
 */
 
-struct mpc_err_t;
-typedef struct mpc_err_t mpc_err_t;
+typedef struct {
+  char next;
+  int pos;
+  int row;
+  int col;
+} mpc_state_t;
 
-void mpc_err_delete(mpc_err_t *x);
-void mpc_err_print(mpc_err_t *x);
-void mpc_err_print_to(mpc_err_t *x, FILE *f);
-void mpc_err_string(mpc_err_t *x, char **out);
+typedef struct {
+  mpc_state_t state;
+  char *filename;
+  char *failure;
+  int expected_num;
+  char **expected;
+} mpc_err_t;
 
-int mpc_err_line(mpc_err_t *x);
-int mpc_err_column(mpc_err_t *x);
-char mpc_err_unexpected(mpc_err_t *x);
-void mpc_err_expected(mpc_err_t *x, char **out, int *out_num, int out_max);
-char *mpc_err_filename(mpc_err_t *x);
-char *mpc_err_failure(mpc_err_t *x);
+void mpc_err_delete(mpc_err_t *e);
+char *mpc_err_string(mpc_err_t *e);
+void mpc_err_print(mpc_err_t *e);
+void mpc_err_print_to(mpc_err_t *e, FILE *f);
 
 /*
 ** Parsing
@@ -51,8 +56,8 @@ struct mpc_parser_t;
 typedef struct mpc_parser_t mpc_parser_t;
 
 int mpc_parse(const char *filename, const char *string, mpc_parser_t *p, mpc_result_t *r);
-int mpc_fparse(const char *filename, FILE* file, mpc_parser_t *p, mpc_result_t *r);
-int mpc_fparse_contents(const char *filename, mpc_parser_t *p, mpc_result_t *r);
+int mpc_parse_file(const char *filename, FILE* file, mpc_parser_t *p, mpc_result_t *r);
+int mpc_parse_contents(const char *filename, mpc_parser_t *p, mpc_result_t *r);
 
 /*
 ** Function Types
@@ -270,7 +275,7 @@ mpc_parser_t *mpca_grammar(const char *grammar, ...);
 
 mpc_err_t *mpca_lang(const char *language, ...);
 mpc_err_t *mpca_lang_file(FILE *f, ...);
-mpc_err_t *mpca_lang_filename(const char *filename, ...);
+mpc_err_t *mpca_lang_contents(const char *filename, ...);
 
 /*
 ** Debug & Testing
