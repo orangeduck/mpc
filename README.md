@@ -412,7 +412,7 @@ Combinator Method
 
 Using the above combinators we can create a parser that matches a C identifier.
 
-If we match two parts of a string separately with a function such as `mpc_and` we'll need to combine them together into a long string to represent the final identifier.
+When using the combinators we need to supply a function that says how to combine two `char *`.
 
 For this we build a fold function that will concatenate zero or more strings together. For this sake of this tutorial we will write it by hand, but this (as well as many other useful fold functions), are actually included in _mpc_ under the `mpcf_*` namespace, such as `mpcf_strfold`.
 
@@ -454,7 +454,7 @@ Because of this we shouldn't create a parser and input it into multiple places, 
 Regex Method
 ------------
 
-There is an easy way to do this than the above method. _mpc_ comes with a handy regex function for constructing parsers using regex syntax. We can specify an identifier using a regex pattern as shown below.
+There is an easier way to do this than the above method. _mpc_ comes with a handy regex function for constructing parsers using regex syntax. We can specify an identifier using a regex pattern as shown below.
 
 ```c
 mpc_parser_t *ident = mpc_re("[a-zA-Z_][a-zA-Z_0-9]*");
@@ -621,9 +621,11 @@ Case Study - Maths Language
 Combinator Approach
 -------------------
 
-Passing around all these function pointers might seem clumsy, but having parsers be type-generic is important as it lets users define their own syntax tree types, as well as allows them perform specific house-keeping or data processing in the parsing phase. For example we can specify a simple maths grammar that computes the result of the expression as it goes along.
+Passing around all these function pointers might seem clumsy, but having parsers be type-generic is important as it lets users define their own ouput types for parsers. For example we could design our own syntax tree type to use. We can also use this method to do some specific house-keeping or data processing in the parsing phase.
 
-We start with a fold function that will fold two `int*` into a new `int*` based on some `char*` operator.
+As an example of this power, we can specify a simple maths grammar, that ouputs `int *`, and computes the result of the expression as it goes along.
+
+We start with a fold function that will fold two `int *` into a new `int *` based on some `char *` operator.
 
 ```c
 mpc_val_t* fold_maths(int n, mpc_val_t **xs) {
@@ -689,7 +691,7 @@ It is possible to avoid passing in and around all those function pointers, if yo
 
 Doing things via this method means that all the data processing must take place after the parsing. In many instances this is no problem or even preferable.
 
-It also allows for one more trick. As all the fold and destructor functions are implicit, the user can simply specify the grammar of the language in some nice way and the system can try to build a parser for the AST type from this alone. For this there are two functions supplied which take in a string and output a parser. The format for these grammars is simple and familiar to those who have used parser generators before. It looks something like this.
+It also allows for one more trick. As all the fold and destructor functions are implicit, the user can simply specify the grammar of the language in some nice way and the system can try to build a parser for the AST type from this alone. For this there are a few functions supplied which take in a string, and output a parser. The format for these grammars is simple and familiar to those who have used parser generators before. It looks something like this.
 
 ```
 number "number" : /[0-9]+/ ;
