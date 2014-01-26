@@ -13,7 +13,7 @@ void test_ident(void) {
 
   /* ^[a-zA-Z_][a-zA-Z0-9_]*$ */
   
-  mpc_parser_t* Ident = mpc_enclose(
+  mpc_parser_t* Ident = mpc_whole(
     mpc_and(2, mpcf_strfold,
       mpc_or(2, mpc_alpha(), mpc_underscore()),
       mpc_many1(mpcf_strfold, mpc_or(3, mpc_alpha(), mpc_underscore(), mpc_digit())),
@@ -62,7 +62,7 @@ void test_maths(void) {
     mpc_parens(Expr, free)
   ));
   
-  mpc_define(Maths, mpc_enclose(Expr, free));
+  mpc_define(Maths, mpc_whole(Expr, free));
   
   PT_ASSERT(mpc_match(Maths, "1", &r0, int_eq, free, int_print));
   PT_ASSERT(mpc_match(Maths, "(5)", &r1, int_eq, free, int_print));

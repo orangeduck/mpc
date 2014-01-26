@@ -56,7 +56,8 @@ struct mpc_parser_t;
 typedef struct mpc_parser_t mpc_parser_t;
 
 int mpc_parse(const char *filename, const char *string, mpc_parser_t *p, mpc_result_t *r);
-int mpc_parse_file(const char *filename, FILE* file, mpc_parser_t *p, mpc_result_t *r);
+int mpc_parse_file(const char *filename, FILE *file, mpc_parser_t *p, mpc_result_t *r);
+int mpc_parse_pipe(const char *filename, FILE *pipe, mpc_parser_t *p, mpc_result_t *r);
 int mpc_parse_contents(const char *filename, mpc_parser_t *p, mpc_result_t *r);
 
 /*
@@ -129,9 +130,9 @@ mpc_parser_t *mpc_predictive(mpc_parser_t *a);
 mpc_parser_t *mpc_eoi(void);
 mpc_parser_t *mpc_soi(void);
 
-mpc_parser_t *mpc_space(void);
-mpc_parser_t *mpc_spaces(void);
 mpc_parser_t *mpc_whitespace(void);
+mpc_parser_t *mpc_whitespaces(void);
+mpc_parser_t *mpc_blank(void);
 
 mpc_parser_t *mpc_newline(void);
 mpc_parser_t *mpc_tab(void);
@@ -168,10 +169,12 @@ mpc_parser_t *mpc_ident(void);
 ** Useful Parsers
 */
 
-mpc_parser_t *mpc_start(mpc_parser_t *a);
-mpc_parser_t *mpc_end(mpc_parser_t *a, mpc_dtor_t da);
-mpc_parser_t *mpc_enclose(mpc_parser_t *a, mpc_dtor_t da);
+mpc_parser_t *mpc_startwith(mpc_parser_t *a);
+mpc_parser_t *mpc_endwith(mpc_parser_t *a, mpc_dtor_t da);
+mpc_parser_t *mpc_whole(mpc_parser_t *a, mpc_dtor_t da);
 
+mpc_parser_t *mpc_stripl(mpc_parser_t *a);
+mpc_parser_t *mpc_stripr(mpc_parser_t *a);
 mpc_parser_t *mpc_strip(mpc_parser_t *a);
 mpc_parser_t *mpc_tok(mpc_parser_t *a); 
 mpc_parser_t *mpc_sym(const char *s);
@@ -208,11 +211,13 @@ mpc_val_t *mpcf_escape(mpc_val_t *x);
 mpc_val_t *mpcf_escape_regex(mpc_val_t *x);
 mpc_val_t *mpcf_escape_string_raw(mpc_val_t *x);
 mpc_val_t *mpcf_escape_char_raw(mpc_val_t *x);
+
 mpc_val_t *mpcf_unescape(mpc_val_t *x);
 mpc_val_t *mpcf_unescape_regex(mpc_val_t *x);
 mpc_val_t *mpcf_unescape_string_raw(mpc_val_t *x);
 mpc_val_t *mpcf_unescape_char_raw(mpc_val_t *x);
 
+mpc_val_t *mpcf_null(int n, mpc_val_t** xs);
 mpc_val_t *mpcf_fst(int n, mpc_val_t** xs);
 mpc_val_t *mpcf_snd(int n, mpc_val_t** xs);
 mpc_val_t *mpcf_trd(int n, mpc_val_t** xs);
@@ -271,11 +276,18 @@ mpc_parser_t *mpca_count(int n, mpc_parser_t *a);
 mpc_parser_t *mpca_or(int n, ...);
 mpc_parser_t *mpca_and(int n, ...);
 
-mpc_parser_t *mpca_grammar(const char *grammar, ...);
+enum {
+  MPC_LANG_DEFAULT              = 0,
+  MPC_LANG_PREDICTIVE           = 1,
+  MPC_LANG_WHITESPACE_SENSITIVE = 2
+};
 
-mpc_err_t *mpca_lang(const char *language, ...);
-mpc_err_t *mpca_lang_file(FILE *f, ...);
-mpc_err_t *mpca_lang_contents(const char *filename, ...);
+mpc_parser_t *mpca_grammar(int flags, const char *grammar, ...);
+
+mpc_err_t *mpca_lang(int flags, const char *language, ...);
+mpc_err_t *mpca_lang_file(int flags, FILE *f, ...);
+mpc_err_t *mpca_lang_pipe(int flags, FILE *f, ...);
+mpc_err_t *mpca_lang_contents(int flags, const char *filename, ...);
 
 /*
 ** Debug & Testing
