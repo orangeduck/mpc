@@ -10,3 +10,4 @@ int main(int argc, char** argv) {
   pt_add_suite(suite_grammar);
   return pt_run();
 }
+
