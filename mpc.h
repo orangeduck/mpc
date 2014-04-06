@@ -22,17 +22,17 @@
 */
 
 typedef struct {
-  char next;
   int pos;
   int row;
   int col;
+  char next;
 } mpc_state_t;
 
 typedef struct {
   mpc_state_t state;
+  int expected_num;
   char *filename;
   char *failure;
-  int expected_num;
   char **expected;
 } mpc_err_t;
 
