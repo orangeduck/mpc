@@ -703,7 +703,7 @@ String literals are surrounded in double quotes `"`. Character literals in singl
 
 Parts specified one after another are parsed in order (like `mpc_and`), while parts separated by a pipe `|` are alternatives (like `mpc_or`). Parenthesis `()` are used to specify precedence. `*` can be used to mean zero or more of. `+` for one or more of. `?` for zero or one of. `!` for negation. And a number inside braces `{5}` to means so many counts of.
 
-Rules are specified by rule name, optionally followed by an _expected_ string, followed by a colon `:`, followed by the definition, and ending in a semicolon `;`. The flags variable is a set of flags `MPC_LANG_DEFAULT`, `MPC_LANG_PREDICTIVE`, or `MPC_LANG_WHITESPACE_SENSITIVE`. For specifying if the language is predictive or whitespace sensitive.
+Rules are specified by rule name, optionally followed by an _expected_ string, followed by a colon `:`, followed by the definition, and ending in a semicolon `;`. The flags variable is a set of flags `MPCA_LANG_DEFAULT`, `MPCA_LANG_PREDICTIVE`, or `MPCA_LANG_WHITESPACE_SENSITIVE`. For specifying if the language is predictive or whitespace sensitive.
 
 Like with the regular expressions, this user input is parsed by existing parts of the _mpc_ library. It provides one of the more powerful features of the library.
 

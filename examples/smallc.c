@@ -20,7 +20,7 @@ int main(int argc, char **argv) {
   mpc_parser_t* Includes  = mpc_new("includes");
   mpc_parser_t* Smallc    = mpc_new("smallc");
 
-  mpc_err_t* err = mpca_lang(MPC_LANG_DEFAULT,
+  mpc_err_t* err = mpca_lang(MPCA_LANG_DEFAULT,
     "                                                                  \n\
       ident     : /[a-zA-Z_][a-zA-Z0-9_]*/ ;                           \n\
       number    : /[0-9]+/ ;                                           \n\

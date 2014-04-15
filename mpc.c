@@ -2781,7 +2781,7 @@ static mpc_val_t *mpcaf_grammar_repeat(int n, mpc_val_t **xs) {
 static mpc_val_t *mpcaf_grammar_string(mpc_val_t *x, void *s) {
   mpca_grammar_st_t *st = s;
   char *y = mpcf_unescape(x);
-  mpc_parser_t *p = (st->flags & MPC_LANG_WHITESPACE_SENSITIVE) ? mpc_string(y) : mpc_tok(mpc_string(y));
+  mpc_parser_t *p = (st->flags & MPCA_LANG_WHITESPACE_SENSITIVE) ? mpc_string(y) : mpc_tok(mpc_string(y));
   free(y);
   return mpca_state(mpca_tag(mpc_apply(p, mpcf_str_ast), "string"));
 }
@@ -2789,7 +2789,7 @@ static mpc_val_t *mpcaf_grammar_string(mpc_val_t *x, void *s) {
 static mpc_val_t *mpcaf_grammar_char(mpc_val_t *x, void *s) {
   mpca_grammar_st_t *st = s;
   char *y = mpcf_unescape(x);
-  mpc_parser_t *p = (st->flags & MPC_LANG_WHITESPACE_SENSITIVE) ? mpc_char(y[0]) : mpc_tok(mpc_char(y[0]));
+  mpc_parser_t *p = (st->flags & MPCA_LANG_WHITESPACE_SENSITIVE) ? mpc_char(y[0]) : mpc_tok(mpc_char(y[0]));
   free(y);
   return mpca_state(mpca_tag(mpc_apply(p, mpcf_str_ast), "char"));
 }
@@ -2797,7 +2797,7 @@ static mpc_val_t *mpcaf_grammar_char(mpc_val_t *x, void *s) {
 static mpc_val_t *mpcaf_grammar_regex(mpc_val_t *x, void *s) {
   mpca_grammar_st_t *st = s;
   char *y = mpcf_unescape_regex(x);
-  mpc_parser_t *p = (st->flags & MPC_LANG_WHITESPACE_SENSITIVE) ? mpc_re(y) : mpc_tok(mpc_re(y));
+  mpc_parser_t *p = (st->flags & MPCA_LANG_WHITESPACE_SENSITIVE) ? mpc_re(y) : mpc_tok(mpc_re(y));
   free(y);
   return mpca_state(mpca_tag(mpc_apply(p, mpcf_str_ast), "regex"));
 }
@@ -2927,7 +2927,7 @@ mpc_parser_t *mpca_grammar_st(const char *grammar, mpca_grammar_st_t *st) {
   
   mpc_cleanup(5, GrammarTotal, Grammar, Term, Factor, Base);
   
-  return (st->flags & MPC_LANG_PREDICTIVE) ? mpc_predictive(r.output) : r.output;
+  return (st->flags & MPCA_LANG_PREDICTIVE) ? mpc_predictive(r.output) : r.output;
   
 }
 
@@ -3006,7 +3006,7 @@ static mpc_val_t *mpca_stmt_list_apply_to(mpc_val_t *x, void *s) {
   while(*stmts) {
     stmt = *stmts;
     left = mpca_grammar_find_parser(stmt->ident, st);
-    if (st->flags & MPC_LANG_PREDICTIVE) { stmt->grammar = mpc_predictive(stmt->grammar); }
+    if (st->flags & MPCA_LANG_PREDICTIVE) { stmt->grammar = mpc_predictive(stmt->grammar); }
     if (stmt->name) { stmt->grammar = mpc_expect(stmt->grammar, stmt->name); }
     mpc_define(left, stmt->grammar);
     free(stmt->ident);

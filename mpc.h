@@ -285,9 +285,9 @@ mpc_parser_t *mpca_or(int n, ...);
 mpc_parser_t *mpca_and(int n, ...);
 
 enum {
-  MPC_LANG_DEFAULT              = 0,
-  MPC_LANG_PREDICTIVE           = 1,
-  MPC_LANG_WHITESPACE_SENSITIVE = 2
+  MPCA_LANG_DEFAULT              = 0,
+  MPCA_LANG_PREDICTIVE           = 1,
+  MPCA_LANG_WHITESPACE_SENSITIVE = 2
 };
 
 mpc_parser_t *mpca_grammar(int flags, const char *grammar, ...);

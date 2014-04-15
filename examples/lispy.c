@@ -11,7 +11,7 @@ int main(int argc, char **argv) {
   mpc_parser_t* Expr    = mpc_new("expr");
   mpc_parser_t* Lispy   = mpc_new("lispy");
 
-  mpca_lang(MPC_LANG_PREDICTIVE,
+  mpca_lang(MPCA_LANG_PREDICTIVE,
     "                                                          \
       number  \"number\"  : /[0-9]+/ ;                         \
       symbol  \"symbol\"  : /[a-zA-Z0-9_+\\-*\\/\\\\=<>!&]+/ ; \

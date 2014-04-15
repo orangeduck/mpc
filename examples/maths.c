@@ -7,7 +7,7 @@ int main(int argc, char **argv) {
   mpc_parser_t *Value = mpc_new("value");
   mpc_parser_t *Maths = mpc_new("maths");
   
-  mpca_lang(MPC_LANG_PREDICTIVE,
+  mpca_lang(MPCA_LANG_PREDICTIVE,
     "                                                    \
         expression : <product> (('+' | '-') <product>)*; \
         product : <value>   (('*' | '/')   <value>)*;    \
