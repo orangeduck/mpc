@@ -1620,7 +1620,7 @@ mpc_parser_t *mpc_newline(void) { return mpc_expect(mpc_char('\n'), "newline"); 
 mpc_parser_t *mpc_tab(void) { return mpc_expect(mpc_char('\t'), "tab"); }
 mpc_parser_t *mpc_escape(void) { return mpc_and(2, mpcf_strfold, mpc_char('\\'), mpc_any(), free); }
 
-mpc_parser_t *mpc_digit(void) { return mpc_expect(mpc_oneof("012345689"), "digit"); }
+mpc_parser_t *mpc_digit(void) { return mpc_expect(mpc_oneof("0123456789"), "digit"); }
 mpc_parser_t *mpc_hexdigit(void) { return mpc_expect(mpc_oneof("0123456789ABCDEFabcdef"), "hex digit"); }
 mpc_parser_t *mpc_octdigit(void) { return mpc_expect(mpc_oneof("01234567"), "oct digit"); }
 mpc_parser_t *mpc_digits(void) { return mpc_expect(mpc_many1(mpcf_strfold, mpc_digit()), "digits"); }
