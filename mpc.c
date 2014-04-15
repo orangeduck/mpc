@@ -22,6 +22,12 @@ static mpc_state_t mpc_state_new(void) {
   return s;
 }
 
+static mpc_state_t *mpc_state_copy(mpc_state_t s) {
+  mpc_state_t *r = malloc(sizeof(mpc_state_t));
+  memcpy(r, &s, sizeof(mpc_state_t));
+  return r;
+}
+
 /*
 ** Error Type
 */
@@ -608,28 +614,29 @@ enum {
   MPC_TYPE_LIFT      = 3,
   MPC_TYPE_LIFT_VAL  = 4,
   MPC_TYPE_EXPECT    = 5,
+  MPC_TYPE_STATE     = 6,
   
-  MPC_TYPE_SOI       = 6,
-  MPC_TYPE_EOI       = 7,
-  MPC_TYPE_ANY       = 8,
-  MPC_TYPE_SINGLE    = 9,
-  MPC_TYPE_ONEOF     = 10,
-  MPC_TYPE_NONEOF    = 11,
-  MPC_TYPE_RANGE     = 12,
-  MPC_TYPE_SATISFY   = 13,
-  MPC_TYPE_STRING    = 14,
+  MPC_TYPE_SOI       = 7,
+  MPC_TYPE_EOI       = 8,
+  MPC_TYPE_ANY       = 9,
+  MPC_TYPE_SINGLE    = 10,
+  MPC_TYPE_ONEOF     = 11,
+  MPC_TYPE_NONEOF    = 12,
+  MPC_TYPE_RANGE     = 13,
+  MPC_TYPE_SATISFY   = 14,
+  MPC_TYPE_STRING    = 15,
   
-  MPC_TYPE_APPLY     = 15,
-  MPC_TYPE_APPLY_TO  = 16,
-  MPC_TYPE_PREDICT   = 17,
-  MPC_TYPE_NOT       = 18,
-  MPC_TYPE_MAYBE     = 19,
-  MPC_TYPE_MANY      = 20,
-  MPC_TYPE_MANY1     = 21,
-  MPC_TYPE_COUNT     = 22,
+  MPC_TYPE_APPLY     = 16,
+  MPC_TYPE_APPLY_TO  = 17,
+  MPC_TYPE_PREDICT   = 18,
+  MPC_TYPE_NOT       = 19,
+  MPC_TYPE_MAYBE     = 20,
+  MPC_TYPE_MANY      = 21,
+  MPC_TYPE_MANY1     = 22,
+  MPC_TYPE_COUNT     = 23,
   
-  MPC_TYPE_OR        = 23,
-  MPC_TYPE_AND       = 24
+  MPC_TYPE_OR        = 24,
+  MPC_TYPE_AND       = 25
 };
 
 typedef struct { char *m; } mpc_pdata_fail_t;
@@ -932,7 +939,8 @@ int mpc_parse_input(mpc_input_t *i, mpc_parser_t *init, mpc_result_t *final) {
       case MPC_TYPE_FAIL:      MPC_FAILURE(mpc_err_fail(i->filename, i->state, p->data.fail.m));
       case MPC_TYPE_LIFT:      MPC_SUCCESS(p->data.lift.lf());
       case MPC_TYPE_LIFT_VAL:  MPC_SUCCESS(p->data.lift.x);
-    
+      case MPC_TYPE_STATE:     MPC_SUCCESS(mpc_state_copy(i->state));
+      
       /* Basic Parsers */
 
       case MPC_TYPE_SOI:       MPC_PRIMATIVE(NULL, mpc_input_soi(i));
@@ -1365,6 +1373,12 @@ mpc_parser_t *mpc_lift(mpc_ctor_t lf) {
   mpc_parser_t *p = mpc_undefined();
   p->type = MPC_TYPE_LIFT;
   p->data.lift.lf = lf;
+  return p;
+}
+
+mpc_parser_t *mpc_state(void) {
+  mpc_parser_t *p = mpc_undefined();
+  p->type = MPC_TYPE_STATE;
   return p;
 }
 
@@ -2222,6 +2236,7 @@ static void mpc_print_unretained(mpc_parser_t *p, int force) {
   if (p->type == MPC_TYPE_PASS)   { printf("<:>"); }
   if (p->type == MPC_TYPE_FAIL)   { printf("<!>"); }
   if (p->type == MPC_TYPE_LIFT)   { printf("<#>"); }
+  if (p->type == MPC_TYPE_STATE)  { printf("<S#>"); }
   if (p->type == MPC_TYPE_EXPECT) {
     printf("%s", p->data.expect.m);
     /*mpc_print_unretained(p->data.expect.x, 0);*/

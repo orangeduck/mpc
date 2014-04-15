@@ -91,6 +91,7 @@ mpc_parser_t *mpc_fail(const char *m);
 mpc_parser_t *mpc_failf(const char *fmt, ...);
 mpc_parser_t *mpc_lift(mpc_ctor_t f);
 mpc_parser_t *mpc_lift_val(mpc_val_t *x);
+mpc_parser_t *mpc_state(void);
 
 mpc_parser_t *mpc_any(void);
 mpc_parser_t *mpc_char(char c);
