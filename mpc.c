@@ -2895,7 +2895,7 @@ mpc_parser_t *mpca_grammar_st(const char *grammar, mpca_grammar_st_t *st) {
     mpc_soft_delete
   ));
   
-  mpc_define(Term, mpc_many(mpcaf_grammar_and, Factor));
+  mpc_define(Term, mpc_many1(mpcaf_grammar_and, Factor));
   
   mpc_define(Factor, mpc_and(2, mpcaf_grammar_repeat,
     Base,
@@ -3048,7 +3048,7 @@ static mpc_err_t *mpca_lang_st(mpc_input_t *i, mpca_grammar_st_t *st) {
       mpc_soft_delete
   ));
   
-  mpc_define(Term, mpc_many(mpcaf_grammar_and, Factor));
+  mpc_define(Term, mpc_many1(mpcaf_grammar_and, Factor));
   
   mpc_define(Factor, mpc_and(2, mpcaf_grammar_repeat,
     Base,
