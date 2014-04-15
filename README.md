@@ -1,6 +1,8 @@
 Micro Parser Combinators
 ========================
 
+Version 0.8
+
 _mpc_ is a lightweight and powerful Parser Combinator library for C.
 
 Using _mpc_ might be of interest to you if you are...
@@ -73,24 +75,24 @@ mpc_cleanup(4, Expr, Prod, Value, Maths);
 If you were to set `input` to the string `(4 * 2 * 11 + 2) - 5`, the printed output would look like this.
 
 ```
->:
-  regex:
-  expression|>:
-    value|>:
-      char: '('
-      expression|>:
-        product|>:
-          value|regex: '4'
-          char: '*'
-          value|regex: '2'
-          char: '*'
-          value|regex: '11'
-        char: '+'
-        product|value|regex: '2'
-      char: ')'
-    char: '-'
-    product|value|regex: '5'
-  regex:
+>
+  regex
+  expression|>
+    value|>
+      char:1:1 '('
+      expression|>
+        product|>
+          value|regex:1:2 '4'
+          char:1:4 '*'
+          value|regex:1:6 '2'
+          char:1:8 '*'
+          value|regex:1:10 '11'
+        char:1:13 '+'
+        product|value|regex:1:15 '2'
+      char:1:16 ')'
+    char:1:18 '-'
+    product|value|regex:1:20 '5'
+  regex
 ```
 
 Getting Started
@@ -195,7 +197,7 @@ Consumes no input, always fails with message `m`.
 mpc_parser_t *mpc_failf(const char *fmt, ...);
 ```
 
-Consumes no input, always fails with formatted message given by `fmt` and following parameters.
+Consumes no input, always fails with string formatted message given by `fmt` and following parameters.
 
 * * *
 
@@ -212,6 +214,14 @@ mpc_parser_t *mpc_lift_val(mpc_val_t *x);
 ```
 
 Consumes no input, always successful, returns `x`
+
+* * *
+
+```c
+mpc_parser_t *mpc_state(void);
+```
+
+Consumes no input, always successful, returns a copy of the parser state as `mpc_state_t *`. This pointer needs to be freed with `free` when done with.
 
 
 Parsing
@@ -683,14 +693,10 @@ It also allows for one more trick. As all the fold and destructor functions are 
 
 ```
 number "number" : /[0-9]+/ ;
-
-expression : <product> (('+' | '-') <product>)* ;
-
-product : <value>   (('*' | '/')   <value>)* ;
-
-value : <number> | '(' <expression> ')' ;
-
-maths : /^/ <expression> /$/ ;
+expression      : <product> (('+' | '-') <product>)* ;
+product         : <value>   (('*' | '/')   <value>)* ;
+value           : <number> | '(' <expression> ')' ;
+maths           : /^/ <expression> /$/ ;
 ```
 
 String literals are surrounded in double quotes `"`. Character literals in single quotes `'` and regex literals in slashes `/`. References to other parsers are surrounded in braces `<>` and referred to by name.
@@ -748,7 +754,7 @@ Limitations & FAQ
 
 ### Does this support Unicode?
 
-_mpc_ Only supports ASCII. Sorry! I welcome contributions as making the library support Unicode is non-trivial.
+_mpc_ Only supports ASCII. Sorry! Writing a parser library that supports Unicode is pretty difficult. I welcome contributions!
 
 
 ### Backtracking and Left Recursion
@@ -769,7 +775,7 @@ factor : <ident> '('  <expr>? (',' <expr>)* ')'
        | <ident> ;
 ```
 
-An alternative, and better option is to remove the ambiguity by factoring out the first identifier completely. This is better because it removes any need for backtracking at all!
+An alternative, and better option is to remove the ambiguity by factoring out the first identifier completely. This is better because it removes any need for backtracking at all! Now the grammar is predictive!
 
 ```
 factor : <ident> ('('  <expr>? (',' <expr>)* ')')? ;
@@ -783,5 +789,9 @@ Some compilers limit the maximum length of string literals. If you have a huge l
 There are a couple of ways to overcome this issue if it arises. You could instead use `mpca_lang_contents` and load the language from file or you could use a string literal for each line and let the preprocessor automatically concatenate them together, avoiding the limit. The final option is to upgrade your compiler. In C99 this limit has been increased to 4095.
 
 
+### The string tag is annoying.
 
+When parsing from a grammar, the abstract syntax tree is tagged with different tags for each primitive type it encounters. For example a regular expression will be automatically tagged as `regex`. Character literals as `char` and strings as `string`.
+
+If you have a rule in your grammar called `string`, `char` or `regex`, you may encounter some confusion. This is because nodes will be tagged with (for example) `string` _either_ if they are a string primitive, _or_ if they were parsed via your `string` rule. If you are detecting node type using something like `strstr`, in this situation it might break. One solution to this is to always check that `string` is the innermost tag to test for string primitives, or to rename your rule called `string` to something that doesn't conflict.
 
