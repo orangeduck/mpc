@@ -662,6 +662,7 @@ static int mpc_input_boundary(mpc_input_t* i) {
 	       "0123456789_";
 	       
   char peek = mpc_input_peekc(i);
+  if (strchr(word, i->last) && peek == '\0') { return 1; }
   if (strchr(word, peek) && !strchr(word, i->last)) { return 1; }
   if (!strchr(word, peek) && strchr(word, i->last)) { return 1; }
   
@@ -2435,7 +2436,7 @@ void mpc_print(mpc_parser_t *p) {
 **
 */
 
-int mpc_unmatch(mpc_parser_t *p, const char *s, void *d,
+int mpc_test_fail(mpc_parser_t *p, const char *s, void *d,
   int(*tester)(void*, void*),
   mpc_dtor_t destructor,
   void(*printer)(void*)) {
@@ -2458,7 +2459,7 @@ int mpc_unmatch(mpc_parser_t *p, const char *s, void *d,
   
 }
 
-int mpc_match(mpc_parser_t *p, const char *s, void *d,
+int mpc_test_pass(mpc_parser_t *p, const char *s, void *d,
   int(*tester)(void*, void*), 
   mpc_dtor_t destructor, 
   void(*printer)(void*)) {

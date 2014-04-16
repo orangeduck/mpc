@@ -312,14 +312,16 @@ mpc_err_t *mpca_lang_contents(int flags, const char *filename, ...);
 
 void mpc_print(mpc_parser_t *p);
 
-int mpc_unmatch(mpc_parser_t *p, const char *s, void *d,
+int mpc_test_pass(mpc_parser_t *p, const char *s, void *d,
+  int(*tester)(void*, void*), 
+  mpc_dtor_t destructor, 
+  void(*printer)(void*));
+
+int mpc_test_fail(mpc_parser_t *p, const char *s, void *d,
   int(*tester)(void*, void*),
   mpc_dtor_t destructor,
   void(*printer)(void*));
 
-int mpc_match(mpc_parser_t *p, const char *s, void *d,
-  int(*tester)(void*, void*), 
-  mpc_dtor_t destructor, 
-  void(*printer)(void*));
+
 
 #endif
