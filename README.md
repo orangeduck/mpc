@@ -172,7 +172,7 @@ mpc_parser_t *mpc_string(const char *s);
 Matches exactly the string `s`
 
 
-### Trivial Parsers
+### Other Parsers
 
 Several other functions exist that construct parsers with some other special functionality.
 
@@ -224,6 +224,18 @@ mpc_parser_t *mpc_state(void);
 ```
 
 Consumes no input, always successful, returns a copy of the parser state as `mpc_state_t *`. This pointer needs to be freed with `free` when done with.
+
+* * *
+
+```c
+mpc_parser_t *mpc_boundary(void);
+```
+
+Consumes no input. Only successful on the boundary between words. Always returns `NULL` on success.
+
+Words are defined as any alphanumeric character or underscore. A non word is defined as any whitespace or non-alphanumeric/underscore character. This includes the start and end of input.
+
+A boundary is therefore when the last character parsed was not part of a word, while the next character is part of a word, _or_ when the last character was part of a word, while the next character is not.
 
 
 Parsing

@@ -327,6 +327,9 @@ typedef struct {
   int backtrack;
   int marks_num;
   mpc_state_t* marks;
+  int* lasts;
+  
+  char last;
   
 } mpc_input_t;
 
@@ -348,6 +351,9 @@ static mpc_input_t *mpc_input_new_string(const char *filename, const char *strin
   i->backtrack = 1;
   i->marks_num = 0;
   i->marks = NULL;
+  i->lasts = NULL;
+
+  i->last = -1;
   
   return i;
 }
@@ -369,6 +375,9 @@ static mpc_input_t *mpc_input_new_pipe(const char *filename, FILE *pipe) {
   i->backtrack = 1;
   i->marks_num = 0;
   i->marks = NULL;
+  i->lasts = NULL;
+  
+  i->last = -1;
   
   return i;
   
@@ -390,6 +399,9 @@ static mpc_input_t *mpc_input_new_file(const char *filename, FILE *file) {
   i->backtrack = 1;
   i->marks_num = 0;
   i->marks = NULL;
+  i->lasts = NULL;
+  
+  i->last = -1;
   
   return i;
 }
@@ -402,6 +414,7 @@ static void mpc_input_delete(mpc_input_t *i) {
   if (i->type == MPC_INPUT_PIPE) { free(i->buffer); }
   
   free(i->marks);
+  free(i->lasts);
   free(i);
 }
 
@@ -414,7 +427,9 @@ static void mpc_input_mark(mpc_input_t *i) {
   
   i->marks_num++;
   i->marks = realloc(i->marks, sizeof(mpc_state_t) * i->marks_num);
+  i->lasts = realloc(i->lasts, sizeof(int) * i->marks_num);
   i->marks[i->marks_num-1] = i->state;
+  i->lasts[i->marks_num-1] = i->last;
   
   if (i->type == MPC_INPUT_PIPE && i->marks_num == 1) {
     i->buffer = calloc(1, 1);
@@ -428,6 +443,7 @@ static void mpc_input_unmark(mpc_input_t *i) {
   
   i->marks_num--;
   i->marks = realloc(i->marks, sizeof(mpc_state_t) * i->marks_num);
+  i->lasts = realloc(i->lasts, sizeof(int) * i->marks_num);
   
   if (i->type == MPC_INPUT_PIPE && i->marks_num == 0) {
     free(i->buffer);
@@ -441,6 +457,7 @@ static void mpc_input_rewind(mpc_input_t *i) {
   if (i->backtrack < 1) { return; }
   
   i->state = i->marks[i->marks_num-1];
+  i->last = i->lasts[i->marks_num-1];
   
   if (i->type == MPC_INPUT_FILE) {
     fseek(i->file, i->state.pos, SEEK_SET);
@@ -488,26 +505,6 @@ static char mpc_input_getc(mpc_input_t *i) {
   return c;
 }
 
-static int mpc_input_failure(mpc_input_t *i, char c) {
-
-  switch (i->type) {
-    case MPC_INPUT_STRING: break;
-    case MPC_INPUT_FILE: fseek(i->file, -1, SEEK_CUR); break;
-    case MPC_INPUT_PIPE:
-      
-      if (!i->buffer) { ungetc(c, i->file); break; }
-      
-      if (i->buffer && mpc_input_buffer_in_range(i)) {
-        break;
-      } else {
-        ungetc(c, i->file); 
-      }
-      
-  }
-  
-  return 0;
-}
-
 static char mpc_input_peekc(mpc_input_t *i) {
   
   char c;
@@ -541,6 +538,26 @@ static char mpc_input_peekc(mpc_input_t *i) {
   
 }
 
+static int mpc_input_failure(mpc_input_t *i, char c) {
+
+  switch (i->type) {
+    case MPC_INPUT_STRING: break;
+    case MPC_INPUT_FILE: fseek(i->file, -1, SEEK_CUR); break;
+    case MPC_INPUT_PIPE:
+      
+      if (!i->buffer) { ungetc(c, i->file); break; }
+      
+      if (i->buffer && mpc_input_buffer_in_range(i)) {
+        break;
+      } else {
+        ungetc(c, i->file); 
+      }
+      
+  }
+  
+  return 0;
+}
+
 static int mpc_input_success(mpc_input_t *i, char c, char **o) {
   
   if (i->type == MPC_INPUT_PIPE &&
@@ -551,7 +568,8 @@ static int mpc_input_success(mpc_input_t *i, char c, char **o) {
     i->buffer[strlen(i->buffer) + 1] = '\0';
     i->buffer[strlen(i->buffer) + 0] = c;
   }
-
+  
+  i->last = c;
   i->state.pos++;
   i->state.col++;
   
@@ -565,8 +583,8 @@ static int mpc_input_success(mpc_input_t *i, char c, char **o) {
     (*o)[0] = c;
     (*o)[1] = '\0';
   }
-  return 1;
   
+  return 1;
 }
 
 static int mpc_input_eoi(mpc_input_t *i) {
@@ -637,6 +655,19 @@ static int mpc_input_string(mpc_input_t *i, const char *c, char **o) {
   return 1;
 }
 
+static int mpc_input_boundary(mpc_input_t* i) {
+  
+  char* word = "abcdefghijklmnopqrstuvwxyz"
+               "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	       "0123456789_";
+	       
+  char peek = mpc_input_peekc(i);
+  if (strchr(word, peek) && !strchr(word, i->last)) { return 1; }
+  if (!strchr(word, peek) && strchr(word, i->last)) { return 1; }
+  
+  return 0;
+}
+
 /*
 ** Parser Type
 */
@@ -648,29 +679,30 @@ enum {
   MPC_TYPE_LIFT      = 3,
   MPC_TYPE_LIFT_VAL  = 4,
   MPC_TYPE_EXPECT    = 5,
-  MPC_TYPE_STATE     = 6,
+  MPC_TYPE_BOUNDARY  = 6,
+  MPC_TYPE_STATE     = 7,
   
-  MPC_TYPE_SOI       = 7,
-  MPC_TYPE_EOI       = 8,
-  MPC_TYPE_ANY       = 9,
-  MPC_TYPE_SINGLE    = 10,
-  MPC_TYPE_ONEOF     = 11,
-  MPC_TYPE_NONEOF    = 12,
-  MPC_TYPE_RANGE     = 13,
-  MPC_TYPE_SATISFY   = 14,
-  MPC_TYPE_STRING    = 15,
+  MPC_TYPE_SOI       = 8,
+  MPC_TYPE_EOI       = 9,
+  MPC_TYPE_ANY       = 10,
+  MPC_TYPE_SINGLE    = 11,
+  MPC_TYPE_ONEOF     = 12,
+  MPC_TYPE_NONEOF    = 13,
+  MPC_TYPE_RANGE     = 14,
+  MPC_TYPE_SATISFY   = 15,
+  MPC_TYPE_STRING    = 16,
   
-  MPC_TYPE_APPLY     = 16,
-  MPC_TYPE_APPLY_TO  = 17,
-  MPC_TYPE_PREDICT   = 18,
-  MPC_TYPE_NOT       = 19,
-  MPC_TYPE_MAYBE     = 20,
-  MPC_TYPE_MANY      = 21,
-  MPC_TYPE_MANY1     = 22,
-  MPC_TYPE_COUNT     = 23,
+  MPC_TYPE_APPLY     = 17,
+  MPC_TYPE_APPLY_TO  = 18,
+  MPC_TYPE_PREDICT   = 19,
+  MPC_TYPE_NOT       = 20,
+  MPC_TYPE_MAYBE     = 21,
+  MPC_TYPE_MANY      = 22,
+  MPC_TYPE_MANY1     = 23,
+  MPC_TYPE_COUNT     = 24,
   
-  MPC_TYPE_OR        = 24,
-  MPC_TYPE_AND       = 25
+  MPC_TYPE_OR        = 25,
+  MPC_TYPE_AND       = 26
 };
 
 typedef struct { char *m; } mpc_pdata_fail_t;
@@ -966,15 +998,6 @@ int mpc_parse_input(mpc_input_t *i, mpc_parser_t *init, mpc_result_t *final) {
     
     switch (p->type) {
       
-      /* Trivial Parsers */
-
-      case MPC_TYPE_UNDEFINED: MPC_FAILURE(mpc_err_fail(i->filename, i->state, "Parser Undefined!"));      
-      case MPC_TYPE_PASS:      MPC_SUCCESS(NULL);
-      case MPC_TYPE_FAIL:      MPC_FAILURE(mpc_err_fail(i->filename, i->state, p->data.fail.m));
-      case MPC_TYPE_LIFT:      MPC_SUCCESS(p->data.lift.lf());
-      case MPC_TYPE_LIFT_VAL:  MPC_SUCCESS(p->data.lift.x);
-      case MPC_TYPE_STATE:     MPC_SUCCESS(mpc_state_copy(i->state));
-      
       /* Basic Parsers */
 
       case MPC_TYPE_SOI:       MPC_PRIMATIVE(NULL, mpc_input_soi(i));
@@ -986,7 +1009,23 @@ int mpc_parse_input(mpc_input_t *i, mpc_parser_t *init, mpc_result_t *final) {
       case MPC_TYPE_NONEOF:    MPC_PRIMATIVE(s, mpc_input_noneof(i, p->data.string.x, &s));
       case MPC_TYPE_SATISFY:   MPC_PRIMATIVE(s, mpc_input_satisfy(i, p->data.satisfy.f, &s));
       case MPC_TYPE_STRING:    MPC_PRIMATIVE(s, mpc_input_string(i, p->data.string.x, &s));
-    
+      
+      /* Other parsers */
+      
+      case MPC_TYPE_UNDEFINED: MPC_FAILURE(mpc_err_fail(i->filename, i->state, "Parser Undefined!"));      
+      case MPC_TYPE_PASS:      MPC_SUCCESS(NULL);
+      case MPC_TYPE_FAIL:      MPC_FAILURE(mpc_err_fail(i->filename, i->state, p->data.fail.m));
+      case MPC_TYPE_LIFT:      MPC_SUCCESS(p->data.lift.lf());
+      case MPC_TYPE_LIFT_VAL:  MPC_SUCCESS(p->data.lift.x);
+      case MPC_TYPE_STATE:     MPC_SUCCESS(mpc_state_copy(i->state));
+      
+      case MPC_TYPE_BOUNDARY:
+	if (mpc_input_boundary(i)) {
+	  MPC_SUCCESS(NULL);
+        } else {
+	  MPC_FAILURE(mpc_err_new(i->filename, i->state, "boundary", mpc_input_peekc(i)));
+	}
+      
       /* Application Parsers */
       
       case MPC_TYPE_EXPECT:
@@ -1413,6 +1452,12 @@ mpc_parser_t *mpc_lift(mpc_ctor_t lf) {
 mpc_parser_t *mpc_state(void) {
   mpc_parser_t *p = mpc_undefined();
   p->type = MPC_TYPE_STATE;
+  return p;
+}
+
+mpc_parser_t *mpc_boundary(void) {
+  mpc_parser_t *p = mpc_undefined();
+  p->type = MPC_TYPE_BOUNDARY;
   return p;
 }
 
@@ -1852,7 +1897,8 @@ static mpc_parser_t *mpc_re_escape_char(char c) {
     case 'r': return mpc_char('\r');
     case 't': return mpc_char('\t');
     case 'v': return mpc_char('\v');
-    case 'b': return mpc_char('\b');
+    case 'b': return mpc_and(2, mpcf_snd, mpc_boundary(), mpc_lift(mpcf_ctor_str), free);
+    case 'B': return mpc_not_lift(mpc_boundary(), free, mpcf_ctor_str);
     case 'A': return mpc_and(2, mpcf_snd, mpc_soi(), mpc_lift(mpcf_ctor_str), free);
     case 'Z': return mpc_and(2, mpcf_snd, mpc_eoi(), mpc_lift(mpcf_ctor_str), free);
     case 'd': return mpc_digit();
@@ -2271,6 +2317,7 @@ static void mpc_print_unretained(mpc_parser_t *p, int force) {
   if (p->type == MPC_TYPE_FAIL)   { printf("<!>"); }
   if (p->type == MPC_TYPE_LIFT)   { printf("<#>"); }
   if (p->type == MPC_TYPE_STATE)  { printf("<S#>"); }
+  if (p->type == MPC_TYPE_BOUNDARY)  { printf("<\\b>"); }
   if (p->type == MPC_TYPE_EXPECT) {
     printf("%s", p->data.expect.m);
     /*mpc_print_unretained(p->data.expect.x, 0);*/
