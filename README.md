@@ -1,6 +1,12 @@
 Micro Parser Combinators
 ========================
 
+Version 0.8
+
+
+About
+-----
+
 _mpc_ is a lightweight and powerful Parser Combinator library for C.
 
 Using _mpc_ might be of interest to you if you are...
@@ -37,65 +43,58 @@ _mpc_ provides a number of features that this project does not offer, and also o
 * _mpc_ Doesn't pollute the namespace
 
 
-Demonstration
-=============
+Quickstart
+==========
 
-In the below example I create a parser for basic mathematical expressions.
+Here is how one would use _mpc_ to create a parser for a basic mathematical expression language.
 
 ```c
-#include "mpc.h"
+mpc_parser_t *Expr  = mpc_new("expression");
+mpc_parser_t *Prod  = mpc_new("product");
+mpc_parser_t *Value = mpc_new("value");
+mpc_parser_t *Maths = mpc_new("maths");
 
-void parse_maths(const char *input) {
+mpca_lang(
+  " expression : <product> (('+' | '-') <product>)*; "
+  " product    : <value>   (('*' | '/') <value>  )*; "
+  " value      : /[0-9]+/ | '(' <expression> ')';    "
+  " maths      : /^/ <expression> /$/;               ",
+  Expr, Prod, Value, Maths);
 
-  mpc_parser_t *Expr  = mpc_new("expression");
-  mpc_parser_t *Prod  = mpc_new("product");
-  mpc_parser_t *Value = mpc_new("value");
-  mpc_parser_t *Maths = mpc_new("maths");
-  
-  mpca_lang(
-    "                                                    \
-        expression : <product> (('+' | '-') <product>)*; \
-        product    : <value>   (('*' | '/') <value>  )*; \
-        value      : /[0-9]+/ | '(' <expression> ')';    \
-        maths      : /^/ <expression> /$/;               \
-    ",
-    Expr, Prod, Value, Maths);
-  
-  mpc_result_t r;
-  
-  if (!mpc_parse("<parse_maths>", input, Maths, &r)) {
-    mpc_ast_print(r.output);
-    mpc_ast_delete(r.output);
-  } else {
-    mpc_err_print(r.error);
-    mpc_err_delete(r.error);
-  }
-  
-  mpc_cleanup(4, Expr, Prod, Value, Maths);
+mpc_result_t r;
+
+if (mpc_parse("input", input, Maths, &r)) {
+  mpc_ast_print(r.output);
+  mpc_ast_delete(r.output);
+} else {
+  mpc_err_print(r.error);
+  mpc_err_delete(r.error);
 }
+
+mpc_cleanup(4, Expr, Prod, Value, Maths);
 ```
 
-If you were to input `"(4 * 2 * 11 + 2) - 5"` into this function, the output would look something like this:
+If you were to set `input` to the string `(4 * 2 * 11 + 2) - 5`, the printed output would look like this.
 
 ```
->:
-  regex:
-  expression|>:
-    value|>:
-      char: '('
-      expression|>:
-        product|>:
-          value|regex: '4'
-          char: '*'
-          value|regex: '2'
-          char: '*'
-          value|regex: '11'
-        char: '+'
-        product|value|regex: '2'
-      char: ')'
-    char: '-'
-    product|value|regex: '5'
-  regex:
+>
+  regex
+  expression|>
+    value|>
+      char:1:1 '('
+      expression|>
+        product|>
+          value|regex:1:2 '4'
+          char:1:4 '*'
+          value|regex:1:6 '2'
+          char:1:8 '*'
+          value|regex:1:10 '11'
+        char:1:13 '+'
+        product|value|regex:1:15 '2'
+      char:1:16 ')'
+    char:1:18 '-'
+    product|value|regex:1:20 '5'
+  regex
 ```
 
 Getting Started
@@ -144,7 +143,7 @@ Matches any single given character in the range `s` to `e` (inclusive)
 * * *
 
 ```c
-mpc_parser_t *mpc_oneof(const char* s);
+mpc_parser_t *mpc_oneof(const char *s);
 ```
 
 Matches any single given character in the string  `s`
@@ -152,7 +151,7 @@ Matches any single given character in the string  `s`
 * * *
 
 ```c
-mpc_parser_t *mpc_noneof(const char* s);
+mpc_parser_t *mpc_noneof(const char *s);
 ```
 Matches any single given character not in the string `s`
 
@@ -167,13 +166,13 @@ Matches any single given character satisfying function `f`
 * * *
 
 ```c
-mpc_parser_t *mpc_string(const char* s);
+mpc_parser_t *mpc_string(const char *s);
 ```
 
 Matches exactly the string `s`
 
 
-### Trivial Parsers
+### Other Parsers
 
 Several other functions exist that construct parsers with some other special functionality.
 
@@ -188,8 +187,8 @@ Consumes no input, always successful, returns `NULL`
 * * *
 
 ```c
-mpc_parser_t *mpc_fail(const char* m);
-mpc_parser_t *mpc_failf(const char* fmt, ...);
+mpc_parser_t *mpc_fail(const char *m);
+mpc_parser_t *mpc_failf(const char *fmt, ...);
 ```
 
 Consumes no input, always fails with message `m`.
@@ -197,10 +196,10 @@ Consumes no input, always fails with message `m`.
 * * *
 
 ```c
-mpc_parser_t *mpc_failf(const char* fmt, ...);
+mpc_parser_t *mpc_failf(const char *fmt, ...);
 ```
 
-Consumes no input, always fails with formatted message given by `fmt` and following parameters.
+Consumes no input, always fails with string formatted message given by `fmt` and following parameters.
 
 * * *
 
@@ -213,10 +212,30 @@ Consumes no input, always successful, returns the result of function `f`
 * * *
 
 ```c
-mpc_parser_t *mpc_lift_val(mpc_val_t* x);
+mpc_parser_t *mpc_lift_val(mpc_val_t *x);
 ```
 
 Consumes no input, always successful, returns `x`
+
+* * *
+
+```c
+mpc_parser_t *mpc_state(void);
+```
+
+Consumes no input, always successful, returns a copy of the parser state as `mpc_state_t *`. This pointer needs to be freed with `free` when done with.
+
+* * *
+
+```c
+mpc_parser_t *mpc_boundary(void);
+```
+
+Consumes no input. Only successful on the boundary between words. Always returns `NULL` on success.
+
+Words are defined as any alphanumeric character or underscore. A non word is defined as any whitespace or non-alphanumeric/underscore character. This includes the start and end of input.
+
+A boundary is therefore when the last character parsed was not part of a word, while the next character is part of a word, _or_ when the last character was part of a word, while the next character is not.
 
 
 Parsing
@@ -261,7 +280,7 @@ Run a parser on some pipe (such as `stdin`).
 * * *
 
 ```c
-int mpc_parse_contents(const char* filename, mpc_parser_t *p, mpc_result_t* r);
+int mpc_parse_contents(const char *filename, mpc_parser_t *p, mpc_result_t *r);
 ```
 
 Run a parser on the contents of some file.
@@ -281,8 +300,8 @@ Here are the main combinators and how to use then.
 * * *
 
 ```c
-mpc_parser_t *mpc_expect(mpc_parser_t *a, const char* e);
-mpc_parser_t *mpc_expectf(mpc_parser_t *a, const char* fmt, ...);
+mpc_parser_t *mpc_expect(mpc_parser_t *a, const char *e);
+mpc_parser_t *mpc_expectf(mpc_parser_t *a, const char *fmt, ...);
 ```
 
 Returns a parser that runs `a`, and on success returns the result of `a`, while on failure reports that `e` was expected.
@@ -291,7 +310,7 @@ Returns a parser that runs `a`, and on success returns the result of `a`, while 
 
 ```c
 mpc_parser_t *mpc_apply(mpc_parser_t *a, mpc_apply_t f);
-mpc_parser_t *mpc_apply_to(mpc_parser_t *a, mpc_apply_to_t f, void* x);
+mpc_parser_t *mpc_apply_to(mpc_parser_t *a, mpc_apply_to_t f, void *x);
 ```
 
 Returns a parser that applies function `f` (optionality taking extra input `x`) to the result of parser `a`.
@@ -404,15 +423,15 @@ typedef mpc_val_t*(*mpc_fold_t)(int,mpc_val_t**);
 This takes a list of pointers to data values and must return some combined or folded version of these data values. It must ensure to free and input data that is no longer used once after combination has taken place.
 
 
-Case Study - C Identifier
-=========================
+Case Study - Identifier
+=======================
 
 Combinator Method
 -----------------
 
 Using the above combinators we can create a parser that matches a C identifier.
 
-If we match two parts of a string separately with a function such as `mpc_and` we'll need to combine them together into a long string to represent the final identifier.
+When using the combinators we need to supply a function that says how to combine two `char *`.
 
 For this we build a fold function that will concatenate zero or more strings together. For this sake of this tutorial we will write it by hand, but this (as well as many other useful fold functions), are actually included in _mpc_ under the `mpcf_*` namespace, such as `mpcf_strfold`.
 
@@ -454,7 +473,7 @@ Because of this we shouldn't create a parser and input it into multiple places, 
 Regex Method
 ------------
 
-There is an easy way to do this than the above method. _mpc_ comes with a handy regex function for constructing parsers using regex syntax. We can specify an identifier using a regex pattern as shown below.
+There is an easier way to do this than the above method. _mpc_ comes with a handy regex function for constructing parsers using regex syntax. We can specify an identifier using a regex pattern as shown below.
 
 ```c
 mpc_parser_t *ident = mpc_re("[a-zA-Z_][a-zA-Z_0-9]*");
@@ -486,7 +505,7 @@ Building parsers in the above way can have issues with self-reference or cyclic-
 * * *
 
 ```c
-mpc_parser_t *mpc_new(const char* name);
+mpc_parser_t *mpc_new(const char *name);
 ```
 
 This will construct a parser called `name` which can then be used as input to others, including itself, without fear of being deleted. Any parser created using `mpc_new` is said to be _retained_. This means it will behave differently to a normal parser when referenced. When deleting a parser that includes a _retained_ parser, the _retained_ parser will not be deleted along with it. To delete a retained parser `mpc_delete` must be used on it directly.
@@ -526,35 +545,35 @@ Library Reference
 Common Parsers
 --------------
 
-* `mpc_soi(void);` Matches only the start of input, returns `NULL`
-* `mpc_eoi(void);` Matches only the end of input, returns `NULL`
-* `mpc_whitespace(void);` Matches any whitespace character `" \f\n\r\t\v"`
-* `mpc_whitespaces(void);` Matches zero or more whitespace characters
-* `mpc_blank(void);` Matches whitespaces and frees the result, returns `NULL`
-* `mpc_newline(void);` Matches `'\n'`
-* `mpc_tab(void);` Matches `'\t'`
-* `mpc_escape(void);` Matches a backslash followed by any character
-* `mpc_digit(void);` Matches any character in the range `'0'` - `'9'`
-* `mpc_hexdigit(void);` Matches any character in the range `'0'` - `'9'` as well as `'A'` - `'F'` and `'a'` - `'f'`
-* `mpc_octdigit(void);` Matches any character in the range `'0'` - `'7'`
-* `mpc_digits(void);` Matches one or more digit
-* `mpc_hexdigits(void);` Matches one or more hexdigit
-* `mpc_octdigits(void);` Matches one or more octdigit
-* `mpc_lower(void);` Matches and lower case character
-* `mpc_upper(void);` Matches any upper case character
-* `mpc_alpha(void);` Matches and alphabet character
-* `mpc_underscore(void);` Matches `'_'`
-* `mpc_alphanum(void);` Matches any alphabet character, underscore or digit
-* `mpc_int(void);` Matches digits and returns an `int*`
-* `mpc_hex(void);` Matches hexdigits and returns an `int*`
-* `mpc_oct(void);` Matches octdigits and returns an `int*`
-* `mpc_number(void);` Matches `mpc_int`, `mpc_hex` or `mpc_oct`
-* `mpc_real(void);` Matches some floating point number as a string
-* `mpc_float(void);` Matches some floating point number and returns a `float*`
-* `mpc_char_lit(void);` Matches some character literal surrounded by `'`
-* `mpc_string_lit(void);` Matches some string literal surrounded by `"`
-* `mpc_regex_lit(void);` Matches some regex literal surrounded by `/`
-* `mpc_ident(void);` Matches a C style identifier
+* `mpc_soi;` Matches only the start of input, returns `NULL`
+* `mpc_eoi;` Matches only the end of input, returns `NULL`
+* `mpc_whitespace` Matches any whitespace character `" \f\n\r\t\v"`
+* `mpc_whitespaces` Matches zero or more whitespace characters
+* `mpc_blank` Matches whitespaces and frees the result, returns `NULL`
+* `mpc_newline` Matches `'\n'`
+* `mpc_tab` Matches `'\t'`
+* `mpc_escape` Matches a backslash followed by any character
+* `mpc_digit` Matches any character in the range `'0'` - `'9'`
+* `mpc_hexdigit` Matches any character in the range `'0'` - `'9'` as well as `'A'` - `'F'` and `'a'` - `'f'`
+* `mpc_octdigit` Matches any character in the range `'0'` - `'7'`
+* `mpc_digits` Matches one or more digit
+* `mpc_hexdigits` Matches one or more hexdigit
+* `mpc_octdigits` Matches one or more octdigit
+* `mpc_lower` Matches and lower case character
+* `mpc_upper` Matches any upper case character
+* `mpc_alpha` Matches and alphabet character
+* `mpc_underscore` Matches `'_'`
+* `mpc_alphanum` Matches any alphabet character, underscore or digit
+* `mpc_int` Matches digits and returns an `int*`
+* `mpc_hex` Matches hexdigits and returns an `int*`
+* `mpc_oct` Matches octdigits and returns an `int*`
+* `mpc_number` Matches `mpc_int`, `mpc_hex` or `mpc_oct`
+* `mpc_real` Matches some floating point number as a string
+* `mpc_float` Matches some floating point number and returns a `float*`
+* `mpc_char_lit` Matches some character literal surrounded by `'`
+* `mpc_string_lit` Matches some string literal surrounded by `"`
+* `mpc_regex_lit` Matches some regex literal surrounded by `/`
+* `mpc_ident` Matches a C style identifier
 
 
 Useful Parsers
@@ -567,14 +586,14 @@ Useful Parsers
 * `mpc_stripr(mpc_parser_t *a);` Matches `a` striping any whitespace to the right
 * `mpc_strip(mpc_parser_t *a);` Matches `a` striping any surrounding whitespace
 * `mpc_tok(mpc_parser_t *a);` Matches `a` and strips any trailing whitespace
-* `mpc_sym(const char* s);` Matches string `s` and strips any trailing whitespace
+* `mpc_sym(const char *s);` Matches string `s` and strips any trailing whitespace
 * `mpc_total(mpc_parser_t *a, mpc_dtor_t da);` Matches the whitespace stripped `a`, enclosed in the start and end of input
-* `mpc_between(mpc_parser_t *a, mpc_dtor_t ad, const char* o, const char* c);` Matches `a` between strings `o` and `c`
+* `mpc_between(mpc_parser_t *a, mpc_dtor_t ad, const char *o, const char *c);` Matches `a` between strings `o` and `c`
 * `mpc_parens(mpc_parser_t *a, mpc_dtor_t ad);` Matches `a` between `"("` and `")"`
 * `mpc_braces(mpc_parser_t *a, mpc_dtor_t ad);` Matches `a` between `"<"` and `">"`
 * `mpc_brackets(mpc_parser_t *a, mpc_dtor_t ad);` Matches `a` between `"{"` and `"}"`
 * `mpc_squares(mpc_parser_t *a, mpc_dtor_t ad);` Matches `a` between `"["` and `"]"`
-* `mpc_tok_between(mpc_parser_t *a, mpc_dtor_t ad, const char* o, const char* c);` Matches `a` between `o` and `c`, where `o` and `c` have their trailing whitespace striped.
+* `mpc_tok_between(mpc_parser_t *a, mpc_dtor_t ad, const char *o, const char *c);` Matches `a` between `o` and `c`, where `o` and `c` have their trailing whitespace striped.
 * `mpc_tok_parens(mpc_parser_t *a, mpc_dtor_t ad);` Matches `a` between trailing whitespace stripped `"("` and `")"`
 * `mpc_tok_braces(mpc_parser_t *a, mpc_dtor_t ad);` Matches `a` between trailing whitespace stripped `"<"` and `">"`
 * `mpc_tok_brackets(mpc_parser_t *a, mpc_dtor_t ad);` Matches `a` between trailing whitespace stripped `"{"` and `"}"`
@@ -584,35 +603,35 @@ Useful Parsers
 Apply Functions
 ---------------
 
-* `void mpcf_dtor_null(mpc_val_t* x);` Empty destructor. Does nothing
-* `mpc_val_t* mpcf_ctor_null(void);` Returns `NULL`
-* `mpc_val_t* mpcf_ctor_str(void);` Returns `""`
-* `mpc_val_t* mpcf_free(mpc_val_t* x);` Frees `x` and returns `NULL`
-* `mpc_val_t* mpcf_int(mpc_val_t* x);` Converts a decimal string `x` to an `int*`
-* `mpc_val_t* mpcf_hex(mpc_val_t* x);` Converts a hex string `x` to an `int*`
-* `mpc_val_t* mpcf_oct(mpc_val_t* x);` Converts a oct string `x` to an `int*`
-* `mpc_val_t* mpcf_float(mpc_val_t* x);` Converts a string `x` to a `float*`
-* `mpc_val_t* mpcf_escape(mpc_val_t* x);` Converts a string `x` to an escaped version
-* `mpc_val_t* mpcf_escape_regex(mpc_val_t* x);` Converts a regex `x` to an escaped version
-* `mpc_val_t* mpcf_escape_string_raw(mpc_val_t* x);` Converts a raw string `x` to an escaped version
-* `mpc_val_t* mpcf_escape_char_raw(mpc_val_t* x);` Converts a raw character `x` to an escaped version
-* `mpc_val_t* mpcf_unescape(mpc_val_t* x);` Converts a string `x` to an unescaped version
-* `mpc_val_t* mpcf_unescape_regex(mpc_val_t* x);` Converts a regex `x` to an unescaped version
-* `mpc_val_t* mpcf_unescape_string_raw(mpc_val_t* x);` Converts a raw string `x` to an unescaped version
-* `mpc_val_t* mpcf_unescape_char_raw(mpc_val_t* x);` Converts a raw character `x` to an unescaped version
+* `void mpcf_dtor_null(mpc_val_t *x);` Empty destructor. Does nothing
+* `mpc_val_t *mpcf_ctor_null(void);` Returns `NULL`
+* `mpc_val_t *mpcf_ctor_str(void);` Returns `""`
+* `mpc_val_t *mpcf_free(mpc_val_t *x);` Frees `x` and returns `NULL`
+* `mpc_val_t *mpcf_int(mpc_val_t *x);` Converts a decimal string `x` to an `int*`
+* `mpc_val_t *mpcf_hex(mpc_val_t *x);` Converts a hex string `x` to an `int*`
+* `mpc_val_t *mpcf_oct(mpc_val_t *x);` Converts a oct string `x` to an `int*`
+* `mpc_val_t *mpcf_float(mpc_val_t *x);` Converts a string `x` to a `float*`
+* `mpc_val_t *mpcf_escape(mpc_val_t *x);` Converts a string `x` to an escaped version
+* `mpc_val_t *mpcf_escape_regex(mpc_val_t *x);` Converts a regex `x` to an escaped version
+* `mpc_val_t *mpcf_escape_string_raw(mpc_val_t *x);` Converts a raw string `x` to an escaped version
+* `mpc_val_t *mpcf_escape_char_raw(mpc_val_t *x);` Converts a raw character `x` to an escaped version
+* `mpc_val_t *mpcf_unescape(mpc_val_t *x);` Converts a string `x` to an unescaped version
+* `mpc_val_t *mpcf_unescape_regex(mpc_val_t *x);` Converts a regex `x` to an unescaped version
+* `mpc_val_t *mpcf_unescape_string_raw(mpc_val_t *x);` Converts a raw string `x` to an unescaped version
+* `mpc_val_t *mpcf_unescape_char_raw(mpc_val_t *x);` Converts a raw character `x` to an unescaped version
 
 Fold Functions
 --------------
 
-* `mpc_val_t* mpcf_null(int n, mpc_val_t** xs);` Returns `NULL`
-* `mpc_val_t* mpcf_fst(int n, mpc_val_t** xs);` Returns first element of `xs`
-* `mpc_val_t* mpcf_snd(int n, mpc_val_t** xs);` Returns second element of `xs`
-* `mpc_val_t* mpcf_trd(int n, mpc_val_t** xs);` Returns third element of `xs`
-* `mpc_val_t* mpcf_fst_free(int n, mpc_val_t** xs);` Returns first element of `xs` and calls `free` on others
-* `mpc_val_t* mpcf_snd_free(int n, mpc_val_t** xs);` Returns second element of `xs` and calls `free` on others
-* `mpc_val_t* mpcf_trd_free(int n, mpc_val_t** xs);` Returns third element of `xs` and calls `free` on others
-* `mpc_val_t* mpcf_strfold(int n, mpc_val_t** xs);` Concatenates all `xs` together as strings and returns result 
-* `mpc_val_t* mpcf_maths(int n, mpc_val_t** xs);` Examines second argument as string to see which operator it is, then operators on first and third argument as if they are `int*`.
+* `mpc_val_t *mpcf_null(int n, mpc_val_t** xs);` Returns `NULL`
+* `mpc_val_t *mpcf_fst(int n, mpc_val_t** xs);` Returns first element of `xs`
+* `mpc_val_t *mpcf_snd(int n, mpc_val_t** xs);` Returns second element of `xs`
+* `mpc_val_t *mpcf_trd(int n, mpc_val_t** xs);` Returns third element of `xs`
+* `mpc_val_t *mpcf_fst_free(int n, mpc_val_t** xs);` Returns first element of `xs` and calls `free` on others
+* `mpc_val_t *mpcf_snd_free(int n, mpc_val_t** xs);` Returns second element of `xs` and calls `free` on others
+* `mpc_val_t *mpcf_trd_free(int n, mpc_val_t** xs);` Returns third element of `xs` and calls `free` on others
+* `mpc_val_t *mpcf_strfold(int n, mpc_val_t** xs);` Concatenates all `xs` together as strings and returns result 
+* `mpc_val_t *mpcf_maths(int n, mpc_val_t** xs);` Examines second argument as string to see which operator it is, then operators on first and third argument as if they are `int*`.
 
 
 Case Study - Maths Language
@@ -621,12 +640,14 @@ Case Study - Maths Language
 Combinator Approach
 -------------------
 
-Passing around all these function pointers might seem clumsy, but having parsers be type-generic is important as it lets users define their own syntax tree types, as well as allows them perform specific house-keeping or data processing in the parsing phase. For example we can specify a simple maths grammar that computes the result of the expression as it goes along.
+Passing around all these function pointers might seem clumsy, but having parsers be type-generic is important as it lets users define their own ouput types for parsers. For example we could design our own syntax tree type to use. We can also use this method to do some specific house-keeping or data processing in the parsing phase.
 
-We start with a fold function that will fold two `int*` into a new `int*` based on some `char*` operator.
+As an example of this power, we can specify a simple maths grammar, that ouputs `int *`, and computes the result of the expression as it goes along.
+
+We start with a fold function that will fold two `int *` into a new `int *` based on some `char *` operator.
 
 ```c
-mpc_val_t* fold_maths(int n, mpc_val_t **xs) {
+mpc_val_t *fold_maths(int n, mpc_val_t **xs) {
   
   int **vs = (int**)xs;
     
@@ -645,38 +666,31 @@ mpc_val_t* fold_maths(int n, mpc_val_t **xs) {
 And then we use this to specify a basic grammar, which folds together any results.
 
 ```c
-int parse_maths(char* input) {
+mpc_parser_t *Expr   = mpc_new("expr");
+mpc_parser_t *Factor = mpc_new("factor");
+mpc_parser_t *Term   = mpc_new("term");
+mpc_parser_t *Maths  = mpc_new("maths");
 
-  mpc_parser_t *Expr   = mpc_new("expr");
-  mpc_parser_t *Factor = mpc_new("factor");
-  mpc_parser_t *Term   = mpc_new("term");
-  mpc_parser_t *Maths  = mpc_new("maths");
+mpc_define(Expr, mpc_or(2, 
+  mpc_and(3, fold_maths,
+    Factor, mpc_oneof("*/"), Factor,
+    free, free),
+  Factor
+));
 
-  mpc_define(Expr, mpc_or(2, 
-    mpc_and(3, fold_maths, Factor, mpc_oneof("*/"), Factor, free, free),
-    Factor
-  ));
-  
-  mpc_define(Factor, mpc_or(2, 
-    mpc_and(3, fold_maths, Term, mpc_oneof("+-"), Term, free, free),
-    Term
-  ));
-  
-  mpc_define(Term, mpc_or(2, mpc_int(), mpc_parens(Expr, free)));
-  mpc_define(Maths, mpc_enclose(Expr, free));
-  
-  mpc_result_t r;
-  if (!mpc_parse("parse_maths", input, Maths, &r)) {
-    mpc_err_print(r.error);
-    abort();
-  }
+mpc_define(Factor, mpc_or(2, 
+  mpc_and(3, fold_maths,
+    Term, mpc_oneof("+-"), Term,
+    free, free),
+  Term
+));
 
-  int result = *r.output;
-  printf("Result: %i\n", result);
-  free(r.output);
-  
-  return result;
-}
+mpc_define(Term, mpc_or(2, mpc_int(), mpc_parens(Expr, free)));
+mpc_define(Maths, mpc_whole(Expr, free));
+
+/* Do Some Parsing... */
+
+mpc_delete(Maths);
 ```
 
 If we supply this function with something like `(4*2)+5`, we can expect it to output `13`.
@@ -689,40 +703,36 @@ It is possible to avoid passing in and around all those function pointers, if yo
 
 Doing things via this method means that all the data processing must take place after the parsing. In many instances this is no problem or even preferable.
 
-It also allows for one more trick. As all the fold and destructor functions are implicit, the user can simply specify the grammar of the language in some nice way and the system can try to build a parser for the AST type from this alone. For this there are two functions supplied which take in a string and output a parser. The format for these grammars is simple and familiar to those who have used parser generators before. It looks something like this.
+It also allows for one more trick. As all the fold and destructor functions are implicit, the user can simply specify the grammar of the language in some nice way and the system can try to build a parser for the AST type from this alone. For this there are a few functions supplied which take in a string, and output a parser. The format for these grammars is simple and familiar to those who have used parser generators before. It looks something like this.
 
 ```
 number "number" : /[0-9]+/ ;
-
-expression : <product> (('+' | '-') <product>)* ;
-
-product : <value>   (('*' | '/')   <value>)* ;
-
-value : <number> | '(' <expression> ')' ;
-
-maths : /^/ <expression> /$/ ;
+expression      : <product> (('+' | '-') <product>)* ;
+product         : <value>   (('*' | '/')   <value>)* ;
+value           : <number> | '(' <expression> ')' ;
+maths           : /^/ <expression> /$/ ;
 ```
 
 String literals are surrounded in double quotes `"`. Character literals in single quotes `'` and regex literals in slashes `/`. References to other parsers are surrounded in braces `<>` and referred to by name.
 
 Parts specified one after another are parsed in order (like `mpc_and`), while parts separated by a pipe `|` are alternatives (like `mpc_or`). Parenthesis `()` are used to specify precedence. `*` can be used to mean zero or more of. `+` for one or more of. `?` for zero or one of. `!` for negation. And a number inside braces `{5}` to means so many counts of.
 
-Rules are specified by rule name, optionally followed by an _expected_ string, followed by a colon `:`, followed by the definition, and ending in a semicolon `;`.
+Rules are specified by rule name, optionally followed by an _expected_ string, followed by a colon `:`, followed by the definition, and ending in a semicolon `;`. The flags variable is a set of flags `MPCA_LANG_DEFAULT`, `MPCA_LANG_PREDICTIVE`, or `MPCA_LANG_WHITESPACE_SENSITIVE`. For specifying if the language is predictive or whitespace sensitive.
 
 Like with the regular expressions, this user input is parsed by existing parts of the _mpc_ library. It provides one of the more powerful features of the library.
 
 * * *
 
 ```c
-mpc_parser_t *mpca_grammar(int flags, const char* grammar, ...);
+mpc_parser_t *mpca_grammar(int flags, const char *grammar, ...);
 ```
 
-This takes in some single right hand side of a rule, as well as a list of any of the parsers it refers to, and outputs a parser that does exactly what is specified by the rule. The flags variable is a set of flags `MPC_LANG_DEFAULT`, `MPC_LANG_PREDICTIVE`, or `MPC_LANG_WHITESPACE_SENSITIVE`. For specifying if the language is predictive or whitespace sensitive.
+This takes in some single right hand side of a rule, as well as a list of any of the parsers it refers to, and outputs a parser that does exactly what is specified by the rule.
 
 * * *
 
 ```c
-mpc_err_t* mpca_lang(int flags, const char* lang, ...);
+mpc_err_t* mpca_lang(int flags, const char *lang, ...);
 ```
 
 This takes in a full language (zero or more rules) as well as any parsers referred to by either the right or left hand sides. Any parsers specified on the left hand side of any rule will be assigned a parser equivalent to what is specified on the right. On valid user input this returns `NULL`, while if there are any errors in the user input it will return an instance of `mpc_err_t` describing the issues.
@@ -738,7 +748,7 @@ This reads in the contents of file `f` and inputs it into `mpca_lang`.
 * * *
 
 ```c
-mpc_err_t* mpca_lang_contents(int flags, const char* filename, ...);
+mpc_err_t* mpca_lang_contents(int flags, const char *filename, ...);
 ```
 
 This opens and reads in the contents of the file given by `filename` and passes it to `mpca_lang`.
@@ -753,17 +763,36 @@ _mpc_ provides some automatic generation of error messages. These can be enhance
 <test>:0:3: error: expected one or more of 'a' or 'd' at 'k'
 ```
 
+
 Limitations & FAQ
 =================
 
-### ASCII
+### Does _mpc_ support Unicode?
 
-Only supports ASCII. Sorry!
+_mpc_ Only supports ASCII. Sorry! Writing a parser library that supports Unicode is pretty difficult. I welcome contributions!
 
 
-### Backtracking and Left Recursion
+### The Parser is going into an infinite loop!
 
-MPC supports backtracking, but will not completely backtrack up a parse tree if it encounters some success on the path it is going. To demonstrate this behaviour examine the following erroneous grammar, intended to parse either a C style identifier, or a C style function call.
+While it is certainly possible there is an issue with _mpc_, it is probably the case that your grammar contains _left recursion_. This is something _mpc_ cannot deal with. _Left recursion_ is when a rule directly or indirectly references itself on the left hand side of a derivation. For example consider this left recursive grammar intended to parse an expression.
+
+```
+expr : <expr> '+' (<expr> | <int> | <string>);
+```
+
+When the rule `expr` is called, it looks the first rule on the left. This happens to be the rule `expr` again. So again it looks for the first rule on the left. Which is `expr` again. And so on. To avoid left recursion this can be rewritten as the following.
+
+```
+expr    : <int> <exprext> | <string> <exprext> ;
+exprext : ('+' <expr>)? ;
+```
+
+Avoiding left recursion can be tricky, but is easy once you get a feel for it. For more information you can look on [wikipedia](http://en.wikipedia.org/wiki/Left_recursion) which covers some common techniques and more examples. Possibly in the future _mpc_ will support functionality to warn the user or re-write grammars which contain left recursion, but it wont for now.
+
+
+### Backtracking isn't working!
+
+_mpc_ supports backtracking, but will not completely backtrack up a parse tree if it encounters some success on the path it is going. To demonstrate this behaviour examine the following erroneous grammar, intended to parse either a C style identifier, or a C style function call.
 
 ```
 factor : <ident>
@@ -779,19 +808,26 @@ factor : <ident> '('  <expr>? (',' <expr>)* ')'
        | <ident> ;
 ```
 
-An alternative, and better option is to remove the ambiguity by factoring out the first identifier completely. This is better because it removes any need for backtracking at all!
+An alternative, and better option is to remove the ambiguity by factoring out the first identifier completely. This is better because it removes any need for backtracking at all! Now the grammar is predictive!
 
 ```
 factor : <ident> ('('  <expr>? (',' <expr>)* ')')? ;
 ```
 
 
-### Max String Length
+### How can I avoid the maximum string literal length?
 
 Some compilers limit the maximum length of string literals. If you have a huge language string in the source file to be passed into `mpca_lang` you might encounter this. The ANSI standard says that 509 is the maximum length allowed for a string literal. Most compilers support greater than this. Visual Studio supports up to 2048 characters, while gcc allocates memory dynamically and so has no real limit.
 
 There are a couple of ways to overcome this issue if it arises. You could instead use `mpca_lang_contents` and load the language from file or you could use a string literal for each line and let the preprocessor automatically concatenate them together, avoiding the limit. The final option is to upgrade your compiler. In C99 this limit has been increased to 4095.
 
 
+### The automatic tags in the AST are annoying!
+
+When parsing from a grammar, the abstract syntax tree is tagged with different tags for each primitive type it encounters. For example a regular expression will be automatically tagged as `regex`. Character literals as `char` and strings as `string`. This is to help people wondering exactly how they might need to convert the node contents.
+
+If you have a rule in your grammar called `string`, `char` or `regex`, you may encounter some confusion. This is because nodes will be tagged with (for example) `string` _either_ if they are a string primitive, _or_ if they were parsed via your `string` rule. If you are detecting node type using something like `strstr`, in this situation it might break. One solution to this is to always check that `string` is the innermost tag to test for string primitives, or to rename your rule called `string` to something that doesn't conflict.
+
+Yes it is annoying but its probably not going to change!
 
 

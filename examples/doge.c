@@ -7,13 +7,11 @@ int main(int argc, char **argv) {
   mpc_parser_t* Phrase    = mpc_new("phrase");
   mpc_parser_t* Doge      = mpc_new("doge");
 
-  mpca_lang(MPC_LANG_DEFAULT,
-    "                                                                     \
-      adjective : \"wow\" | \"many\" | \"so\" | \"such\";                 \
-      noun      : \"lisp\" | \"language\" | \"c\" | \"book\" | \"build\"; \
-      phrase    : <adjective> <noun>;                                     \
-      doge      : /^/ <phrase>* /$/;                                      \
-    ",
+  mpca_lang(MPCA_LANG_DEFAULT,
+    " adjective : \"wow\" | \"many\" | \"so\" | \"such\";                 "
+    " noun      : \"lisp\" | \"language\" | \"c\" | \"book\" | \"build\"; "
+    " phrase    : <adjective> <noun>;                                     "
+    " doge      : /^/ <phrase>* /$/;                                      ",
     Adjective, Noun, Phrase, Doge);
 
   if (argc > 1) {
@@ -45,3 +43,4 @@ int main(int argc, char **argv) {
   return 0;
   
 }
+
