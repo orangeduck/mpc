@@ -327,7 +327,7 @@ typedef struct {
   int backtrack;
   int marks_num;
   mpc_state_t* marks;
-  int* lasts;
+  char* lasts;
   
   char last;
   
@@ -353,7 +353,7 @@ static mpc_input_t *mpc_input_new_string(const char *filename, const char *strin
   i->marks = NULL;
   i->lasts = NULL;
 
-  i->last = -1;
+  i->last = '\0';
   
   return i;
 }
@@ -377,7 +377,7 @@ static mpc_input_t *mpc_input_new_pipe(const char *filename, FILE *pipe) {
   i->marks = NULL;
   i->lasts = NULL;
   
-  i->last = -1;
+  i->last = '\0';
   
   return i;
   
@@ -401,7 +401,7 @@ static mpc_input_t *mpc_input_new_file(const char *filename, FILE *file) {
   i->marks = NULL;
   i->lasts = NULL;
   
-  i->last = -1;
+  i->last = '\0';
   
   return i;
 }
@@ -427,7 +427,7 @@ static void mpc_input_mark(mpc_input_t *i) {
   
   i->marks_num++;
   i->marks = realloc(i->marks, sizeof(mpc_state_t) * i->marks_num);
-  i->lasts = realloc(i->lasts, sizeof(int) * i->marks_num);
+  i->lasts = realloc(i->lasts, sizeof(char) * i->marks_num);
   i->marks[i->marks_num-1] = i->state;
   i->lasts[i->marks_num-1] = i->last;
   
@@ -443,7 +443,7 @@ static void mpc_input_unmark(mpc_input_t *i) {
   
   i->marks_num--;
   i->marks = realloc(i->marks, sizeof(mpc_state_t) * i->marks_num);
-  i->lasts = realloc(i->lasts, sizeof(int) * i->marks_num);
+  i->lasts = realloc(i->lasts, sizeof(char) * i->marks_num);
   
   if (i->type == MPC_INPUT_PIPE && i->marks_num == 0) {
     free(i->buffer);
@@ -457,7 +457,7 @@ static void mpc_input_rewind(mpc_input_t *i) {
   if (i->backtrack < 1) { return; }
   
   i->state = i->marks[i->marks_num-1];
-  i->last = i->lasts[i->marks_num-1];
+  i->last  = i->lasts[i->marks_num-1];
   
   if (i->type == MPC_INPUT_FILE) {
     fseek(i->file, i->state.pos, SEEK_SET);
@@ -587,16 +587,6 @@ static int mpc_input_success(mpc_input_t *i, char c, char **o) {
   return 1;
 }
 
-static int mpc_input_eoi(mpc_input_t *i) {
-  char x = mpc_input_getc(i);
-  if (mpc_input_terminated(i)) { return 1; }
-  else { return mpc_input_failure(i, x); }
-}
-
-static int mpc_input_soi(mpc_input_t *i) {
-  return (i->state.pos == 0);
-}
-
 static int mpc_input_any(mpc_input_t *i, char **o) {
   char x = mpc_input_getc(i);
   if (mpc_input_terminated(i)) { return 0; }
@@ -655,18 +645,8 @@ static int mpc_input_string(mpc_input_t *i, const char *c, char **o) {
   return 1;
 }
 
-static int mpc_input_boundary(mpc_input_t* i) {
-  
-  char* word = "abcdefghijklmnopqrstuvwxyz"
-               "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-	       "0123456789_";
-	       
-  char peek = mpc_input_peekc(i);
-  if (strchr(word, i->last) && peek == '\0') { return 1; }
-  if (strchr(word, peek) && !strchr(word, i->last)) { return 1; }
-  if (!strchr(word, peek) && strchr(word, i->last)) { return 1; }
-  
-  return 0;
+static int mpc_input_anchor(mpc_input_t* i, int(*f)(char,char)) {
+  return f(i->last, mpc_input_peekc(i));
 }
 
 /*
@@ -680,35 +660,34 @@ enum {
   MPC_TYPE_LIFT      = 3,
   MPC_TYPE_LIFT_VAL  = 4,
   MPC_TYPE_EXPECT    = 5,
-  MPC_TYPE_BOUNDARY  = 6,
+  MPC_TYPE_ANCHOR    = 6,
   MPC_TYPE_STATE     = 7,
   
-  MPC_TYPE_SOI       = 8,
-  MPC_TYPE_EOI       = 9,
-  MPC_TYPE_ANY       = 10,
-  MPC_TYPE_SINGLE    = 11,
-  MPC_TYPE_ONEOF     = 12,
-  MPC_TYPE_NONEOF    = 13,
-  MPC_TYPE_RANGE     = 14,
-  MPC_TYPE_SATISFY   = 15,
-  MPC_TYPE_STRING    = 16,
+  MPC_TYPE_ANY       = 8,
+  MPC_TYPE_SINGLE    = 9,
+  MPC_TYPE_ONEOF     = 10,
+  MPC_TYPE_NONEOF    = 11,
+  MPC_TYPE_RANGE     = 12,
+  MPC_TYPE_SATISFY   = 13,
+  MPC_TYPE_STRING    = 14,
   
-  MPC_TYPE_APPLY     = 17,
-  MPC_TYPE_APPLY_TO  = 18,
-  MPC_TYPE_PREDICT   = 19,
-  MPC_TYPE_NOT       = 20,
-  MPC_TYPE_MAYBE     = 21,
-  MPC_TYPE_MANY      = 22,
-  MPC_TYPE_MANY1     = 23,
-  MPC_TYPE_COUNT     = 24,
+  MPC_TYPE_APPLY     = 15,
+  MPC_TYPE_APPLY_TO  = 16,
+  MPC_TYPE_PREDICT   = 17,
+  MPC_TYPE_NOT       = 18,
+  MPC_TYPE_MAYBE     = 19,
+  MPC_TYPE_MANY      = 20,
+  MPC_TYPE_MANY1     = 21,
+  MPC_TYPE_COUNT     = 22,
   
-  MPC_TYPE_OR        = 25,
-  MPC_TYPE_AND       = 26
+  MPC_TYPE_OR        = 23,
+  MPC_TYPE_AND       = 24
 };
 
 typedef struct { char *m; } mpc_pdata_fail_t;
 typedef struct { mpc_ctor_t lf; void *x; } mpc_pdata_lift_t;
 typedef struct { mpc_parser_t *x; char *m; } mpc_pdata_expect_t;
+typedef struct { int(*f)(char,char); } mpc_pdata_anchor_t;
 typedef struct { char x; } mpc_pdata_single_t;
 typedef struct { char x; char y; } mpc_pdata_range_t;
 typedef struct { int(*f)(char); } mpc_pdata_satisfy_t;
@@ -725,6 +704,7 @@ typedef union {
   mpc_pdata_fail_t fail;
   mpc_pdata_lift_t lift;
   mpc_pdata_expect_t expect;
+  mpc_pdata_anchor_t anchor;
   mpc_pdata_single_t single;
   mpc_pdata_range_t range;
   mpc_pdata_satisfy_t satisfy;
@@ -1001,8 +981,6 @@ int mpc_parse_input(mpc_input_t *i, mpc_parser_t *init, mpc_result_t *final) {
       
       /* Basic Parsers */
 
-      case MPC_TYPE_SOI:       MPC_PRIMATIVE(NULL, mpc_input_soi(i));
-      case MPC_TYPE_EOI:       MPC_PRIMATIVE(NULL, mpc_input_eoi(i));
       case MPC_TYPE_ANY:       MPC_PRIMATIVE(s, mpc_input_any(i, &s));
       case MPC_TYPE_SINGLE:    MPC_PRIMATIVE(s, mpc_input_char(i, p->data.single.x, &s));
       case MPC_TYPE_RANGE:     MPC_PRIMATIVE(s, mpc_input_range(i, p->data.range.x, p->data.range.y, &s));
@@ -1020,12 +998,12 @@ int mpc_parse_input(mpc_input_t *i, mpc_parser_t *init, mpc_result_t *final) {
       case MPC_TYPE_LIFT_VAL:  MPC_SUCCESS(p->data.lift.x);
       case MPC_TYPE_STATE:     MPC_SUCCESS(mpc_state_copy(i->state));
       
-      case MPC_TYPE_BOUNDARY:
-	if (mpc_input_boundary(i)) {
-	  MPC_SUCCESS(NULL);
+      case MPC_TYPE_ANCHOR:
+        if (mpc_input_anchor(i, p->data.anchor.f)) {
+          MPC_SUCCESS(NULL);
         } else {
-	  MPC_FAILURE(mpc_err_new(i->filename, i->state, "boundary", mpc_input_peekc(i)));
-	}
+          MPC_FAILURE(mpc_err_new(i->filename, i->state, "anchor", mpc_input_peekc(i)));
+        }
       
       /* Application Parsers */
       
@@ -1450,15 +1428,16 @@ mpc_parser_t *mpc_lift(mpc_ctor_t lf) {
   return p;
 }
 
-mpc_parser_t *mpc_state(void) {
+mpc_parser_t *mpc_anchor(int(*f)(char,char)) {
   mpc_parser_t *p = mpc_undefined();
-  p->type = MPC_TYPE_STATE;
+  p->type = MPC_TYPE_ANCHOR;
+  p->data.anchor.f = f;
   return p;
 }
 
-mpc_parser_t *mpc_boundary(void) {
+mpc_parser_t *mpc_state(void) {
   mpc_parser_t *p = mpc_undefined();
-  p->type = MPC_TYPE_BOUNDARY;
+  p->type = MPC_TYPE_STATE;
   return p;
 }
 
@@ -1694,17 +1673,24 @@ mpc_parser_t *mpc_and(int n, mpc_fold_t f, ...) {
 ** Common Parsers
 */
 
-mpc_parser_t *mpc_eoi(void) {
-  mpc_parser_t *p = mpc_undefined();
-  p->type = MPC_TYPE_EOI;
-  return mpc_expect(p, "end of input");
+static int mpc_soi_anchor(char prev, char next) { return (prev == '\0'); }
+static int mpc_eoi_anchor(char prev, char next) { return (next == '\0'); }
+
+mpc_parser_t *mpc_soi(void) { return mpc_expect(mpc_anchor(mpc_soi_anchor), "start of input"); }
+mpc_parser_t *mpc_eoi(void) { return mpc_expect(mpc_anchor(mpc_eoi_anchor), "end of input"); }
+
+static int mpc_boundary_anchor(char prev, char next) {
+  char* word = "abcdefghijklmnopqrstuvwxyz"
+               "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+               "0123456789_";
+  if ( strchr(word, next) &&  prev == '\0') { return 1; }
+  if ( strchr(word, prev) &&  next == '\0') { return 1; }
+  if ( strchr(word, next) && !strchr(word, prev)) { return 1; }
+  if (!strchr(word, next) &&  strchr(word, prev)) { return 1; }
+  return 0;
 }
 
-mpc_parser_t *mpc_soi(void) {
-  mpc_parser_t *p = mpc_undefined();
-  p->type = MPC_TYPE_SOI;
-  return mpc_expect(p, "start of input");
-}
+mpc_parser_t *mpc_boundary(void) { return mpc_expect(mpc_anchor(mpc_boundary_anchor), "boundary"); }
 
 mpc_parser_t *mpc_whitespace(void) { return mpc_expect(mpc_oneof(" \f\n\r\t\v"), "whitespace"); }
 mpc_parser_t *mpc_whitespaces(void) { return mpc_expect(mpc_many(mpcf_strfold, mpc_whitespace()), "spaces"); }
@@ -2317,15 +2303,12 @@ static void mpc_print_unretained(mpc_parser_t *p, int force) {
   if (p->type == MPC_TYPE_PASS)   { printf("<:>"); }
   if (p->type == MPC_TYPE_FAIL)   { printf("<!>"); }
   if (p->type == MPC_TYPE_LIFT)   { printf("<#>"); }
-  if (p->type == MPC_TYPE_STATE)  { printf("<S#>"); }
-  if (p->type == MPC_TYPE_BOUNDARY)  { printf("<\\b>"); }
+  if (p->type == MPC_TYPE_STATE)  { printf("<S>"); }
+  if (p->type == MPC_TYPE_ANCHOR) { printf("<@>"); }
   if (p->type == MPC_TYPE_EXPECT) {
     printf("%s", p->data.expect.m);
     /*mpc_print_unretained(p->data.expect.x, 0);*/
   }
-  
-  if (p->type == MPC_TYPE_SOI) { printf("<^>"); }
-  if (p->type == MPC_TYPE_EOI) { printf("<$>"); }
   
   if (p->type == MPC_TYPE_ANY) { printf("<.>"); }
   if (p->type == MPC_TYPE_SATISFY) { printf("<f>"); }

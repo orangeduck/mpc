@@ -228,14 +228,15 @@ Consumes no input, always successful, returns a copy of the parser state as `mpc
 * * *
 
 ```c
-mpc_parser_t *mpc_boundary(void);
+mpc_parser_t *mpc_anchor(int(*f)(char,char));
 ```
 
-Consumes no input. Only successful on the boundary between words. Always returns `NULL` on success.
+Consumes no input. Successful when function `f` returns true. Always returns `NULL` on success.
 
-Words are defined as any alphanumeric character or underscore. A non word is defined as any whitespace or non-alphanumeric/underscore character. This includes the start and end of input.
+Function `f` is a _anchor_ function. It takes as input the last character parsed, and the next character in the input, and returns success or failure based upon these. This function can be set by the user to ensure some condition is met. This could be that the input is at a boundary between words and non-words, or anything else. The nice thing about this parser is that it consumes no input.
 
-A boundary is therefore when the last character parsed was not part of a word, while the next character is part of a word, _or_ when the last character was part of a word, while the next character is not.
+At the start of the input the first argument is set to `\\0`. At the end of the input the second argument is set to the `\\0`.
+
 
 
 Parsing
@@ -547,6 +548,7 @@ Common Parsers
 
 * `mpc_soi;` Matches only the start of input, returns `NULL`
 * `mpc_eoi;` Matches only the end of input, returns `NULL`
+* `mpc_boundary;` Matches only the boundary between words, returns `NULL`
 * `mpc_whitespace` Matches any whitespace character `" \f\n\r\t\v"`
 * `mpc_whitespaces` Matches zero or more whitespace characters
 * `mpc_blank` Matches whitespaces and frees the result, returns `NULL`
@@ -770,6 +772,11 @@ Limitations & FAQ
 ### Does _mpc_ support Unicode?
 
 _mpc_ Only supports ASCII. Sorry! Writing a parser library that supports Unicode is pretty difficult. I welcome contributions!
+
+
+### Is _mpc_ binary safe?
+
+No. Sorry! Including NULL characters in a string or a file will probably break it. Just avoid it if possible.
 
 
 ### The Parser is going into an infinite loop!

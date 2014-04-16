@@ -107,7 +107,7 @@ mpc_parser_t *mpc_fail(const char *m);
 mpc_parser_t *mpc_failf(const char *fmt, ...);
 mpc_parser_t *mpc_lift(mpc_ctor_t f);
 mpc_parser_t *mpc_lift_val(mpc_val_t *x);
-mpc_parser_t *mpc_boundary(void);
+mpc_parser_t *mpc_anchor(int(*f)(char,char));
 mpc_parser_t *mpc_state(void);
 
 /*
@@ -139,6 +139,8 @@ mpc_parser_t *mpc_predictive(mpc_parser_t *a);
 
 mpc_parser_t *mpc_eoi(void);
 mpc_parser_t *mpc_soi(void);
+
+mpc_parser_t *mpc_boundary(void);
 
 mpc_parser_t *mpc_whitespace(void);
 mpc_parser_t *mpc_whitespaces(void);
