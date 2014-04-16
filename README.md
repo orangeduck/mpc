@@ -3,6 +3,10 @@ Micro Parser Combinators
 
 Version 0.8
 
+
+About
+-----
+
 _mpc_ is a lightweight and powerful Parser Combinator library for C.
 
 Using _mpc_ might be of interest to you if you are...
@@ -51,12 +55,10 @@ mpc_parser_t *Value = mpc_new("value");
 mpc_parser_t *Maths = mpc_new("maths");
 
 mpca_lang(
-  "                                                    \
-      expression : <product> (('+' | '-') <product>)*; \
-      product    : <value>   (('*' | '/') <value>  )*; \
-      value      : /[0-9]+/ | '(' <expression> ')';    \
-      maths      : /^/ <expression> /$/;               \
-  ",
+  " expression : <product> (('+' | '-') <product>)*; "
+  " product    : <value>   (('*' | '/') <value>  )*; "
+  " value      : /[0-9]+/ | '(' <expression> ')';    "
+  " maths      : /^/ <expression> /$/;               ",
   Expr, Prod, Value, Maths);
 
 mpc_result_t r;
@@ -410,7 +412,7 @@ This takes a list of pointers to data values and must return some combined or fo
 
 
 Case Study - Identifier
-=========================
+=======================
 
 Combinator Method
 -----------------
@@ -749,15 +751,34 @@ _mpc_ provides some automatic generation of error messages. These can be enhance
 <test>:0:3: error: expected one or more of 'a' or 'd' at 'k'
 ```
 
+
 Limitations & FAQ
 =================
 
-### Does this support Unicode?
+### Does _mpc_ support Unicode?
 
 _mpc_ Only supports ASCII. Sorry! Writing a parser library that supports Unicode is pretty difficult. I welcome contributions!
 
 
-### Backtracking and Left Recursion
+### The Parser is going into an infinite loop!
+
+While it is certainly possible there is an issue with _mpc_, it is probably the case that your grammar contains _left recursion_. This is something _mpc_ cannot deal with. _Left recursion_ is when a rule directly or indirectly references itself on the left hand side of a derivation. For example consider this left recursive grammar intended to parse an expression.
+
+```
+expr : <expr> '+' (<expr> | <int> | <string>);
+```
+
+When the rule `expr` is called, it looks the first rule on the left. This happens to be the rule `expr` again. So again it looks for the first rule on the left. Which is `expr` again. And so on. To avoid left recursion this can be rewritten as the following.
+
+```
+expr    : <int> <exprext> | <string> <exprext> ;
+exprext : ('+' <expr>)? ;
+```
+
+Avoiding left recursion can be tricky, but is easy once you get a feel for it. For more information you can look on [wikipedia](http://en.wikipedia.org/wiki/Left_recursion) which covers some common techniques and more examples. Possibly in the future _mpc_ will support functionality to warn the user or re-write grammars which contain left recursion, but it wont for now.
+
+
+### Backtracking isn't working!
 
 _mpc_ supports backtracking, but will not completely backtrack up a parse tree if it encounters some success on the path it is going. To demonstrate this behaviour examine the following erroneous grammar, intended to parse either a C style identifier, or a C style function call.
 
@@ -789,9 +810,12 @@ Some compilers limit the maximum length of string literals. If you have a huge l
 There are a couple of ways to overcome this issue if it arises. You could instead use `mpca_lang_contents` and load the language from file or you could use a string literal for each line and let the preprocessor automatically concatenate them together, avoiding the limit. The final option is to upgrade your compiler. In C99 this limit has been increased to 4095.
 
 
-### The string tag is annoying.
+### The automatic tags in the AST are annoying!
 
-When parsing from a grammar, the abstract syntax tree is tagged with different tags for each primitive type it encounters. For example a regular expression will be automatically tagged as `regex`. Character literals as `char` and strings as `string`.
+When parsing from a grammar, the abstract syntax tree is tagged with different tags for each primitive type it encounters. For example a regular expression will be automatically tagged as `regex`. Character literals as `char` and strings as `string`. This is to help people wondering exactly how they might need to convert the node contents.
 
 If you have a rule in your grammar called `string`, `char` or `regex`, you may encounter some confusion. This is because nodes will be tagged with (for example) `string` _either_ if they are a string primitive, _or_ if they were parsed via your `string` rule. If you are detecting node type using something like `strstr`, in this situation it might break. One solution to this is to always check that `string` is the innermost tag to test for string primitives, or to rename your rule called `string` to something that doesn't conflict.
+
+Yes it is annoying but its probably not going to change!
+
 

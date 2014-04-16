@@ -12,17 +12,15 @@ int main(int argc, char **argv) {
   mpc_parser_t* Lispy   = mpc_new("lispy");
 
   mpca_lang(MPCA_LANG_PREDICTIVE,
-    "                                                          \
-      number  \"number\"  : /[0-9]+/ ;                         \
-      symbol  \"symbol\"  : /[a-zA-Z0-9_+\\-*\\/\\\\=<>!&]+/ ; \
-      string  \"string\"  : /\"(\\\\.|[^\"])*\"/ ;             \
-      comment             : /;[^\\r\\n]*/ ;                    \
-      sexpr               : '(' <expr>* ')' ;                  \
-      qexpr               : '{' <expr>* '}' ;                  \
-      expr                : <number>  | <symbol> | <string>    \
-                          | <comment> | <sexpr>  | <qexpr> ;   \
-      lispy               : /^/ <expr>* /$/ ;                  \
-    ",
+    " number  \"number\"  : /[0-9]+/ ;                         "
+    " symbol  \"symbol\"  : /[a-zA-Z0-9_+\\-*\\/\\\\=<>!&]+/ ; "
+    " string  \"string\"  : /\"(\\\\.|[^\"])*\"/ ;             "
+    " comment             : /;[^\\r\\n]*/ ;                    "
+    " sexpr               : '(' <expr>* ')' ;                  "
+    " qexpr               : '{' <expr>* '}' ;                  "
+    " expr                : <number>  | <symbol> | <string>    "
+    "                     | <comment> | <sexpr>  | <qexpr> ;   "
+    " lispy               : /^/ <expr>* /$/ ;                  ",
     Number, Symbol, String, Comment, Sexpr, Qexpr, Expr, Lispy);
 
   if (argc > 1) {

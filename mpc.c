@@ -2553,6 +2553,7 @@ mpc_ast_t *mpc_ast_tag(mpc_ast_t *a, const char *t) {
 }
 
 mpc_ast_t *mpc_ast_state(mpc_ast_t *a, mpc_state_t s) {
+  if (a == NULL) { return a; }
   a->state = s;
   return a;
 }

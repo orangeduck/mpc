@@ -8,12 +8,10 @@ int main(int argc, char **argv) {
   mpc_parser_t *Maths = mpc_new("maths");
   
   mpca_lang(MPCA_LANG_PREDICTIVE,
-    "                                                    \
-        expression : <product> (('+' | '-') <product>)*; \
-        product : <value>   (('*' | '/')   <value>)*;    \
-        value : /[0-9]+/ | '(' <expression> ')';         \
-        maths : /^/ <expression> /$/;                    \
-    ",
+    " expression : <product> (('+' | '-') <product>)*; "
+    " product : <value>   (('*' | '/')   <value>)*;    "
+    " value : /[0-9]+/ | '(' <expression> ')';         "
+    " maths : /^/ <expression> /$/;                    ",
     Expr, Prod, Value, Maths);
   
   if (argc > 1) {

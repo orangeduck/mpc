@@ -8,12 +8,10 @@ int main(int argc, char **argv) {
   mpc_parser_t* Doge      = mpc_new("doge");
 
   mpca_lang(MPCA_LANG_DEFAULT,
-    "                                                                     \
-      adjective : \"wow\" | \"many\" | \"so\" | \"such\";                 \
-      noun      : \"lisp\" | \"language\" | \"c\" | \"book\" | \"build\"; \
-      phrase    : <adjective> <noun>;                                     \
-      doge      : /^/ <phrase>* /$/;                                      \
-    ",
+    " adjective : \"wow\" | \"many\" | \"so\" | \"such\";                 "
+    " noun      : \"lisp\" | \"language\" | \"c\" | \"book\" | \"build\"; "
+    " phrase    : <adjective> <noun>;                                     "
+    " doge      : /^/ <phrase>* /$/;                                      ",
     Adjective, Noun, Phrase, Doge);
 
   if (argc > 1) {
