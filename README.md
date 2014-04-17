@@ -545,9 +545,9 @@ Library Reference
 Common Parsers
 --------------
 
-* `mpc_soi;` Matches only the start of input, returns `NULL`
-* `mpc_eoi;` Matches only the end of input, returns `NULL`
-* `mpc_boundary;` Matches only the boundary between words, returns `NULL`
+* `mpc_soi` Matches only the start of input, returns `NULL`
+* `mpc_eoi` Matches only the end of input, returns `NULL`
+* `mpc_boundary` Matches only the boundary between words, returns `NULL`
 * `mpc_whitespace` Matches any whitespace character `" \f\n\r\t\v"`
 * `mpc_whitespaces` Matches zero or more whitespace characters
 * `mpc_blank` Matches whitespaces and frees the result, returns `NULL`
