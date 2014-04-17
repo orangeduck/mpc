@@ -188,7 +188,6 @@ Consumes no input, always successful, returns `NULL`
 
 ```c
 mpc_parser_t *mpc_fail(const char *m);
-mpc_parser_t *mpc_failf(const char *fmt, ...);
 ```
 
 Consumes no input, always fails with message `m`.
@@ -235,7 +234,7 @@ Consumes no input. Successful when function `f` returns true. Always returns `NU
 
 Function `f` is a _anchor_ function. It takes as input the last character parsed, and the next character in the input, and returns success or failure based upon these. This function can be set by the user to ensure some condition is met. This could be that the input is at a boundary between words and non-words, or anything else. The nice thing about this parser is that it consumes no input.
 
-At the start of the input the first argument is set to `\\0`. At the end of the input the second argument is set to the `\\0`.
+At the start of the input the first argument is set to `\0`. At the end of the input the second argument is set to the `\0`.
 
 
 
