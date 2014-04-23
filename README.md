@@ -806,11 +806,11 @@ While it is certainly possible there is an issue with _mpc_, it is probably the 
 expr : <expr> '+' (<expr> | <int> | <string>);
 ```
 
-When the rule `expr` is called, it looks the first rule on the left. This happens to be the rule `expr` again. So again it looks for the first rule on the left. Which is `expr` again. And so on. To avoid left recursion this can be rewritten as the following.
+When the rule `expr` is called, it looks the first rule on the left. This happens to be the rule `expr` again. So again it looks for the first rule on the left. Which is `expr` again. And so on. To avoid left recursion this can be rewritten (for example) as the following. Note that rewriting as follows also changes the operator associativity.
 
 ```
-expr    : <int> <exprext> | <string> <exprext> ;
-exprext : ('+' <expr>)? ;
+value : <int> | <string> ;
+expr  : <value> ('+' <expr>)* ;
 ```
 
 Avoiding left recursion can be tricky, but is easy once you get a feel for it. For more information you can look on [wikipedia](http://en.wikipedia.org/wiki/Left_recursion) which covers some common techniques and more examples. Possibly in the future _mpc_ will support functionality to warn the user or re-write grammars which contain left recursion, but it wont for now.
@@ -818,23 +818,25 @@ Avoiding left recursion can be tricky, but is easy once you get a feel for it. F
 
 ### Backtracking isn't working!
 
-_mpc_ supports backtracking, but will not completely backtrack up a parse tree if it encounters some success on the path it is going. To demonstrate this behaviour examine the following erroneous grammar, intended to parse either a C style identifier, or a C style function call.
+_mpc_ supports backtracking, but it may not work as you expect. It isn't a silver bullet, and you still must structure your grammar to be unambiguous. To demonstrate this behaviour examine the following erroneous grammar, intended to parse either a C style identifier, or a C style function call.
 
 ```
 factor : <ident>
        | <ident> '('  <expr>? (',' <expr>)* ')' ;
 ```
 
-This grammar will never correctly parse a function call because it will always first succeed parsing the initial identifier. At this point it will encounter the parenthesis of the function call, give up, and throw an error. It will not backtrack far enough, to attempt the next potential option, which would have succeeded.
+This grammar will never correctly parse a function call because it will always first succeed parsing the initial identifier and return a factor. At this point it will encounter the parenthesis of the function call, give up, and throw an error. Even if it were to try and parse a factor again on this failure it would never reach the correct function call option because it always tries the other options first, and always succeeds with the identifier.
 
-The solution to this is to always structure grammars with the most specific clause first, and more general clauses afterwards. This is the natural technique used for avoiding left-recursive grammars, so is a good habit to get into anyway.
+The solution to this is to always structure grammars with the most specific clause first, and more general clauses afterwards. This is the natural technique used for avoiding left-recursive grammars and unambiguity, so is a good habit to get into anyway.
+
+Now the parser will try to match a function first, and if this fails backtrack and try to match just an identifier.
 
 ```
 factor : <ident> '('  <expr>? (',' <expr>)* ')'
        | <ident> ;
 ```
 
-An alternative, and better option is to remove the ambiguity by factoring out the first identifier completely. This is better because it removes any need for backtracking at all! Now the grammar is predictive!
+An alternative, and better option is to remove the ambiguity completely by factoring out the first identifier. This is better because it removes any need for backtracking at all! Now the grammar is predictive!
 
 ```
 factor : <ident> ('('  <expr>? (',' <expr>)* ')')? ;
