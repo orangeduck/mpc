@@ -21,7 +21,7 @@ int main(int argc, char **argv) {
     " expr                : <number>  | <symbol> | <string>    "
     "                     | <comment> | <sexpr>  | <qexpr> ;   "
     " lispy               : /^/ <expr>* /$/ ;                  ",
-    Number, Symbol, String, Comment, Sexpr, Qexpr, Expr, Lispy);
+    Number, Symbol, String, Comment, Sexpr, Qexpr, Expr, Lispy, NULL);
 
   if (argc > 1) {
     

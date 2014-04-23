@@ -641,7 +641,6 @@ Fold Functions
   <tr><td><code>mpc_val_t *mpcf_snd_free(int n, mpc_val_t** xs);</code></td><td>Returns second element of <code>xs</code> and calls <code>free</code> on others</td></tr>
   <tr><td><code>mpc_val_t *mpcf_trd_free(int n, mpc_val_t** xs);</code></td><td>Returns third element of <code>xs</code> and calls <code>free</code> on others</td></tr>
   <tr><td><code>mpc_val_t *mpcf_strfold(int n, mpc_val_t** xs);</code></td><td>Concatenates all <code>xs</code> together as strings and returns result </td></tr>
-  <tr><td><code>mpc_val_t *mpcf_maths(int n, mpc_val_t** xs);</code></td><td>Examines second argument as string to see which operator it is, then operators on first and third argument as if they are <code>int*</code>.</td></tr>
 
 </table>
 

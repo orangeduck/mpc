@@ -12,7 +12,7 @@ int main(int argc, char **argv) {
     " noun      : \"lisp\" | \"language\" | \"c\" | \"book\" | \"build\"; "
     " phrase    : <adjective> <noun>;                                     "
     " doge      : /^/ <phrase>* /$/;                                      ",
-    Adjective, Noun, Phrase, Doge);
+    Adjective, Noun, Phrase, Doge, NULL);
 
   if (argc > 1) {
     

@@ -60,7 +60,7 @@ int main(int argc, char **argv) {
     " includes  : (\"#include\" <string>)* ;                           \n"
     " smallc    : /^/ <includes> <decls> <procedure>* <main> /$/ ;     \n",
     Ident, Number, Character, String, Factor, Term, Lexp, Stmt, Exp, 
-    Typeident, Decls, Args, Body, Procedure, Main, Includes, Smallc);
+    Typeident, Decls, Args, Body, Procedure, Main, Includes, Smallc, NULL);
   
   if (err != NULL) {
     mpc_err_print(err);

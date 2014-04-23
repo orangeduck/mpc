@@ -12,7 +12,12 @@ int main(int argc, char **argv) {
     " product : <value>   (('*' | '/')   <value>)*;    "
     " value : /[0-9]+/ | '(' <expression> ')';         "
     " maths : /^/ <expression> /$/;                    ",
-    Expr, Prod, Value, Maths);
+    Expr, Prod, Value, Maths, NULL);
+  
+  mpc_print(Expr);
+  mpc_print(Prod);
+  mpc_print(Value);
+  mpc_print(Maths);
   
   if (argc > 1) {
     

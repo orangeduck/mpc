@@ -157,9 +157,8 @@ char *mpc_err_string(mpc_err_t *x) {
   
   if (x->failure) {
     mpc_err_string_cat(buffer, &pos, &max,
-    "error: %s\n", 
-      x->filename, x->state.row+1, 
-      x->state.col+1, x->failure);
+    "%s: error: %s\n", 
+      x->filename, x->failure);
     return buffer;
   }
   
@@ -2867,6 +2866,7 @@ static mpc_parser_t *mpca_grammar_find_parser(char *x, mpca_grammar_st_t *st) {
     /* Search Existing Parsers */
     for (i = 0; i < st->parsers_num; i++) {
       mpc_parser_t *p = st->parsers[i];
+      if (p == NULL) { return mpc_failf("Unknown Parser '%s'!", x); }
       if (p->name && strcmp(p->name, x) == 0) { return p; }
     }
     
@@ -2879,10 +2879,7 @@ static mpc_parser_t *mpca_grammar_find_parser(char *x, mpca_grammar_st_t *st) {
       st->parsers = realloc(st->parsers, sizeof(mpc_parser_t*) * st->parsers_num);
       st->parsers[st->parsers_num-1] = p;
       
-      if (p == NULL) {
-        return mpc_failf("Unknown Parser '%s'!", x);
-      }
-      
+      if (p == NULL) { return mpc_failf("Unknown Parser '%s'!", x); }
       if (p->name && strcmp(p->name, x) == 0) { return p; }
       
     }
