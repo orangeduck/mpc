@@ -753,7 +753,7 @@ This takes in some single right hand side of a rule, as well as a list of any of
 * * *
 
 ```c
-mpc_err_t* mpca_lang(int flags, const char *lang, ...);
+mpc_err_t *mpca_lang(int flags, const char *lang, ...);
 ```
 
 This takes in a full language (zero or more rules) as well as any parsers referred to by either the right or left hand sides. Any parsers specified on the left hand side of any rule will be assigned a parser equivalent to what is specified on the right. On valid user input this returns `NULL`, while if there are any errors in the user input it will return an instance of `mpc_err_t` describing the issues. The list of parsers referenced can be terminated with `NULL` to get an error instead of a crash when a parser required is not supplied.
@@ -761,7 +761,7 @@ This takes in a full language (zero or more rules) as well as any parsers referr
 * * *
 
 ```c
-mpc_err_t* mpca_lang_file(int flags, FILE* f, ...);
+mpc_err_t *mpca_lang_file(int flags, FILE* f, ...);
 ```
 
 This reads in the contents of file `f` and inputs it into `mpca_lang`.
@@ -769,7 +769,7 @@ This reads in the contents of file `f` and inputs it into `mpca_lang`.
 * * *
 
 ```c
-mpc_err_t* mpca_lang_contents(int flags, const char *filename, ...);
+mpc_err_t *mpca_lang_contents(int flags, const char *filename, ...);
 ```
 
 This opens and reads in the contents of the file given by `filename` and passes it to `mpca_lang`.
