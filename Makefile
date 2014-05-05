@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -ansi -pedantic -Wall -Wno-overlength-strings -Werror -g
+CFLAGS = -ansi -pedantic -Wall -Wno-overlength-strings -Werror -O3 -g
 
 TESTS = $(wildcard tests/*.c)
 EXAMPLES = $(wildcard examples/*.c)

@@ -482,58 +482,62 @@ static int mpc_input_terminated(mpc_input_t *i) {
 
 static char mpc_input_getc(mpc_input_t *i) {
   
-  char c;
+  char c = '\0';
+  
   switch (i->type) {
     
-    case MPC_INPUT_STRING: c = i->string[i->state.pos]; break;
-    case MPC_INPUT_FILE: c = fgetc(i->file); break;
+    case MPC_INPUT_STRING: return i->string[i->state.pos];
+    case MPC_INPUT_FILE: c = fgetc(i->file); return c;
     case MPC_INPUT_PIPE:
     
-      if (!i->buffer) { c = getc(i->file); break; }
+      if (!i->buffer) { c = getc(i->file); return c; }
       
       if (i->buffer && mpc_input_buffer_in_range(i)) {
         c = mpc_input_buffer_get(i);
+        return c;
       } else {
         c = getc(i->file);
+        return c;
       }
     
-    break;
-    
+    default: return c;
   }
-  
-  return c;
 }
 
 static char mpc_input_peekc(mpc_input_t *i) {
   
-  char c;
+  char c = '\0';
   
   switch (i->type) {
     case MPC_INPUT_STRING: return i->string[i->state.pos];
     case MPC_INPUT_FILE: 
       
+      c = fgetc(i->file);
       if (feof(i->file)) { return '\0'; }
       
-      c = fgetc(i->file);
       fseek(i->file, -1, SEEK_CUR);
-      break;
+      return c;
     
     case MPC_INPUT_PIPE:
       
-      if (feof(i->file)) { return '\0'; }
-      
-      if (!i->buffer) { c = getc(i->file); ungetc(c, i->file); break; }
+      if (!i->buffer) {
+        c = getc(i->file);
+        if (feof(i->file)) { return '\0'; }
+        ungetc(c, i->file);
+        return c;
+      }
       
       if (i->buffer && mpc_input_buffer_in_range(i)) {
         return mpc_input_buffer_get(i);
       } else {
-        c = getc(i->file); ungetc(c, i->file);
-        break;
+        c = getc(i->file);
+        if (feof(i->file)) { return '\0'; }
+        ungetc(c, i->file);
+        return c;
       }
-      
+    
+    default: return c;
   }
-  
-  return c;
   
 }
 
@@ -2016,8 +2020,7 @@ mpc_parser_t *mpc_re(const char *re) {
   Base   = mpc_new("base");
   Range  = mpc_new("range");
   
-  mpc_define(Regex, mpc_and(2, 
-    mpcf_re_or,
+  mpc_define(Regex, mpc_and(2, mpcf_re_or,
     Term, 
     mpc_maybe(mpc_and(2, mpcf_snd_free, mpc_char('|'), Regex, free)),
     (mpc_dtor_t)mpc_delete
@@ -2025,8 +2028,7 @@ mpc_parser_t *mpc_re(const char *re) {
   
   mpc_define(Term, mpc_many(mpcf_re_and, Factor));
   
-  mpc_define(Factor, mpc_and(2, 
-    mpcf_re_repeat,
+  mpc_define(Factor, mpc_and(2, mpcf_re_repeat,
     Base,
     mpc_or(5,
       mpc_char('*'), mpc_char('+'), mpc_char('?'),
@@ -2833,6 +2835,7 @@ static mpc_val_t *mpcaf_grammar_regex(mpc_val_t *x, void *s) {
   return mpca_state(mpca_tag(mpc_apply(p, mpcf_str_ast), "regex"));
 }
 
+/* Should this just use `isdigit` instead */
 static int is_number(const char* s) {
   int i;
   for (i = 0; i < strlen(s); i++) { if (!strchr("0123456789", s[i])) { return 0; } }
@@ -3068,7 +3071,7 @@ static mpc_err_t *mpca_lang_st(mpc_input_t *i, mpca_grammar_st_t *st) {
   
   mpc_define(Stmt, mpc_and(5, mpca_stmt_afold,
     mpc_tok(mpc_ident()), mpc_maybe(mpc_tok(mpc_string_lit())), mpc_sym(":"), Grammar, mpc_sym(";"),
-    free, free, mpc_soft_delete
+    free, free, free, mpc_soft_delete
   ));
   
   mpc_define(Grammar, mpc_and(2, mpcaf_grammar_or,
