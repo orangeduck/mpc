@@ -269,6 +269,7 @@ mpc_ast_t *mpc_ast_state(mpc_ast_t *a, mpc_state_t s);
 
 void mpc_ast_delete(mpc_ast_t *a);
 void mpc_ast_print(mpc_ast_t *a);
+void mpc_ast_print_to(mpc_ast_t *a, FILE *fp);
 
 /*
 ** Warning: This function currently doesn't test for equality of the `state` member!
