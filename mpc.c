@@ -2590,25 +2590,29 @@ mpc_ast_t *mpc_ast_state(mpc_ast_t *a, mpc_state_t s) {
   return a;
 }
 
-static void mpc_ast_print_depth(mpc_ast_t *a, int d) {
+static void mpc_ast_print_depth(mpc_ast_t *a, int d, FILE *fp) {
   
   int i;
-  for (i = 0; i < d; i++) { printf("  "); }
+  for (i = 0; i < d; i++) { fprintf(fp, "  "); }
   
   if (strlen(a->contents)) {
-    printf("%s:%i:%i '%s'\n", a->tag, a->state.row+1, a->state.col+1, a->contents);
+    fprintf(fp, "%s:%i:%i '%s'\n", a->tag, a->state.row+1, a->state.col+1, a->contents);
   } else {
-    printf("%s \n", a->tag);
+    fprintf(fp, "%s \n", a->tag);
   }
   
   for (i = 0; i < a->children_num; i++) {
-    mpc_ast_print_depth(a->children[i], d+1);
+    mpc_ast_print_depth(a->children[i], d+1, fp);
   }
   
 }
 
 void mpc_ast_print(mpc_ast_t *a) {
-  mpc_ast_print_depth(a, 0);
+  mpc_ast_print_depth(a, 0, stdout);
+}
+
+void mpc_ast_print_to(mpc_ast_t *a, FILE *fp) {
+  mpc_ast_print_depth(a, 0, fp);
 }
 
 mpc_val_t *mpcf_fold_ast(int n, mpc_val_t **xs) {
