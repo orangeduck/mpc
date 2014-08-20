@@ -56,9 +56,9 @@ mpc_parser_t *Maths = mpc_new("maths");
 
 mpca_lang(MPCA_LANG_DEFAULT,
   " expression : <product> (('+' | '-') <product>)*; "
-  " product : <value>   (('*' | '/')   <value>)*;    "
-  " value : /[0-9]+/ | '(' <expression> ')';         "
-  " maths : /^/ <expression> /$/;                    ",
+  " product    : <value>   (('*' | '/')   <value>)*; "
+  " value      : /[0-9]+/ | '(' <expression> ')';    "
+  " maths      : /^/ <expression> /$/;               ",
   Expr, Prod, Value, Maths, NULL);
 
 mpc_result_t r;
