@@ -1,5 +1,6 @@
 *~
 *.exe
+*.dSYM
 test
 doge
 lispy
