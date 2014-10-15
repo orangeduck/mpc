@@ -1871,8 +1871,8 @@ static mpc_val_t *mpcf_re_and(int n, mpc_val_t **xs) {
 
 static mpc_val_t *mpcf_re_repeat(int n, mpc_val_t **xs) {
   /* casting to remove unused warning rather than changing api */
-  (void) n;
   int num;
+  (void) n;
   if (xs[1] == NULL) { return xs[0]; }
   if (strcmp(xs[1], "*") == 0) { free(xs[1]); return mpc_many(mpcf_strfold, xs[0]); }
   if (strcmp(xs[1], "+") == 0) { free(xs[1]); return mpc_many1(mpcf_strfold, xs[0]); }
@@ -1952,15 +1952,14 @@ static mpc_val_t *mpcf_re_range(mpc_val_t *x) {
   char *range = calloc(1,1);
   const char *tmp = NULL;
   const char *s = x;
+  int comp = s[0] == '^' ? 1 : 0;
   size_t start, end;
+  size_t i, j; /* changed to use size_t to remove type comparison warnings */
   
   if (s[0] == '\0') { free(x); return mpc_fail("Invalid Regex Range Expression"); } 
   if (s[0] == '^' && 
       s[1] == '\0') { free(x); return mpc_fail("Invalid Regex Range Expression"); }
   
-  int comp = s[0] == '^' ? 1 : 0;
-
-  size_t i, j; /* changed to use size_t to remove type comparison warnings */
   for (i = comp; i < strlen(s); i++){
     
     /* Regex Range Escape */
@@ -2271,9 +2270,8 @@ mpc_val_t *mpcf_strfold(int n, mpc_val_t **xs) {
 }
 
 mpc_val_t *mpcf_maths(int n, mpc_val_t **xs) {
-  /* casting to remove unused warning rather than changing api */
-  (void) n;
   int **vs = (int**)xs;
+  (void) n; /* casting to remove unused warning rather than changing api */
     
   if (strcmp(xs[1], "*") == 0) { *vs[0] *= *vs[2]; }
   if (strcmp(xs[1], "/") == 0) { *vs[0] /= *vs[2]; }
@@ -2428,10 +2426,9 @@ int mpc_test_fail(mpc_parser_t *p, const char *s, void *d,
   int(*tester)(void*, void*),
   mpc_dtor_t destructor,
   void(*printer)(void*)) {
-
+  mpc_result_t r;
   /* casting to remove unused warning rather than changing api */
   (void) printer;
-  mpc_result_t r;  
   if (mpc_parse("<test>", s, p, &r)) {
 
     if (tester(r.output, d)) {
@@ -2666,12 +2663,12 @@ mpc_val_t *mpcf_str_ast(mpc_val_t *c) {
 }
 
 mpc_val_t *mpcf_state_ast(int n, mpc_val_t **xs) {
-  /* casting to remove unused warning rather than changing api */
-  (void) n;
   mpc_state_t *s = ((mpc_state_t**)xs)[0];
   mpc_ast_t *a = ((mpc_ast_t**)xs)[1];
   a = mpc_ast_state(a, *s);
   free(s);
+  /* casting to remove unused warning rather than changing api */
+  (void) n;
   return a;
 }
 
@@ -2812,11 +2809,10 @@ static mpc_val_t *mpcaf_grammar_and(int n, mpc_val_t **xs) {
   return p;
 }
 
-static mpc_val_t *mpcaf_grammar_repeat(int n, mpc_val_t **xs) {
-  
+static mpc_val_t *mpcaf_grammar_repeat(int n, mpc_val_t **xs) { 
+  int num;
   /* casting to remove unused warning rather than changing api */
   (void) n;
-  int num;
   if (xs[1] == NULL) { return xs[0]; }  
   if (strcmp(xs[1], "*") == 0) { free(xs[1]); return mpca_many(xs[0]); }
   if (strcmp(xs[1], "+") == 0) { free(xs[1]); return mpca_many1(xs[0]); }
@@ -3004,13 +3000,12 @@ typedef struct {
 } mpca_stmt_t;
 
 static mpc_val_t *mpca_stmt_afold(int n, mpc_val_t **xs) {
-  /* casting to remove unused warnings rather than changing api */
-  (void) n;
   mpca_stmt_t *stmt = malloc(sizeof(mpca_stmt_t));
   stmt->ident = ((char**)xs)[0];
   stmt->name = ((char**)xs)[1];
   stmt->grammar = ((mpc_parser_t**)xs)[3];
-  
+  /* casting to remove unused warnings rather than changing api */
+  (void) n;
   free(((char**)xs)[2]);
   free(((char**)xs)[4]);
   
