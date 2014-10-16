@@ -4,14 +4,14 @@
 #include <string.h>
 #include <stdlib.h>
 
-static int string_eq(void* x, void* y) { return (strcmp(x, y) == 0); }
-static void string_print(void* x) { printf("'%s'", (char*)x); }
+static int string_eq(const void* x, const void* y) { return (strcmp(x, y) == 0); }
+static void string_print(const void* x) { printf("'%s'", (char*)x); }
 
-int regex_test_pass(mpc_parser_t *p, char* value, char* match) {
+int regex_test_pass(mpc_parser_t *p, const char* value, const char* match) {
   return mpc_test_pass(p, value, match, string_eq, free, string_print);
 }
 
-int regex_test_fail(mpc_parser_t *p, char* value, char* match) {
+int regex_test_fail(mpc_parser_t *p, const char* value, const char* match) {
   return mpc_test_fail(p, value, match, string_eq, free, string_print);
 }
 

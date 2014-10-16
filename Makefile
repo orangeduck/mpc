@@ -1,8 +1,3 @@
-# change notes:
-# 	filter out -Werror when compiling ptest. GCC chooses to warn about strange things sometimes.
-# 	mpc.c and mpc.h ompile will all flags below on clang and gcc with -Werror.
-# 	added standard flag (and reverted to -ansi, can now be changed from command line `make -STD=...` 
-# 	to compile against various standards.
 
 CC = gcc
 STND=-ansi

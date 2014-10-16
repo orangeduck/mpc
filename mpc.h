@@ -319,15 +319,15 @@ mpc_err_t *mpca_lang_contents(int flags, const char *filename, ...);
 
 void mpc_print(mpc_parser_t *p);
 
-int mpc_test_pass(mpc_parser_t *p, const char *s, void *d,
-  int(*tester)(void*, void*), 
+int mpc_test_pass(mpc_parser_t *p, const char *s, const void *d,
+  int(*tester)(const void*, const void*), 
   mpc_dtor_t destructor, 
-  void(*printer)(void*));
+  void(*printer)(const void*));
 
-int mpc_test_fail(mpc_parser_t *p, const char *s, void *d,
-  int(*tester)(void*, void*),
+int mpc_test_fail(mpc_parser_t *p, const char *s, const void *d,
+  int(*tester)(const void*, const void*),
   mpc_dtor_t destructor,
-  void(*printer)(void*));
+  void(*printer)(const void*));
 
 
 

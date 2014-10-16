@@ -4,10 +4,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-static int int_eq(void* x, void* y) { return (*(int*)x == *(int*)y); }
-static void int_print(void* x) { printf("'%i'", *((int*)x)); }
-static int string_eq(void* x, void* y) { return (strcmp(x, y) == 0); }
-static void string_print(void* x) { printf("'%s'", (char*)x); }
+static int int_eq(const void* x, const void* y) { return (*(int*)x == *(int*)y); }
+static void int_print(const void* x) { printf("'%i'", *((int*)x)); }
+static int string_eq(const void* x, const void* y) { return (strcmp(x, y) == 0); }
+static void string_print(const void* x) { printf("'%s'", (char*)x); }
 
 void test_ident(void) {
 

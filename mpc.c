@@ -540,7 +540,6 @@ static char mpc_input_peekc(mpc_input_t *i) {
   
 }
 
-/* filled in default case */
 static int mpc_input_failure(mpc_input_t *i, char c) {
 
   switch (i->type) {
@@ -555,8 +554,8 @@ static int mpc_input_failure(mpc_input_t *i, char c) {
       } else {
         ungetc(c, i->file); 
       }
-	}
-	default: { break; }
+    }
+    default: { break; }
   }
   return 0;
 }
@@ -1676,7 +1675,6 @@ mpc_parser_t *mpc_and(int n, mpc_fold_t f, ...) {
 ** Common Parsers
 */
 
-/* casting to remove warnings rather than changing api */
 static int mpc_soi_anchor(char prev, char next) { (void) next; return (prev == '\0'); }
 static int mpc_eoi_anchor(char prev, char next) { (void) prev; return (next == '\0'); }
 
@@ -1854,7 +1852,6 @@ mpc_parser_t *mpc_tok_squares(mpc_parser_t *a, mpc_dtor_t ad)  { return mpc_tok_
 */
 
 static mpc_val_t *mpcf_re_or(int n, mpc_val_t **xs) {
-  /* casting to remove unused warning rather than changing api */
   (void) n;
   if (xs[1] == NULL) { return xs[0]; }
   else { return mpc_or(2, xs[0], xs[1]); }
@@ -1870,7 +1867,6 @@ static mpc_val_t *mpcf_re_and(int n, mpc_val_t **xs) {
 }
 
 static mpc_val_t *mpcf_re_repeat(int n, mpc_val_t **xs) {
-  /* casting to remove unused warning rather than changing api */
   int num;
   (void) n;
   if (xs[1] == NULL) { return xs[0]; }
@@ -1954,7 +1950,7 @@ static mpc_val_t *mpcf_re_range(mpc_val_t *x) {
   const char *s = x;
   int comp = s[0] == '^' ? 1 : 0;
   size_t start, end;
-  size_t i, j; /* changed to use size_t to remove type comparison warnings */
+  size_t i, j;
   
   if (s[0] == '\0') { free(x); return mpc_fail("Invalid Regex Range Expression"); } 
   if (s[0] == '^' && 
@@ -2071,7 +2067,7 @@ mpc_parser_t *mpc_re(const char *re) {
 /*
 ** Common Fold Functions
 */
-/* casting to remove unused warning rather than changing api */
+
 void mpcf_dtor_null(mpc_val_t *x) { (void) x; return; }
 
 mpc_val_t *mpcf_ctor_null(void) { return NULL; }
@@ -2240,7 +2236,7 @@ mpc_val_t *mpcf_unescape_char_raw(mpc_val_t *x) {
   free(x);
   return y;
 }
-/* casting to remove unused warnings rather than changing api */
+
 mpc_val_t *mpcf_null(int n, mpc_val_t** xs) { (void) n; (void) xs; return NULL; }
 mpc_val_t *mpcf_fst(int n, mpc_val_t **xs) { (void) n; return xs[0]; }
 mpc_val_t *mpcf_snd(int n, mpc_val_t **xs) { (void) n; return xs[1]; }
@@ -2271,8 +2267,8 @@ mpc_val_t *mpcf_strfold(int n, mpc_val_t **xs) {
 
 mpc_val_t *mpcf_maths(int n, mpc_val_t **xs) {
   int **vs = (int**)xs;
-  (void) n; /* casting to remove unused warning rather than changing api */
-    
+  (void) n;
+  
   if (strcmp(xs[1], "*") == 0) { *vs[0] *= *vs[2]; }
   if (strcmp(xs[1], "/") == 0) { *vs[0] /= *vs[2]; }
   if (strcmp(xs[1], "%") == 0) { *vs[0] %= *vs[2]; }
@@ -2422,12 +2418,11 @@ void mpc_print(mpc_parser_t *p) {
 **
 */
 
-int mpc_test_fail(mpc_parser_t *p, const char *s, void *d,
-  int(*tester)(void*, void*),
+int mpc_test_fail(mpc_parser_t *p, const char *s, const void *d,
+  int(*tester)(const void*, const void*),
   mpc_dtor_t destructor,
-  void(*printer)(void*)) {
+  void(*printer)(const void*)) {
   mpc_result_t r;
-  /* casting to remove unused warning rather than changing api */
   (void) printer;
   if (mpc_parse("<test>", s, p, &r)) {
 
@@ -2446,10 +2441,10 @@ int mpc_test_fail(mpc_parser_t *p, const char *s, void *d,
   
 }
 
-int mpc_test_pass(mpc_parser_t *p, const char *s, void *d,
-  int(*tester)(void*, void*), 
+int mpc_test_pass(mpc_parser_t *p, const char *s, const void *d,
+  int(*tester)(const void*, const void*), 
   mpc_dtor_t destructor, 
-  void(*printer)(void*)) {
+  void(*printer)(const void*)) {
 
   mpc_result_t r;  
   if (mpc_parse("<test>", s, p, &r)) {
@@ -2599,7 +2594,10 @@ static void mpc_ast_print_depth(mpc_ast_t *a, int d, FILE *fp) {
   for (i = 0; i < d; i++) { fprintf(fp, "  "); }
   
   if (strlen(a->contents)) {
-    fprintf(fp, "%s:%lu:%lu '%s'\n", a->tag, a->state.row+1, a->state.col+1, a->contents);
+    fprintf(fp, "%s:%lu:%lu '%s'\n", a->tag, 
+      (long unsigned int)(a->state.row+1),
+      (long unsigned int)(a->state.col+1),
+      a->contents);
   } else {
     fprintf(fp, "%s \n", a->tag);
   }
@@ -2667,7 +2665,6 @@ mpc_val_t *mpcf_state_ast(int n, mpc_val_t **xs) {
   mpc_ast_t *a = ((mpc_ast_t**)xs)[1];
   a = mpc_ast_state(a, *s);
   free(s);
-  /* casting to remove unused warning rather than changing api */
   (void) n;
   return a;
 }
@@ -2794,7 +2791,6 @@ typedef struct {
 } mpca_grammar_st_t;
 
 static mpc_val_t *mpcaf_grammar_or(int n, mpc_val_t **xs) {
-  /* casting to remove unused warning rather than changing api */
   (void) n;
   if (xs[1] == NULL) { return xs[0]; }
   else { return mpca_or(2, xs[0], xs[1]); }
@@ -2811,7 +2807,6 @@ static mpc_val_t *mpcaf_grammar_and(int n, mpc_val_t **xs) {
 
 static mpc_val_t *mpcaf_grammar_repeat(int n, mpc_val_t **xs) { 
   int num;
-  /* casting to remove unused warning rather than changing api */
   (void) n;
   if (xs[1] == NULL) { return xs[0]; }  
   if (strcmp(xs[1], "*") == 0) { free(xs[1]); return mpca_many(xs[0]); }
@@ -2847,8 +2842,7 @@ static mpc_val_t *mpcaf_grammar_regex(mpc_val_t *x, void *s) {
   return mpca_state(mpca_tag(mpc_apply(p, mpcf_str_ast), "regex"));
 }
 
-/* Should this just use `isdigit` instead */
-/* Changed to use size_t for loop index, removes type comparison warning */
+/* Should this just use `isdigit` instead? */
 static int is_number(const char* s) {
   size_t i;
   for (i = 0; i < strlen(s); i++) { if (!strchr("0123456789", s[i])) { return 0; } }
@@ -2881,7 +2875,7 @@ static mpc_parser_t *mpca_grammar_find_parser(char *x, mpca_grammar_st_t *st) {
     
     /* Search Existing Parsers */
     for (i = 0; i < st->parsers_num; i++) {
-      mpc_parser_t *q = st->parsers[i]; /* `p` was shadowing the `p` above, now changed to q */
+      mpc_parser_t *q = st->parsers[i];
       if (q == NULL) { return mpc_failf("Unknown Parser '%s'!", x); }
       if (q->name && strcmp(q->name, x) == 0) { return q; }
     }
@@ -3004,7 +2998,6 @@ static mpc_val_t *mpca_stmt_afold(int n, mpc_val_t **xs) {
   stmt->ident = ((char**)xs)[0];
   stmt->name = ((char**)xs)[1];
   stmt->grammar = ((mpc_parser_t**)xs)[3];
-  /* casting to remove unused warnings rather than changing api */
   (void) n;
   free(((char**)xs)[2]);
   free(((char**)xs)[4]);

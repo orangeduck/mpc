@@ -43,11 +43,11 @@ void test_grammar(void) {
       mpc_ast_new("char", "+"),
       mpc_ast_new("product|value|regex", "5"));
   
-  PT_ASSERT(mpc_test_pass(Maths, "  24 ", t0, (int(*)(void*,void*))mpc_ast_eq, (mpc_dtor_t)mpc_ast_delete, (void(*)(void*))mpc_ast_print));
-  PT_ASSERT(mpc_test_pass(Maths, "(5)", t1, (int(*)(void*,void*))mpc_ast_eq, (mpc_dtor_t)mpc_ast_delete, (void(*)(void*))mpc_ast_print));
-  PT_ASSERT(mpc_test_pass(Maths, "(4 * 2 * 11 + 2) + 5", t2, (int(*)(void*,void*))mpc_ast_eq, (mpc_dtor_t)mpc_ast_delete, (void(*)(void*))mpc_ast_print));
-  PT_ASSERT(mpc_test_fail(Maths, "a", t0, (int(*)(void*,void*))mpc_ast_eq, (mpc_dtor_t)mpc_ast_delete, (void(*)(void*))mpc_ast_print));
-  PT_ASSERT(mpc_test_fail(Maths, "2b+4", t0, (int(*)(void*,void*))mpc_ast_eq, (mpc_dtor_t)mpc_ast_delete, (void(*)(void*))mpc_ast_print));
+  PT_ASSERT(mpc_test_pass(Maths, "  24 ", t0, (int(*)(const void*,const void*))mpc_ast_eq, (mpc_dtor_t)mpc_ast_delete, (void(*)(const void*))mpc_ast_print));
+  PT_ASSERT(mpc_test_pass(Maths, "(5)", t1, (int(*)(const void*,const void*))mpc_ast_eq, (mpc_dtor_t)mpc_ast_delete, (void(*)(const void*))mpc_ast_print));
+  PT_ASSERT(mpc_test_pass(Maths, "(4 * 2 * 11 + 2) + 5", t2, (int(*)(const void*,const void*))mpc_ast_eq, (mpc_dtor_t)mpc_ast_delete, (void(*)(const void*))mpc_ast_print));
+  PT_ASSERT(mpc_test_fail(Maths, "a", t0, (int(*)(const void*,const void*))mpc_ast_eq, (mpc_dtor_t)mpc_ast_delete, (void(*)(const void*))mpc_ast_print));
+  PT_ASSERT(mpc_test_fail(Maths, "2b+4", t0, (int(*)(const void*,const void*))mpc_ast_eq, (mpc_dtor_t)mpc_ast_delete, (void(*)(const void*))mpc_ast_print));
 
   mpc_ast_delete(t0);
   mpc_ast_delete(t1);

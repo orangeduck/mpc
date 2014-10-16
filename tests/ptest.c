@@ -94,6 +94,7 @@ static int assert_err_num = 0;
 
 void pt_assert_run(int result, const char* expr, const char* func, const char* file, int line) {
   
+  (void) func;
   num_asserts++;
   test_passing = test_passing && result;
   
@@ -116,6 +117,7 @@ static void ptest_signal(int sig) {
     case SIGFPE:  sprintf(assert_err_buff, "        %i. Division by Zero\n", assert_err_num+1); break;
     case SIGILL:  sprintf(assert_err_buff, "        %i. Illegal Instruction\n", assert_err_num+1); break;
     case SIGSEGV: sprintf(assert_err_buff, "        %i. Segmentation Fault\n", assert_err_num+1); break;
+    default: break;
   }
   
   assert_err_num++;
@@ -134,7 +136,7 @@ static void ptest_signal(int sig) {
 static void pt_title_case(char* output, const char* input) {
   
   int space = 1;
-  unsigned int i;
+  size_t i;
   
   strcpy(output, input);
   
@@ -213,7 +215,7 @@ static char current_suite[MAX_NAME];
 
 int pt_run(void) {
   
-  unsigned int i;
+  int i;
   double total;
 
   printf("    \n");
