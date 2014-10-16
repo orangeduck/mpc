@@ -6,9 +6,9 @@
 
 static mpc_state_t mpc_state_invalid(void) {
   mpc_state_t s;
-  s.pos = -1;
-  s.row = -1;
-  s.col = -1;
+  s.pos = SIZE_MAX;
+  s.row = SIZE_MAX;
+  s.col = SIZE_MAX;
   return s;
 }
 
@@ -112,7 +112,7 @@ void mpc_err_print_to(mpc_err_t *x, FILE *f) {
   free(str);
 }
 
-void mpc_err_string_cat(char *buffer, int *pos, int *max, char *fmt, ...) {
+void mpc_err_string_cat(char *buffer, int *pos, int *max, char const *fmt, ...) {
   /* TODO: Error Checking on Length */
   int left = ((*max) - (*pos));
   va_list va;
@@ -124,7 +124,7 @@ void mpc_err_string_cat(char *buffer, int *pos, int *max, char *fmt, ...) {
 
 static char char_unescape_buffer[3];
 
-static char *mpc_err_char_unescape(char c) {
+static const char *mpc_err_char_unescape(char c) {
   
   char_unescape_buffer[0] = '\'';
   char_unescape_buffer[1] = ' ';
@@ -157,8 +157,7 @@ char *mpc_err_string(mpc_err_t *x) {
   
   if (x->failure) {
     mpc_err_string_cat(buffer, &pos, &max,
-    "%s: error: %s\n", 
-      x->filename, x->failure);
+    "%s: error: %s\n", x->filename, x->failure);
     return buffer;
   }
   
@@ -541,12 +540,13 @@ static char mpc_input_peekc(mpc_input_t *i) {
   
 }
 
+/* filled in default case */
 static int mpc_input_failure(mpc_input_t *i, char c) {
 
   switch (i->type) {
-    case MPC_INPUT_STRING: break;
-    case MPC_INPUT_FILE: fseek(i->file, -1, SEEK_CUR); break;
-    case MPC_INPUT_PIPE:
+    case MPC_INPUT_STRING: { break; }
+    case MPC_INPUT_FILE: fseek(i->file, -1, SEEK_CUR); { break; }
+    case MPC_INPUT_PIPE: {
       
       if (!i->buffer) { ungetc(c, i->file); break; }
       
@@ -555,9 +555,9 @@ static int mpc_input_failure(mpc_input_t *i, char c) {
       } else {
         ungetc(c, i->file); 
       }
-      
+	}
+	default: { break; }
   }
-  
   return 0;
 }
 
@@ -1676,16 +1676,17 @@ mpc_parser_t *mpc_and(int n, mpc_fold_t f, ...) {
 ** Common Parsers
 */
 
-static int mpc_soi_anchor(char prev, char next) { return (prev == '\0'); }
-static int mpc_eoi_anchor(char prev, char next) { return (next == '\0'); }
+/* casting to remove warnings rather than changing api */
+static int mpc_soi_anchor(char prev, char next) { (void) next; return (prev == '\0'); }
+static int mpc_eoi_anchor(char prev, char next) { (void) prev; return (next == '\0'); }
 
 mpc_parser_t *mpc_soi(void) { return mpc_expect(mpc_anchor(mpc_soi_anchor), "start of input"); }
 mpc_parser_t *mpc_eoi(void) { return mpc_expect(mpc_anchor(mpc_eoi_anchor), "end of input"); }
 
 static int mpc_boundary_anchor(char prev, char next) {
-  char* word = "abcdefghijklmnopqrstuvwxyz"
-               "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-               "0123456789_";
+  const char* word = "abcdefghijklmnopqrstuvwxyz"
+                     "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                     "0123456789_";
   if ( strchr(word, next) &&  prev == '\0') { return 1; }
   if ( strchr(word, prev) &&  next == '\0') { return 1; }
   if ( strchr(word, next) && !strchr(word, prev)) { return 1; }
@@ -1853,6 +1854,8 @@ mpc_parser_t *mpc_tok_squares(mpc_parser_t *a, mpc_dtor_t ad)  { return mpc_tok_
 */
 
 static mpc_val_t *mpcf_re_or(int n, mpc_val_t **xs) {
+  /* casting to remove unused warning rather than changing api */
+  (void) n;
   if (xs[1] == NULL) { return xs[0]; }
   else { return mpc_or(2, xs[0], xs[1]); }
 }
@@ -1867,8 +1870,9 @@ static mpc_val_t *mpcf_re_and(int n, mpc_val_t **xs) {
 }
 
 static mpc_val_t *mpcf_re_repeat(int n, mpc_val_t **xs) {
-  
+  /* casting to remove unused warning rather than changing api */
   int num;
+  (void) n;
   if (xs[1] == NULL) { return xs[0]; }
   if (strcmp(xs[1], "*") == 0) { free(xs[1]); return mpc_many(mpcf_strfold, xs[0]); }
   if (strcmp(xs[1], "+") == 0) { free(xs[1]); return mpc_many1(mpcf_strfold, xs[0]); }
@@ -1925,7 +1929,7 @@ static mpc_val_t *mpcf_re_escape(mpc_val_t *x) {
   return p;
 }
 
-static char *mpc_re_range_escape_char(char c) {
+static const char *mpc_re_range_escape_char(char c) {
   switch (c) {
     case '-': return "-";
     case 'a': return "\a";
@@ -1946,17 +1950,15 @@ static mpc_val_t *mpcf_re_range(mpc_val_t *x) {
   
   mpc_parser_t *out;
   char *range = calloc(1,1);
-  char *tmp = NULL;
-  char *s = x;
-  char start, end;
-  int i, j;
-  int comp = 0;
+  const char *tmp = NULL;
+  const char *s = x;
+  int comp = s[0] == '^' ? 1 : 0;
+  size_t start, end;
+  size_t i, j; /* changed to use size_t to remove type comparison warnings */
   
   if (s[0] == '\0') { free(x); return mpc_fail("Invalid Regex Range Expression"); } 
   if (s[0] == '^' && 
       s[1] == '\0') { free(x); return mpc_fail("Invalid Regex Range Expression"); }
-  
-  if (s[0] == '^') { comp = 1;}
   
   for (i = comp; i < strlen(s); i++){
     
@@ -1999,7 +2001,7 @@ static mpc_val_t *mpcf_re_range(mpc_val_t *x) {
   
   }
   
-  out = comp ? mpc_noneof(range) : mpc_oneof(range);
+  out = comp == 1 ? mpc_noneof(range) : mpc_oneof(range);
   
   free(x);
   free(range);
@@ -2069,8 +2071,8 @@ mpc_parser_t *mpc_re(const char *re) {
 /*
 ** Common Fold Functions
 */
-
-void mpcf_dtor_null(mpc_val_t *x) { return; }
+/* casting to remove unused warning rather than changing api */
+void mpcf_dtor_null(mpc_val_t *x) { (void) x; return; }
 
 mpc_val_t *mpcf_ctor_null(void) { return NULL; }
 mpc_val_t *mpcf_ctor_str(void) { return calloc(1, 1); }
@@ -2104,24 +2106,24 @@ mpc_val_t *mpcf_float(mpc_val_t *x) {
   return y;
 }
 
-static char mpc_escape_input_c[]  = {
+static const char mpc_escape_input_c[]  = {
   '\a', '\b', '\f', '\n', '\r',
   '\t', '\v', '\\', '\'', '\"', '\0'};
     
-static char *mpc_escape_output_c[] = {
+static const char *mpc_escape_output_c[] = {
   "\\a", "\\b", "\\f", "\\n", "\\r", "\\t", 
   "\\v", "\\\\", "\\'", "\\\"", "\\0", NULL};
 
-static char mpc_escape_input_raw_re[] = { '/' };
-static char *mpc_escape_output_raw_re[] = { "\\/", NULL };
+static const char mpc_escape_input_raw_re[] = { '/' };
+static const char *mpc_escape_output_raw_re[] = { "\\/", NULL };
 
-static char mpc_escape_input_raw_cstr[] = { '"' };
-static char *mpc_escape_output_raw_cstr[] = { "\\\"", NULL };
+static const char mpc_escape_input_raw_cstr[] = { '"' };
+static const char *mpc_escape_output_raw_cstr[] = { "\\\"", NULL };
 
-static char mpc_escape_input_raw_cchar[] = { '\'' };
-static char *mpc_escape_output_raw_cchar[] = { "\\'", NULL };
+static const char mpc_escape_input_raw_cchar[] = { '\'' };
+static const char *mpc_escape_output_raw_cchar[] = { "\\'", NULL };
 
-static mpc_val_t *mpcf_escape_new(mpc_val_t *x, char *input, char **output) {
+static mpc_val_t *mpcf_escape_new(mpc_val_t *x, const char *input, const char **output) {
   
   int i;
   int found;
@@ -2157,7 +2159,7 @@ static mpc_val_t *mpcf_escape_new(mpc_val_t *x, char *input, char **output) {
   return y;
 }
 
-static mpc_val_t *mpcf_unescape_new(mpc_val_t *x, char *input, char **output) {
+static mpc_val_t *mpcf_unescape_new(mpc_val_t *x, const char *input, const char **output) {
   
   int i;
   int found = 0;
@@ -2238,11 +2240,11 @@ mpc_val_t *mpcf_unescape_char_raw(mpc_val_t *x) {
   free(x);
   return y;
 }
-
-mpc_val_t *mpcf_null(int n, mpc_val_t** xs) { return NULL; }
-mpc_val_t *mpcf_fst(int n, mpc_val_t **xs) { return xs[0]; }
-mpc_val_t *mpcf_snd(int n, mpc_val_t **xs) { return xs[1]; }
-mpc_val_t *mpcf_trd(int n, mpc_val_t **xs) { return xs[2]; }
+/* casting to remove unused warnings rather than changing api */
+mpc_val_t *mpcf_null(int n, mpc_val_t** xs) { (void) n; (void) xs; return NULL; }
+mpc_val_t *mpcf_fst(int n, mpc_val_t **xs) { (void) n; return xs[0]; }
+mpc_val_t *mpcf_snd(int n, mpc_val_t **xs) { (void) n; return xs[1]; }
+mpc_val_t *mpcf_trd(int n, mpc_val_t **xs) { (void) n; return xs[2]; }
 
 static mpc_val_t *mpcf_nth_free(int n, mpc_val_t **xs, int x) {
   int i;
@@ -2268,8 +2270,8 @@ mpc_val_t *mpcf_strfold(int n, mpc_val_t **xs) {
 }
 
 mpc_val_t *mpcf_maths(int n, mpc_val_t **xs) {
-  
   int **vs = (int**)xs;
+  (void) n; /* casting to remove unused warning rather than changing api */
     
   if (strcmp(xs[1], "*") == 0) { *vs[0] *= *vs[2]; }
   if (strcmp(xs[1], "/") == 0) { *vs[0] /= *vs[2]; }
@@ -2424,8 +2426,9 @@ int mpc_test_fail(mpc_parser_t *p, const char *s, void *d,
   int(*tester)(void*, void*),
   mpc_dtor_t destructor,
   void(*printer)(void*)) {
-
-  mpc_result_t r;  
+  mpc_result_t r;
+  /* casting to remove unused warning rather than changing api */
+  (void) printer;
   if (mpc_parse("<test>", s, p, &r)) {
 
     if (tester(r.output, d)) {
@@ -2596,7 +2599,7 @@ static void mpc_ast_print_depth(mpc_ast_t *a, int d, FILE *fp) {
   for (i = 0; i < d; i++) { fprintf(fp, "  "); }
   
   if (strlen(a->contents)) {
-    fprintf(fp, "%s:%i:%i '%s'\n", a->tag, a->state.row+1, a->state.col+1, a->contents);
+    fprintf(fp, "%s:%lu:%lu '%s'\n", a->tag, a->state.row+1, a->state.col+1, a->contents);
   } else {
     fprintf(fp, "%s \n", a->tag);
   }
@@ -2664,6 +2667,8 @@ mpc_val_t *mpcf_state_ast(int n, mpc_val_t **xs) {
   mpc_ast_t *a = ((mpc_ast_t**)xs)[1];
   a = mpc_ast_state(a, *s);
   free(s);
+  /* casting to remove unused warning rather than changing api */
+  (void) n;
   return a;
 }
 
@@ -2789,6 +2794,8 @@ typedef struct {
 } mpca_grammar_st_t;
 
 static mpc_val_t *mpcaf_grammar_or(int n, mpc_val_t **xs) {
+  /* casting to remove unused warning rather than changing api */
+  (void) n;
   if (xs[1] == NULL) { return xs[0]; }
   else { return mpca_or(2, xs[0], xs[1]); }
 }
@@ -2802,9 +2809,10 @@ static mpc_val_t *mpcaf_grammar_and(int n, mpc_val_t **xs) {
   return p;
 }
 
-static mpc_val_t *mpcaf_grammar_repeat(int n, mpc_val_t **xs) {
-  
+static mpc_val_t *mpcaf_grammar_repeat(int n, mpc_val_t **xs) { 
   int num;
+  /* casting to remove unused warning rather than changing api */
+  (void) n;
   if (xs[1] == NULL) { return xs[0]; }  
   if (strcmp(xs[1], "*") == 0) { free(xs[1]); return mpca_many(xs[0]); }
   if (strcmp(xs[1], "+") == 0) { free(xs[1]); return mpca_many1(xs[0]); }
@@ -2840,8 +2848,9 @@ static mpc_val_t *mpcaf_grammar_regex(mpc_val_t *x, void *s) {
 }
 
 /* Should this just use `isdigit` instead */
+/* Changed to use size_t for loop index, removes type comparison warning */
 static int is_number(const char* s) {
-  int i;
+  size_t i;
   for (i = 0; i < strlen(s); i++) { if (!strchr("0123456789", s[i])) { return 0; } }
   return 1;
 }
@@ -2872,9 +2881,9 @@ static mpc_parser_t *mpca_grammar_find_parser(char *x, mpca_grammar_st_t *st) {
     
     /* Search Existing Parsers */
     for (i = 0; i < st->parsers_num; i++) {
-      mpc_parser_t *p = st->parsers[i];
-      if (p == NULL) { return mpc_failf("Unknown Parser '%s'!", x); }
-      if (p->name && strcmp(p->name, x) == 0) { return p; }
+      mpc_parser_t *q = st->parsers[i]; /* `p` was shadowing the `p` above, now changed to q */
+      if (q == NULL) { return mpc_failf("Unknown Parser '%s'!", x); }
+      if (q->name && strcmp(q->name, x) == 0) { return q; }
     }
     
     /* Search New Parsers */
@@ -2991,12 +3000,12 @@ typedef struct {
 } mpca_stmt_t;
 
 static mpc_val_t *mpca_stmt_afold(int n, mpc_val_t **xs) {
-  
   mpca_stmt_t *stmt = malloc(sizeof(mpca_stmt_t));
   stmt->ident = ((char**)xs)[0];
   stmt->name = ((char**)xs)[1];
   stmt->grammar = ((mpc_parser_t**)xs)[3];
-  
+  /* casting to remove unused warnings rather than changing api */
+  (void) n;
   free(((char**)xs)[2]);
   free(((char**)xs)[4]);
   
