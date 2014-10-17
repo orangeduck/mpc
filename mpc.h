@@ -21,14 +21,10 @@
 ** State Type
 */
 
-/* 
-** changed to unsigned values for indexing in state,
-** invalid is now signified by SIZE_MAX.
-*/
 typedef struct {
-  size_t pos;
-  size_t row;
-  size_t col;
+  long pos;
+  long row;
+  long col;
 } mpc_state_t;
 
 /*

@@ -1,3 +1,10 @@
+# Oct. 17, 2014; Daniel Holden
+- Reverted state to use long type
+
+# Oct. 16, 2014; Daniel Holden
+- Removed comments describing changes
+- Fixed warnings reported by gcc in test suite under the new compilation flags
+
 # Oct. 14, 2014; Dalton Woodard
 - Fixed all compilation warnings in `mpc.h` and `mpc.c`; both now compile successfully on OS X under clang-600.0.51 
 and gcc 4.9.1 with the following flags:

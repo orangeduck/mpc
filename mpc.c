@@ -6,9 +6,9 @@
 
 static mpc_state_t mpc_state_invalid(void) {
   mpc_state_t s;
-  s.pos = SIZE_MAX;
-  s.row = SIZE_MAX;
-  s.col = SIZE_MAX;
+  s.pos = -1;
+  s.row = -1;
+  s.col = -1;
   return s;
 }
 
@@ -465,7 +465,7 @@ static void mpc_input_rewind(mpc_input_t *i) {
 }
 
 static int mpc_input_buffer_in_range(mpc_input_t *i) {
-  return i->state.pos < (strlen(i->buffer) + i->marks[0].pos);
+  return i->state.pos < (long)(strlen(i->buffer) + i->marks[0].pos);
 }
 
 static char mpc_input_buffer_get(mpc_input_t *i) {
@@ -473,7 +473,7 @@ static char mpc_input_buffer_get(mpc_input_t *i) {
 }
 
 static int mpc_input_terminated(mpc_input_t *i) {
-  if (i->type == MPC_INPUT_STRING && i->state.pos == strlen(i->string)) { return 1; }
+  if (i->type == MPC_INPUT_STRING && i->state.pos == (long)strlen(i->string)) { return 1; }
   if (i->type == MPC_INPUT_FILE && feof(i->file)) { return 1; }
   if (i->type == MPC_INPUT_PIPE && feof(i->file)) { return 1; }
   return 0;
