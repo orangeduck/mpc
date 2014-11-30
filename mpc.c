@@ -1147,7 +1147,7 @@ int mpc_parse_input(mpc_input_t *i, mpc_parser_t *init, mpc_result_t *final) {
       
       case MPC_TYPE_AND:
         
-        if (p->data.or.n == 0) { MPC_SUCCESS(p->data.and.f(0, NULL)); }
+        if (p->data.and.n == 0) { MPC_SUCCESS(p->data.and.f(0, NULL)); }
         
         if (st == 0) { mpc_input_mark(i); MPC_CONTINUE(st+1, p->data.and.xs[st]); }
         if (st <= p->data.and.n) {
