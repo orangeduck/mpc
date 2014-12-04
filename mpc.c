@@ -2207,6 +2207,12 @@ mpc_val_t *mpcf_unescape(mpc_val_t *x) {
   return y;
 }
 
+mpc_val_t *mpcf_escape_regex(mpc_val_t *x) {
+  mpc_val_t *y = mpcf_escape_new(x, mpc_escape_input_raw_re, mpc_escape_output_raw_re);
+  free(x);
+  return y;  
+}
+
 mpc_val_t *mpcf_unescape_regex(mpc_val_t *x) {
   mpc_val_t *y = mpcf_unescape_new(x, mpc_escape_input_raw_re, mpc_escape_output_raw_re);
   free(x);
