@@ -959,7 +959,7 @@ static mpc_err_t *mpc_stack_merger_err(mpc_stack_t *s, int n) {
 #define MPC_CONTINUE(st, x) mpc_stack_set_state(stk, st); mpc_stack_pushp(stk, x); continue
 #define MPC_SUCCESS(x) mpc_stack_popp(stk, &p, &st); mpc_stack_pushr(stk, mpc_result_out(x), 1); continue
 #define MPC_FAILURE(x) mpc_stack_popp(stk, &p, &st); mpc_stack_pushr(stk, mpc_result_err(x), 0); continue
-#define MPC_PRIMATIVE(x, f) if (f) { MPC_SUCCESS(x); } else { MPC_FAILURE(mpc_err_fail(i->filename, i->state, "Incorrect Input")); }
+#define MPC_PRIMITIVE(x, f) if (f) { MPC_SUCCESS(x); } else { MPC_FAILURE(mpc_err_fail(i->filename, i->state, "Incorrect Input")); }
 
 int mpc_parse_input(mpc_input_t *i, mpc_parser_t *init, mpc_result_t *final) {
   
@@ -983,13 +983,13 @@ int mpc_parse_input(mpc_input_t *i, mpc_parser_t *init, mpc_result_t *final) {
       
       /* Basic Parsers */
 
-      case MPC_TYPE_ANY:       MPC_PRIMATIVE(s, mpc_input_any(i, &s));
-      case MPC_TYPE_SINGLE:    MPC_PRIMATIVE(s, mpc_input_char(i, p->data.single.x, &s));
-      case MPC_TYPE_RANGE:     MPC_PRIMATIVE(s, mpc_input_range(i, p->data.range.x, p->data.range.y, &s));
-      case MPC_TYPE_ONEOF:     MPC_PRIMATIVE(s, mpc_input_oneof(i, p->data.string.x, &s));
-      case MPC_TYPE_NONEOF:    MPC_PRIMATIVE(s, mpc_input_noneof(i, p->data.string.x, &s));
-      case MPC_TYPE_SATISFY:   MPC_PRIMATIVE(s, mpc_input_satisfy(i, p->data.satisfy.f, &s));
-      case MPC_TYPE_STRING:    MPC_PRIMATIVE(s, mpc_input_string(i, p->data.string.x, &s));
+      case MPC_TYPE_ANY:       MPC_PRIMITIVE(s, mpc_input_any(i, &s));
+      case MPC_TYPE_SINGLE:    MPC_PRIMITIVE(s, mpc_input_char(i, p->data.single.x, &s));
+      case MPC_TYPE_RANGE:     MPC_PRIMITIVE(s, mpc_input_range(i, p->data.range.x, p->data.range.y, &s));
+      case MPC_TYPE_ONEOF:     MPC_PRIMITIVE(s, mpc_input_oneof(i, p->data.string.x, &s));
+      case MPC_TYPE_NONEOF:    MPC_PRIMITIVE(s, mpc_input_noneof(i, p->data.string.x, &s));
+      case MPC_TYPE_SATISFY:   MPC_PRIMITIVE(s, mpc_input_satisfy(i, p->data.satisfy.f, &s));
+      case MPC_TYPE_STRING:    MPC_PRIMITIVE(s, mpc_input_string(i, p->data.string.x, &s));
       
       /* Other parsers */
       
@@ -1176,7 +1176,7 @@ int mpc_parse_input(mpc_input_t *i, mpc_parser_t *init, mpc_result_t *final) {
 #undef MPC_CONTINUE
 #undef MPC_SUCCESS
 #undef MPC_FAILURE
-#undef MPC_PRIMATIVE
+#undef MPC_PRIMITIVE
 
 int mpc_parse(const char *filename, const char *string, mpc_parser_t *p, mpc_result_t *r) {
   int x;
