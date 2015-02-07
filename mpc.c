@@ -149,11 +149,11 @@ static const char *mpc_err_char_unescape(char c) {
 }
 
 char *mpc_err_string(mpc_err_t *x) {
-  
-  char *buffer = calloc(1, 1024);
-  int max = 1023;
+
+  int i;  
   int pos = 0; 
-  int i;
+  int max = 1023;
+  char *buffer = calloc(1, 1024);
   
   if (x->failure) {
     mpc_err_string_cat(buffer, &pos, &max,
@@ -1945,12 +1945,12 @@ static const char *mpc_re_range_escape_char(char c) {
 static mpc_val_t *mpcf_re_range(mpc_val_t *x) {
   
   mpc_parser_t *out;
-  char *range = calloc(1,1);
+  size_t i, j;
+  size_t start, end;
   const char *tmp = NULL;
   const char *s = x;
   int comp = s[0] == '^' ? 1 : 0;
-  size_t start, end;
-  size_t i, j;
+  char *range = calloc(1,1);
   
   if (s[0] == '\0') { free(x); return mpc_fail("Invalid Regex Range Expression"); } 
   if (s[0] == '^' && 
@@ -2123,9 +2123,9 @@ static mpc_val_t *mpcf_escape_new(mpc_val_t *x, const char *input, const char **
   
   int i;
   int found;
+  char buff[2];
   char *s = x;
   char *y = calloc(1, 1);
-  char buff[2];
   
   while (*s) {
     
@@ -2159,10 +2159,10 @@ static mpc_val_t *mpcf_unescape_new(mpc_val_t *x, const char *input, const char 
   
   int i;
   int found = 0;
+  char buff[2];
   char *s = x;
   char *y = calloc(1, 1);
-  char buff[2];
-
+  
   while (*s) {
     
     i = 0;
@@ -2180,7 +2180,7 @@ static mpc_val_t *mpcf_unescape_new(mpc_val_t *x, const char *input, const char 
       }
       i++;
     }
-      
+    
     if (!found) {
       y = realloc(y, strlen(y) + 2);
       buff[0] = *s; buff[1] = '\0';
@@ -2261,8 +2261,9 @@ mpc_val_t *mpcf_snd_free(int n, mpc_val_t **xs) { return mpcf_nth_free(n, xs, 1)
 mpc_val_t *mpcf_trd_free(int n, mpc_val_t **xs) { return mpcf_nth_free(n, xs, 2); }
 
 mpc_val_t *mpcf_strfold(int n, mpc_val_t **xs) {
-  char *x = calloc(1, 1);
   int i;
+  char *x = calloc(1, 1);
+
   for (i = 0; i < n; i++) {
     x = realloc(x, strlen(x) + strlen(xs[i]) + 1);
     strcat(x, xs[i]);
