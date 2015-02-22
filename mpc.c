@@ -2486,6 +2486,7 @@ void mpc_ast_delete(mpc_ast_t *a) {
   int i;
   
   if (a == NULL) { return; }
+  
   for (i = 0; i < a->children_num; i++) {
     mpc_ast_delete(a->children[i]);
   }
@@ -2599,6 +2600,11 @@ mpc_ast_t *mpc_ast_state(mpc_ast_t *a, mpc_state_t s) {
 static void mpc_ast_print_depth(mpc_ast_t *a, int d, FILE *fp) {
   
   int i;
+  
+  if (a == NULL) {
+    fprintf(fp, "NULL\n");
+  }
+  
   for (i = 0; i < d; i++) { fprintf(fp, "  "); }
   
   if (strlen(a->contents)) {
