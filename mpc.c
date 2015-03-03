@@ -2603,6 +2603,7 @@ static void mpc_ast_print_depth(mpc_ast_t *a, int d, FILE *fp) {
   
   if (a == NULL) {
     fprintf(fp, "NULL\n");
+    return;
   }
   
   for (i = 0; i < d; i++) { fprintf(fp, "  "); }
