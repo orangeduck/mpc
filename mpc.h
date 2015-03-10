@@ -16,6 +16,7 @@
 #include <string.h>
 #include <math.h>
 #include <errno.h>
+#include <ctype.h>
 
 /*
 ** State Type
@@ -218,6 +219,9 @@ mpc_val_t *mpcf_int(mpc_val_t *x);
 mpc_val_t *mpcf_hex(mpc_val_t *x);
 mpc_val_t *mpcf_oct(mpc_val_t *x);
 mpc_val_t *mpcf_float(mpc_val_t *x);
+mpc_val_t *mpcf_strtriml(mpc_val_t *x);
+mpc_val_t *mpcf_strtrimr(mpc_val_t *x);
+mpc_val_t *mpcf_strtrim(mpc_val_t *x);
 
 mpc_val_t *mpcf_escape(mpc_val_t *x);
 mpc_val_t *mpcf_escape_regex(mpc_val_t *x);

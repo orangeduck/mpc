@@ -1,10 +1,10 @@
 
 CC = gcc
 STND=-ansi
-CFLAGS = $(STND) -pedantic -O3 -g -Werror -Wall -Wextra -Wformat=2 -Wshadow -Wno-long-long \
-		 -Wno-overlength-strings -Wno-format-nonliteral -Wcast-align \
-		 -Wwrite-strings -Wstrict-prototypes -Wold-style-definition -Wredundant-decls -Wnested-externs \
-		 -Wmissing-include-dirs -Wswitch-default
+CFLAGS = $(STND) -pedantic -O3 -g -Werror -Wall -Wextra -Wformat=2 -Wshadow \
+  -Wno-long-long -Wno-overlength-strings -Wno-format-nonliteral -Wcast-align \
+  -Wwrite-strings -Wstrict-prototypes -Wold-style-definition -Wredundant-decls \
+  -Wnested-externs -Wmissing-include-dirs -Wswitch-default
 
 TESTS = $(wildcard tests/*.c)
 EXAMPLES = $(wildcard examples/*.c)

@@ -582,22 +582,22 @@ Useful Parsers
     <tr><td><code>mpc_startswith(mpc_parser_t *a);</code></td><td>Matches the start of input followed by <code>a</code></td></tr>
     <tr><td><code>mpc_endswith(mpc_parser_t *a, mpc_dtor_t da);</code></td><td>Matches <code>a</code> followed by the end of input</td></tr>
     <tr><td><code>mpc_whole(mpc_parser_t *a, mpc_dtor_t da);</code></td><td>Matches the start of input, <code>a</code>, and the end of input</td></tr>  
-    <tr><td><code>mpc_stripl(mpc_parser_t *a);</code></td><td>Matches <code>a</code> striping any whitespace to the left</td></tr>
-    <tr><td><code>mpc_stripr(mpc_parser_t *a);</code></td><td>Matches <code>a</code> striping any whitespace to the right</td></tr>
-    <tr><td><code>mpc_strip(mpc_parser_t *a);</code></td><td>Matches <code>a</code> striping any surrounding whitespace</td></tr>
-    <tr><td><code>mpc_tok(mpc_parser_t *a);</code></td><td>Matches <code>a</code> and strips any trailing whitespace</td></tr>
-    <tr><td><code>mpc_sym(const char *s);</code></td><td>Matches string <code>s</code> and strips any trailing whitespace</td></tr>
-    <tr><td><code>mpc_total(mpc_parser_t *a, mpc_dtor_t da);</code></td><td>Matches the whitespace stripped <code>a</code>, enclosed in the start and end of input</td></tr>
+    <tr><td><code>mpc_stripl(mpc_parser_t *a);</code></td><td>Matches <code>a</code> first consuming any whitespace to the left</td></tr>
+    <tr><td><code>mpc_stripr(mpc_parser_t *a);</code></td><td>Matches <code>a</code> then consumes any whitespace to the right</td></tr>
+    <tr><td><code>mpc_strip(mpc_parser_t *a);</code></td><td>Matches <code>a</code> consuming any surrounding whitespace</td></tr>
+    <tr><td><code>mpc_tok(mpc_parser_t *a);</code></td><td>Matches <code>a</code> and consumes any trailing whitespace</td></tr>
+    <tr><td><code>mpc_sym(const char *s);</code></td><td>Matches string <code>s</code> and consumes any trailing whitespace</td></tr>
+    <tr><td><code>mpc_total(mpc_parser_t *a, mpc_dtor_t da);</code></td><td>Matches the whitespace consumed <code>a</code>, enclosed in the start and end of input</td></tr>
     <tr><td><code>mpc_between(mpc_parser_t *a, mpc_dtor_t ad, <br /> const char *o, const char *c);</code></td><td> Matches <code>a</code> between strings <code>o</code> and <code>c</code></td></tr>
     <tr><td><code>mpc_parens(mpc_parser_t *a, mpc_dtor_t ad);</code></td><td>Matches <code>a</code> between <code>"("</code> and <code>")"</code></td></tr>
     <tr><td><code>mpc_braces(mpc_parser_t *a, mpc_dtor_t ad);</code></td><td>Matches <code>a</code> between <code>"<"</code> and <code>">"</code></td></tr>
     <tr><td><code>mpc_brackets(mpc_parser_t *a, mpc_dtor_t ad);</code></td><td>Matches <code>a</code> between <code>"{"</code> and <code>"}"</code></td></tr>
     <tr><td><code>mpc_squares(mpc_parser_t *a, mpc_dtor_t ad);</code></td><td>Matches <code>a</code> between <code>"["</code> and <code>"]"</code></td></tr>
     <tr><td><code>mpc_tok_between(mpc_parser_t *a, mpc_dtor_t ad, <br /> const char *o, const char *c);</code></td><td>Matches <code>a</code> between <code>o</code> and <code>c</code>, where <code>o</code> and <code>c</code> have their trailing whitespace striped.</td></tr>
-    <tr><td><code>mpc_tok_parens(mpc_parser_t *a, mpc_dtor_t ad);</code></td><td>Matches <code>a</code> between trailing whitespace stripped <code>"("</code> and <code>")"</code></td></tr>
-    <tr><td><code>mpc_tok_braces(mpc_parser_t *a, mpc_dtor_t ad);</code></td><td>Matches <code>a</code> between trailing whitespace stripped <code>"<"</code> and <code>">"</code></td></tr>
-    <tr><td><code>mpc_tok_brackets(mpc_parser_t *a, mpc_dtor_t ad);</code></td><td>Matches <code>a</code> between trailing whitespace stripped <code>"{"</code> and <code>"}"</code></td></tr>
-    <tr><td><code>mpc_tok_squares(mpc_parser_t *a, mpc_dtor_t ad);</code></td><td>Matches <code>a</code> between trailing whitespace stripped <code>"["</code> and <code>"]"</code></td></tr>
+    <tr><td><code>mpc_tok_parens(mpc_parser_t *a, mpc_dtor_t ad);</code></td><td>Matches <code>a</code> between trailing whitespace consumed <code>"("</code> and <code>")"</code></td></tr>
+    <tr><td><code>mpc_tok_braces(mpc_parser_t *a, mpc_dtor_t ad);</code></td><td>Matches <code>a</code> between trailing whitespace consumed <code>"<"</code> and <code>">"</code></td></tr>
+    <tr><td><code>mpc_tok_brackets(mpc_parser_t *a, mpc_dtor_t ad);</code></td><td>Matches <code>a</code> between trailing whitespace consumed <code>"{"</code> and <code>"}"</code></td></tr>
+    <tr><td><code>mpc_tok_squares(mpc_parser_t *a, mpc_dtor_t ad);</code></td><td>Matches <code>a</code> between trailing whitespace consumed <code>"["</code> and <code>"]"</code></td></tr>
 
 </table>
 

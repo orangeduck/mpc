@@ -2096,10 +2096,31 @@ mpc_val_t *mpcf_oct(mpc_val_t *x) {
 }
 
 mpc_val_t *mpcf_float(mpc_val_t *x) {
-  float* y = malloc(sizeof(float));
+  float *y = malloc(sizeof(float));
   *y = strtod(x, NULL);
   free(x);
   return y;
+}
+
+mpc_val_t *mpcf_strtriml(mpc_val_t *x) {
+  char *s = x;
+  while (isspace(*s)) {
+    memmove(s, s+1, strlen(s));
+  }
+  return s;
+}
+
+mpc_val_t *mpcf_strtrimr(mpc_val_t *x) {
+  char *s = x;
+  size_t l = strlen(s);
+  while (isspace(s[l-1])) {
+    s[l-1] = '\0'; l--;
+  }
+  return s;
+}
+
+mpc_val_t *mpcf_strtrim(mpc_val_t *x) {
+  return mpcf_strtriml(mpcf_strtrimr(x));
 }
 
 static const char mpc_escape_input_c[]  = {
