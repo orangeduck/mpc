@@ -44,7 +44,7 @@ enum {
   LIGHT_YELLOW = 14,
   LIGHT_WHITE  = 15,
   
-  DEFAULT      = 16,
+  DEFAULT      = 16
 };
 
 #ifdef _WIN32
@@ -106,8 +106,7 @@ static char assert_err[MAX_ERROR];
 static char assert_err_buff[MAX_ERROR];
 static int assert_err_num = 0;
 
-void pt_assert_run(
-  int result, const char* expr, const char* func, const char* file, int line) {
+void pt_assert_run(int result, const char* expr, const char* file, int line) {
   
   num_asserts++;
   test_passing = test_passing && result;
@@ -139,6 +138,7 @@ static void ptest_signal(int sig) {
     case SIGSEGV: sprintf(assert_err_buff,
       "        %i. Segmentation Fault\n", assert_err_num+1);
     break;
+    default: break;
   }
   
   assert_err_num++;
@@ -240,7 +240,7 @@ static char current_suite[MAX_NAME];
 
 int pt_run(void) {
   
-  unsigned int i;
+  int i;
   double total;
   test_t test;
 
