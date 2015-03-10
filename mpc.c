@@ -122,13 +122,14 @@ void mpc_err_string_cat(char *buffer, int *pos, int *max, char const *fmt, ...) 
   va_end(va);
 }
 
-static char char_unescape_buffer[3];
+static char char_unescape_buffer[4];
 
 static const char *mpc_err_char_unescape(char c) {
   
   char_unescape_buffer[0] = '\'';
   char_unescape_buffer[1] = ' ';
   char_unescape_buffer[2] = '\'';
+  char_unescape_buffer[3] = '\0';
   
   switch (c) {
     
@@ -149,11 +150,11 @@ static const char *mpc_err_char_unescape(char c) {
 }
 
 char *mpc_err_string(mpc_err_t *x) {
-  
-  char *buffer = calloc(1, 1024);
-  int max = 1023;
+
+  int i;  
   int pos = 0; 
-  int i;
+  int max = 1023;
+  char *buffer = calloc(1, 1024);
   
   if (x->failure) {
     mpc_err_string_cat(buffer, &pos, &max,
@@ -959,7 +960,7 @@ static mpc_err_t *mpc_stack_merger_err(mpc_stack_t *s, int n) {
 #define MPC_CONTINUE(st, x) mpc_stack_set_state(stk, st); mpc_stack_pushp(stk, x); continue
 #define MPC_SUCCESS(x) mpc_stack_popp(stk, &p, &st); mpc_stack_pushr(stk, mpc_result_out(x), 1); continue
 #define MPC_FAILURE(x) mpc_stack_popp(stk, &p, &st); mpc_stack_pushr(stk, mpc_result_err(x), 0); continue
-#define MPC_PRIMATIVE(x, f) if (f) { MPC_SUCCESS(x); } else { MPC_FAILURE(mpc_err_fail(i->filename, i->state, "Incorrect Input")); }
+#define MPC_PRIMITIVE(x, f) if (f) { MPC_SUCCESS(x); } else { MPC_FAILURE(mpc_err_fail(i->filename, i->state, "Incorrect Input")); }
 
 int mpc_parse_input(mpc_input_t *i, mpc_parser_t *init, mpc_result_t *final) {
   
@@ -983,13 +984,13 @@ int mpc_parse_input(mpc_input_t *i, mpc_parser_t *init, mpc_result_t *final) {
       
       /* Basic Parsers */
 
-      case MPC_TYPE_ANY:       MPC_PRIMATIVE(s, mpc_input_any(i, &s));
-      case MPC_TYPE_SINGLE:    MPC_PRIMATIVE(s, mpc_input_char(i, p->data.single.x, &s));
-      case MPC_TYPE_RANGE:     MPC_PRIMATIVE(s, mpc_input_range(i, p->data.range.x, p->data.range.y, &s));
-      case MPC_TYPE_ONEOF:     MPC_PRIMATIVE(s, mpc_input_oneof(i, p->data.string.x, &s));
-      case MPC_TYPE_NONEOF:    MPC_PRIMATIVE(s, mpc_input_noneof(i, p->data.string.x, &s));
-      case MPC_TYPE_SATISFY:   MPC_PRIMATIVE(s, mpc_input_satisfy(i, p->data.satisfy.f, &s));
-      case MPC_TYPE_STRING:    MPC_PRIMATIVE(s, mpc_input_string(i, p->data.string.x, &s));
+      case MPC_TYPE_ANY:       MPC_PRIMITIVE(s, mpc_input_any(i, &s));
+      case MPC_TYPE_SINGLE:    MPC_PRIMITIVE(s, mpc_input_char(i, p->data.single.x, &s));
+      case MPC_TYPE_RANGE:     MPC_PRIMITIVE(s, mpc_input_range(i, p->data.range.x, p->data.range.y, &s));
+      case MPC_TYPE_ONEOF:     MPC_PRIMITIVE(s, mpc_input_oneof(i, p->data.string.x, &s));
+      case MPC_TYPE_NONEOF:    MPC_PRIMITIVE(s, mpc_input_noneof(i, p->data.string.x, &s));
+      case MPC_TYPE_SATISFY:   MPC_PRIMITIVE(s, mpc_input_satisfy(i, p->data.satisfy.f, &s));
+      case MPC_TYPE_STRING:    MPC_PRIMITIVE(s, mpc_input_string(i, p->data.string.x, &s));
       
       /* Other parsers */
       
@@ -1147,7 +1148,7 @@ int mpc_parse_input(mpc_input_t *i, mpc_parser_t *init, mpc_result_t *final) {
       
       case MPC_TYPE_AND:
         
-        if (p->data.or.n == 0) { MPC_SUCCESS(p->data.and.f(0, NULL)); }
+        if (p->data.and.n == 0) { MPC_SUCCESS(p->data.and.f(0, NULL)); }
         
         if (st == 0) { mpc_input_mark(i); MPC_CONTINUE(st+1, p->data.and.xs[st]); }
         if (st <= p->data.and.n) {
@@ -1176,7 +1177,7 @@ int mpc_parse_input(mpc_input_t *i, mpc_parser_t *init, mpc_result_t *final) {
 #undef MPC_CONTINUE
 #undef MPC_SUCCESS
 #undef MPC_FAILURE
-#undef MPC_PRIMATIVE
+#undef MPC_PRIMITIVE
 
 int mpc_parse(const char *filename, const char *string, mpc_parser_t *p, mpc_result_t *r) {
   int x;
@@ -1945,12 +1946,12 @@ static const char *mpc_re_range_escape_char(char c) {
 static mpc_val_t *mpcf_re_range(mpc_val_t *x) {
   
   mpc_parser_t *out;
-  char *range = calloc(1,1);
+  size_t i, j;
+  size_t start, end;
   const char *tmp = NULL;
   const char *s = x;
   int comp = s[0] == '^' ? 1 : 0;
-  size_t start, end;
-  size_t i, j;
+  char *range = calloc(1,1);
   
   if (s[0] == '\0') { free(x); return mpc_fail("Invalid Regex Range Expression"); } 
   if (s[0] == '^' && 
@@ -2144,9 +2145,9 @@ static mpc_val_t *mpcf_escape_new(mpc_val_t *x, const char *input, const char **
   
   int i;
   int found;
+  char buff[2];
   char *s = x;
   char *y = calloc(1, 1);
-  char buff[2];
   
   while (*s) {
     
@@ -2180,10 +2181,10 @@ static mpc_val_t *mpcf_unescape_new(mpc_val_t *x, const char *input, const char 
   
   int i;
   int found = 0;
+  char buff[2];
   char *s = x;
   char *y = calloc(1, 1);
-  char buff[2];
-
+  
   while (*s) {
     
     i = 0;
@@ -2201,7 +2202,7 @@ static mpc_val_t *mpcf_unescape_new(mpc_val_t *x, const char *input, const char 
       }
       i++;
     }
-      
+    
     if (!found) {
       y = realloc(y, strlen(y) + 2);
       buff[0] = *s; buff[1] = '\0';
@@ -2226,6 +2227,12 @@ mpc_val_t *mpcf_unescape(mpc_val_t *x) {
   mpc_val_t *y = mpcf_unescape_new(x, mpc_escape_input_c, mpc_escape_output_c);
   free(x);
   return y;
+}
+
+mpc_val_t *mpcf_escape_regex(mpc_val_t *x) {
+  mpc_val_t *y = mpcf_escape_new(x, mpc_escape_input_raw_re, mpc_escape_output_raw_re);
+  free(x);
+  return y;  
 }
 
 mpc_val_t *mpcf_unescape_regex(mpc_val_t *x) {
@@ -2276,8 +2283,9 @@ mpc_val_t *mpcf_snd_free(int n, mpc_val_t **xs) { return mpcf_nth_free(n, xs, 1)
 mpc_val_t *mpcf_trd_free(int n, mpc_val_t **xs) { return mpcf_nth_free(n, xs, 2); }
 
 mpc_val_t *mpcf_strfold(int n, mpc_val_t **xs) {
-  char *x = calloc(1, 1);
   int i;
+  char *x = calloc(1, 1);
+
   for (i = 0; i < n; i++) {
     x = realloc(x, strlen(x) + strlen(xs[i]) + 1);
     strcat(x, xs[i]);
@@ -2499,6 +2507,7 @@ void mpc_ast_delete(mpc_ast_t *a) {
   int i;
   
   if (a == NULL) { return; }
+  
   for (i = 0; i < a->children_num; i++) {
     mpc_ast_delete(a->children[i]);
   }
@@ -2612,6 +2621,12 @@ mpc_ast_t *mpc_ast_state(mpc_ast_t *a, mpc_state_t s) {
 static void mpc_ast_print_depth(mpc_ast_t *a, int d, FILE *fp) {
   
   int i;
+  
+  if (a == NULL) {
+    fprintf(fp, "NULL\n");
+    return;
+  }
+  
   for (i = 0; i < d; i++) { fprintf(fp, "  "); }
   
   if (strlen(a->contents)) {
