@@ -557,7 +557,7 @@ Common Parsers
   <tr><td><code>mpc_octdigits</code></td><td>Matches one or more octdigit</td></tr>
   <tr><td><code>mpc_lower</code></td><td>Matches any lower case character</td></tr>
   <tr><td><code>mpc_upper</code></td><td>Matches any upper case character</td></tr>
-  <tr><td><code>mpc_alpha</code></td><td>Matches and alphabet character</td></tr>
+  <tr><td><code>mpc_alpha</code></td><td>Matches any alphabet character</td></tr>
   <tr><td><code>mpc_underscore</code></td><td>Matches <code>'_'</code></td></tr>
   <tr><td><code>mpc_alphanum</code></td><td>Matches any alphabet character, underscore or digit</td></tr>
   <tr><td><code>mpc_int</code></td><td>Matches digits and returns an <code>int*</code></td></tr>
