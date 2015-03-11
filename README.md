@@ -623,7 +623,9 @@ Apply Functions
   <tr><td><code>mpc_val_t *mpcf_unescape_regex(mpc_val_t *x);</code></td><td>Converts a regex <code>x</code> to an unescaped version</td></tr>
   <tr><td><code>mpc_val_t *mpcf_unescape_string_raw(mpc_val_t *x);</code></td><td>Converts a raw string <code>x</code> to an unescaped version</td></tr>
   <tr><td><code>mpc_val_t *mpcf_unescape_char_raw(mpc_val_t *x);</code></td><td>Converts a raw character <code>x</code> to an unescaped version</td></tr>
-
+  <tr><td<code>mpc_val_t *mpcf_strtriml(mpc_val_t *x);</code></td><td>Trims whitespace from the left of string <code>x</code></td></tr>
+  <tr><td<code>mpc_val_t *mpcf_strtrimr(mpc_val_t *x);</code></td><td>Trims whitespace from the right of string <code>x</code></td></tr>
+  <tr><td<code>mpc_val_t *mpcf_strtrim(mpc_val_t *x);</code></td><td>Trims whitespace from either side of string <code>x</code></td></tr>
 </table>
 
 
