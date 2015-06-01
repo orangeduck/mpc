@@ -2542,6 +2542,8 @@ mpc_ast_t *mpc_ast_new(const char *tag, const char *contents) {
   
   a->children_num = 0;
   a->children = NULL;
+  a->data = NULL;
+  a->free = NULL;
   return a;
   
 }
