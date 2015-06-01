@@ -258,6 +258,8 @@ mpc_parser_t *mpc_re(const char *re);
 typedef struct mpc_ast_t {
   char *tag;
   char *contents;
+  void *data;
+  void (*free)(void*);
   mpc_state_t state;
   int children_num;
   struct mpc_ast_t** children;

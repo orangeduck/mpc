@@ -2512,6 +2512,7 @@ void mpc_ast_delete(mpc_ast_t *a) {
     mpc_ast_delete(a->children[i]);
   }
   
+  if (a->free) a->free(a->data);
   free(a->children);
   free(a->tag);
   free(a->contents);
@@ -2520,6 +2521,7 @@ void mpc_ast_delete(mpc_ast_t *a) {
 }
 
 static void mpc_ast_delete_no_children(mpc_ast_t *a) {
+  if (a->free) a->free(a->data);
   free(a->children);
   free(a->tag);
   free(a->contents);
