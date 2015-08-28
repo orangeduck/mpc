@@ -85,8 +85,38 @@ void test_strip(void) {
   
 }
 
+void test_repeat(void) {
+  
+  int success;
+  mpc_result_t r;
+  mpc_parser_t *p = mpc_count(3, mpcf_strfold, mpc_digit(), free);
+  
+  success = mpc_parse("test", "046", p, &r);
+  PT_ASSERT(success);
+  PT_ASSERT_STR_EQ(r.output, "046");
+  free(r.output);
+  
+  success = mpc_parse("test", "046aa", p, &r);
+  PT_ASSERT(success);
+  PT_ASSERT_STR_EQ(r.output, "046");
+  free(r.output);
+  
+  success = mpc_parse("test", "04632", p, &r);
+  PT_ASSERT(success);
+  PT_ASSERT_STR_EQ(r.output, "046");
+  free(r.output);
+  
+  success = mpc_parse("test", "04", p, &r);
+  PT_ASSERT(!success);
+  mpc_err_delete(r.error);
+  
+  mpc_delete(p);
+  
+}
+
 void suite_core(void) {
-  pt_add_test(test_ident, "Test Ident", "Suite Core");
-  pt_add_test(test_maths, "Test Maths", "Suite Core");
-  pt_add_test(test_strip, "Test Strip", "Suite Core");
+  pt_add_test(test_ident,  "Test Ident",  "Suite Core");
+  pt_add_test(test_maths,  "Test Maths",  "Suite Core");
+  pt_add_test(test_strip,  "Test Strip",  "Suite Core");
+  pt_add_test(test_repeat, "Test Repeat", "Suite Core");
 }

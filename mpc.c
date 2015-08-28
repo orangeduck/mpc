@@ -1112,19 +1112,17 @@ int mpc_parse_input(mpc_input_t *i, mpc_parser_t *init, mpc_result_t *final) {
       case MPC_TYPE_COUNT:
         if (st == 0) { mpc_input_mark(i); MPC_CONTINUE(st+1, p->data.repeat.x); }
         if (st >  0) {
-          if (mpc_stack_peekr(stk, &r)) {
-            MPC_CONTINUE(st+1, p->data.repeat.x);
+          if (!mpc_stack_peekr(stk, &r)) {
+            mpc_stack_popr(stk, &r);
+            mpc_stack_popr_out_single(stk, st-1, p->data.repeat.dx);
+            mpc_input_rewind(i);
+            MPC_FAILURE(mpc_err_count(r.error, p->data.repeat.n));
           } else {
-            if (st != (p->data.repeat.n+1)) {
-              mpc_stack_popr(stk, &r);
-              mpc_stack_popr_out_single(stk, st-1, p->data.repeat.dx);
-              mpc_input_rewind(i);
-              MPC_FAILURE(mpc_err_count(r.error, p->data.repeat.n));
+            if (st < p->data.repeat.n) {
+              MPC_CONTINUE(st+1, p->data.repeat.x);
             } else {
-              mpc_stack_popr(stk, &r);
-              mpc_stack_err(stk, r.error);
               mpc_input_unmark(i);
-              MPC_SUCCESS(mpc_stack_merger_out(stk, st-1, p->data.repeat.f));
+              MPC_SUCCESS(mpc_stack_merger_out(stk, st, p->data.repeat.f));
             }
           }
         }
