@@ -748,18 +748,23 @@ typedef struct {
   
 } mpc_stack_t;
 
+enum {
+  MPC_STACK_MIN = 128
+};
+
 static mpc_stack_t *mpc_stack_new(const char *filename) {
   mpc_stack_t *s = malloc(sizeof(mpc_stack_t));
   
   s->parsers_num = 0;
-  s->parsers_slots = 0;
-  s->parsers = NULL;
-  s->states = NULL;
+  s->parsers_slots = MPC_STACK_MIN;
+  s->parsers = malloc(sizeof(mpc_parser_t*) * MPC_STACK_MIN);
+  s->states = malloc(sizeof(int) * MPC_STACK_MIN);
   
   s->results_num = 0;
-  s->results_slots = 0;
-  s->results = NULL;
-  s->returns = NULL;
+  s->results_slots = MPC_STACK_MIN;
+  
+  s->results = malloc(sizeof(mpc_result_t) * MPC_STACK_MIN);
+  s->returns = malloc(sizeof(int) * MPC_STACK_MIN);
   
   s->err = mpc_err_fail(filename, mpc_state_invalid(), "Unknown Error");
   
@@ -801,15 +806,18 @@ static void mpc_stack_set_state(mpc_stack_t *s, int x) {
 
 static void mpc_stack_parsers_reserve_more(mpc_stack_t *s) {
   if (s->parsers_num > s->parsers_slots) {
-    s->parsers_slots = ceil((s->parsers_slots+1) * 1.5);
+    s->parsers_slots = s->parsers_num + s->parsers_num / 2;
     s->parsers = realloc(s->parsers, sizeof(mpc_parser_t*) * s->parsers_slots);
     s->states = realloc(s->states, sizeof(int) * s->parsers_slots);
   }
 }
 
 static void mpc_stack_parsers_reserve_less(mpc_stack_t *s) {
-  if (s->parsers_slots > pow(s->parsers_num+1, 1.5)) {
-    s->parsers_slots = floor((s->parsers_slots-1) * (1.0/1.5));
+  if (s->parsers_slots > s->parsers_num + s->parsers_num / 2
+  &&  s->parsers_slots > MPC_STACK_MIN) {
+    s->parsers_slots = 
+      s->parsers_num > MPC_STACK_MIN ? 
+      s->parsers_num : MPC_STACK_MIN;
     s->parsers = realloc(s->parsers, sizeof(mpc_parser_t*) * s->parsers_slots);
     s->states = realloc(s->states, sizeof(int) * s->parsers_slots);
   }
@@ -854,15 +862,18 @@ static mpc_result_t mpc_result_out(mpc_val_t *x) {
 
 static void mpc_stack_results_reserve_more(mpc_stack_t *s) {
   if (s->results_num > s->results_slots) {
-    s->results_slots = ceil((s->results_slots + 1) * 1.5);
+    s->results_slots = s->results_num + s->results_num / 2;
     s->results = realloc(s->results, sizeof(mpc_result_t) * s->results_slots);
     s->returns = realloc(s->returns, sizeof(int) * s->results_slots);
   }
 }
 
 static void mpc_stack_results_reserve_less(mpc_stack_t *s) {
-  if ( s->results_slots > pow(s->results_num+1, 1.5)) {
-    s->results_slots = floor((s->results_slots-1) * (1.0/1.5));
+  if (s->results_slots > s->results_num + s->results_num / 2
+  &&  s->results_slots > MPC_STACK_MIN) {
+    s->results_slots = 
+      s->results_num > MPC_STACK_MIN ? 
+      s->results_num : MPC_STACK_MIN;
     s->results = realloc(s->results, sizeof(mpc_result_t) * s->results_slots);
     s->returns = realloc(s->returns, sizeof(int) * s->results_slots);
   }
