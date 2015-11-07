@@ -749,7 +749,7 @@ typedef struct {
 } mpc_stack_t;
 
 enum {
-  MPC_STACK_MIN = 128
+  MPC_STACK_MIN = 256
 };
 
 static mpc_stack_t *mpc_stack_new(const char *filename) {
@@ -1538,7 +1538,7 @@ mpc_parser_t *mpc_noneof(const char *s) {
   p->type = MPC_TYPE_NONEOF;
   p->data.string.x = malloc(strlen(s) + 1);
   strcpy(p->data.string.x, s);
-  return mpc_expectf(p, "one of '%s'", s);
+  return mpc_expectf(p, "none of '%s'", s);
 
 }
 
@@ -2058,6 +2058,12 @@ mpc_parser_t *mpc_re(const char *re) {
   ));
   
   RegexEnclose = mpc_whole(mpc_predictive(Regex), (mpc_dtor_t)mpc_delete);
+  
+  mpc_optimise(Regex);
+  mpc_optimise(Term);
+  mpc_optimise(Factor);
+  mpc_optimise(Base);
+  mpc_optimise(Range);
   
   if(!mpc_parse("<mpc_re_compiler>", re, RegexEnclose, &r)) {
     err_msg = mpc_err_string(r.error);
@@ -3001,6 +3007,12 @@ mpc_parser_t *mpca_grammar_st(const char *grammar, mpca_grammar_st_t *st) {
     mpc_tok_parens(Grammar, mpc_soft_delete)
   ));
   
+  mpc_optimise(GrammarTotal);
+  mpc_optimise(Grammar);
+  mpc_optimise(Factor);
+  mpc_optimise(Term);
+  mpc_optimise(Base);
+  
   if(!mpc_parse("<mpc_grammar_compiler>", grammar, GrammarTotal, &r)) {
     err_msg = mpc_err_string(r.error);
     err_out = mpc_failf("Invalid Grammar: %s", err_msg);
@@ -3091,12 +3103,14 @@ static mpc_val_t *mpca_stmt_list_apply_to(mpc_val_t *x, void *s) {
     left = mpca_grammar_find_parser(stmt->ident, st);
     if (st->flags & MPCA_LANG_PREDICTIVE) { stmt->grammar = mpc_predictive(stmt->grammar); }
     if (stmt->name) { stmt->grammar = mpc_expect(stmt->grammar, stmt->name); }
+    mpc_optimise(stmt->grammar);
     mpc_define(left, stmt->grammar);
     free(stmt->ident);
     free(stmt->name);
     free(stmt);
     stmts++;
   }
+  
   free(x);
   
   return NULL;
@@ -3153,6 +3167,12 @@ static mpc_err_t *mpca_lang_st(mpc_input_t *i, mpca_grammar_st_t *st) {
     mpc_tok_parens(Grammar, mpc_soft_delete)
   ));
   
+  mpc_optimise(Lang);
+  mpc_optimise(Stmt);
+  mpc_optimise(Grammar);
+  mpc_optimise(Term);
+  mpc_optimise(Factor);
+  mpc_optimise(Base);
   
   if (!mpc_parse_input(i, Lang, &r)) {
     e = r.error;
@@ -3264,3 +3284,221 @@ mpc_err_t *mpca_lang_contents(int flags, const char *filename, ...) {
   
   return err;
 }
+
+static int mpc_nodecount_unretained(mpc_parser_t* p, int force) {
+
+  int i, total;
+
+  if (p->retained && !force) { return 0; }
+
+  if (p->type == MPC_TYPE_EXPECT) { return 1 + mpc_nodecount_unretained(p->data.expect.x, 0); }
+
+  if (p->type == MPC_TYPE_APPLY)    { return 1 + mpc_nodecount_unretained(p->data.apply.x, 0); }
+  if (p->type == MPC_TYPE_APPLY_TO) { return 1 + mpc_nodecount_unretained(p->data.apply_to.x, 0); }
+  if (p->type == MPC_TYPE_PREDICT)  { return 1 + mpc_nodecount_unretained(p->data.predict.x, 0); }
+
+  if (p->type == MPC_TYPE_NOT)   { return 1 + mpc_nodecount_unretained(p->data.not.x, 0); }
+  if (p->type == MPC_TYPE_MAYBE) { return 1 + mpc_nodecount_unretained(p->data.not.x, 0); }
+
+  if (p->type == MPC_TYPE_MANY)  { return 1 + mpc_nodecount_unretained(p->data.repeat.x, 0); }
+  if (p->type == MPC_TYPE_MANY1) { return 1 + mpc_nodecount_unretained(p->data.repeat.x, 0); }
+  if (p->type == MPC_TYPE_COUNT) { return 1 + mpc_nodecount_unretained(p->data.repeat.x, 0); }
+
+  if (p->type == MPC_TYPE_OR) { 
+    total = 0;
+    for(i = 0; i < p->data.or.n; i++) {
+      total += mpc_nodecount_unretained(p->data.or.xs[i], 0);
+    }
+    return total;
+  }
+  
+  if (p->type == MPC_TYPE_AND) {
+    total = 0;
+    for(i = 0; i < p->data.and.n; i++) {
+      total += mpc_nodecount_unretained(p->data.and.xs[i], 0);
+    }
+    return total;
+  }
+
+  return 1;
+  
+}
+
+void mpc_stats(mpc_parser_t* p) {
+  printf("Stats\n");
+  printf("=====\n");
+  printf("Node Count: %i\n", mpc_nodecount_unretained(p, 1));
+}
+
+static void mpc_optimise_unretained(mpc_parser_t *p, int force) {
+  
+  int i, n, m;
+  mpc_parser_t *t;
+  mpc_parser_t swp;
+  
+  if (p->retained && !force) { return; }
+  
+  /* Optimise Subexpressions */
+  
+  if (p->type == MPC_TYPE_EXPECT)   { mpc_optimise_unretained(p->data.expect.x, 0); }
+  if (p->type == MPC_TYPE_APPLY)    { mpc_optimise_unretained(p->data.apply.x, 0); }
+  if (p->type == MPC_TYPE_APPLY_TO) { mpc_optimise_unretained(p->data.apply_to.x, 0); }
+  if (p->type == MPC_TYPE_PREDICT)  { mpc_optimise_unretained(p->data.predict.x, 0); }
+  if (p->type == MPC_TYPE_NOT)      { mpc_optimise_unretained(p->data.not.x, 0); }
+  if (p->type == MPC_TYPE_MAYBE)    { mpc_optimise_unretained(p->data.not.x, 0); }
+  if (p->type == MPC_TYPE_MANY)     { mpc_optimise_unretained(p->data.repeat.x, 0); }
+  if (p->type == MPC_TYPE_MANY1)    { mpc_optimise_unretained(p->data.repeat.x, 0); }
+  if (p->type == MPC_TYPE_COUNT)    { mpc_optimise_unretained(p->data.repeat.x, 0); }
+  
+  if (p->type == MPC_TYPE_OR) { 
+    for(i = 0; i < p->data.or.n; i++) {
+      mpc_optimise_unretained(p->data.or.xs[i], 0);
+    }
+  }
+  
+  if (p->type == MPC_TYPE_AND) {
+    for(i = 0; i < p->data.and.n; i++) {
+      mpc_optimise_unretained(p->data.and.xs[i], 0);
+    }
+  }  
+  
+  /* Perform optimisations */
+  
+  while (1) {
+    
+    /* Merge rhs `or` */
+    if (p->type == MPC_TYPE_OR
+    &&  p->data.or.xs[p->data.or.n-1]->type == MPC_TYPE_OR
+    && !p->data.or.xs[p->data.or.n-1]->retained) {
+      t = p->data.or.xs[p->data.or.n-1];
+      n = p->data.or.n; m = t->data.or.n;
+      p->data.or.n = n + m - 1;
+      p->data.or.xs = realloc(p->data.or.xs, sizeof(mpc_parser_t*) * (n + m -1));
+      memmove(p->data.or.xs + n - 1, t->data.or.xs, m * sizeof(mpc_parser_t*));
+      free(t->data.or.xs); free(t->name); free(t);
+      continue;
+    }
+
+    /* Merge lhs `or` */
+    if (p->type == MPC_TYPE_OR
+    &&  p->data.or.xs[0]->type == MPC_TYPE_OR
+    && !p->data.or.xs[0]->retained) {
+      t = p->data.or.xs[0];
+      n = p->data.or.n; m = t->data.or.n;
+      p->data.or.n = n + m - 1;
+      p->data.or.xs = realloc(p->data.or.xs, sizeof(mpc_parser_t*) * (n + m -1));
+      memmove(p->data.or.xs + m, t->data.or.xs + 1, n * sizeof(mpc_parser_t*));
+      memmove(p->data.or.xs, t->data.or.xs, m * sizeof(mpc_parser_t*));
+      free(t->data.or.xs); free(t->name); free(t);
+      continue;
+    }
+    
+    /* Remove ast `pass` */
+    if (p->type == MPC_TYPE_AND
+    &&  p->data.and.n == 2
+    &&  p->data.and.xs[0]->type == MPC_TYPE_PASS
+    && !p->data.and.xs[0]->retained
+    &&  p->data.and.f == mpcf_fold_ast) {
+      memcpy(&swp, p->data.and.xs[1], sizeof(mpc_parser_t));
+      mpc_delete(p->data.and.xs[0]);
+      free(p->data.and.xs); free(p->data.and.dxs);
+      memcpy(p, &swp, sizeof(mpc_parser_t));
+      continue;
+    }
+    
+    /* Merge ast lhs `and` */
+    if (p->type == MPC_TYPE_AND
+    &&  p->data.and.f == mpcf_fold_ast
+    &&  p->data.and.xs[0]->type == MPC_TYPE_AND
+    && !p->data.and.xs[0]->retained
+    &&  p->data.and.xs[0]->data.and.f == mpcf_fold_ast) {
+      t = p->data.and.xs[0];
+      n = p->data.and.n; m = t->data.and.n;
+      p->data.and.n = n + m - 1;
+      p->data.and.xs = realloc(p->data.and.xs, sizeof(mpc_parser_t*) * (n + m -1));
+      p->data.and.dxs = realloc(p->data.and.dxs, sizeof(mpc_dtor_t) * (n + m -1));
+      memmove(p->data.and.xs + m, p->data.and.xs + 1, (n - 1) * sizeof(mpc_parser_t*));
+      memmove(p->data.and.xs, t->data.and.xs, m * sizeof(mpc_parser_t*));
+      memmove(p->data.and.dxs + m, p->data.and.dxs + 1, (n - 1) * sizeof(mpc_dtor_t));
+      memmove(p->data.and.dxs, t->data.and.dxs, m * sizeof(mpc_dtor_t));
+      free(t->data.and.xs); free(t->data.and.dxs); free(t->name); free(t); 
+      continue;
+    }
+    
+    /* Merge ast rhs `and` */
+    if (p->type == MPC_TYPE_AND
+    &&  p->data.and.f == mpcf_fold_ast
+    &&  p->data.and.xs[p->data.and.n-1]->type == MPC_TYPE_AND
+    && !p->data.and.xs[p->data.and.n-1]->retained
+    &&  p->data.and.xs[p->data.and.n-1]->data.and.f == mpcf_fold_ast) {
+      t = p->data.and.xs[p->data.and.n-1];
+      n = p->data.and.n; m = t->data.and.n;
+      p->data.and.n = n + m - 1;
+      p->data.and.xs = realloc(p->data.and.xs, sizeof(mpc_parser_t*) * (n + m -1));
+      p->data.and.dxs = realloc(p->data.and.dxs, sizeof(mpc_dtor_t) * (n + m -1));
+      memmove(p->data.and.xs + n - 1, t->data.and.xs, m * sizeof(mpc_parser_t*));
+      memmove(p->data.and.dxs + n - 1, t->data.and.dxs, m * sizeof(mpc_dtor_t));
+      free(t->data.and.xs); free(t->data.and.dxs); free(t->name); free(t); 
+      continue;
+    }
+
+    /* Remove re `lift` */
+    if (p->type == MPC_TYPE_AND
+    &&  p->data.and.n == 2
+    &&  p->data.and.xs[0]->type == MPC_TYPE_LIFT
+    &&  p->data.and.xs[0]->data.lift.lf == mpcf_ctor_str
+    && !p->data.and.xs[0]->retained
+    &&  p->data.and.f == mpcf_strfold) {
+      memcpy(&swp, p->data.and.xs[1], sizeof(mpc_parser_t));
+      mpc_delete(p->data.and.xs[0]);
+      free(p->data.and.xs); free(p->data.and.dxs);
+      memcpy(p, &swp, sizeof(mpc_parser_t));
+      continue;
+    }
+
+    /* Merge re lhs `and` */
+    if (p->type == MPC_TYPE_AND
+    &&  p->data.and.f == mpcf_strfold
+    &&  p->data.and.xs[0]->type == MPC_TYPE_AND
+    && !p->data.and.xs[0]->retained
+    &&  p->data.and.xs[0]->data.and.f == mpcf_strfold) {
+      t = p->data.and.xs[0];
+      n = p->data.and.n; m = t->data.and.n;
+      p->data.and.n = n + m - 1;
+      p->data.and.xs = realloc(p->data.and.xs, sizeof(mpc_parser_t*) * (n + m -1));
+      p->data.and.dxs = realloc(p->data.and.dxs, sizeof(mpc_dtor_t) * (n + m -1));
+      memmove(p->data.and.xs + m, p->data.and.xs + 1, (n - 1) * sizeof(mpc_parser_t*));
+      memmove(p->data.and.xs, t->data.and.xs, m * sizeof(mpc_parser_t*));
+      memmove(p->data.and.dxs + m, p->data.and.dxs + 1, (n - 1) * sizeof(mpc_dtor_t));
+      memmove(p->data.and.dxs, t->data.and.dxs, m * sizeof(mpc_dtor_t));
+      free(t->data.and.xs); free(t->data.and.dxs); free(t->name); free(t); 
+      continue;
+    }
+    
+    /* Merge re rhs `and` */
+    if (p->type == MPC_TYPE_AND
+    &&  p->data.and.f == mpcf_strfold
+    &&  p->data.and.xs[p->data.and.n-1]->type == MPC_TYPE_AND
+    && !p->data.and.xs[p->data.and.n-1]->retained
+    &&  p->data.and.xs[p->data.and.n-1]->data.and.f == mpcf_strfold) {
+      t = p->data.and.xs[p->data.and.n-1];
+      n = p->data.and.n; m = t->data.and.n;
+      p->data.and.n = n + m - 1;
+      p->data.and.xs = realloc(p->data.and.xs, sizeof(mpc_parser_t*) * (n + m -1));
+      p->data.and.dxs = realloc(p->data.and.dxs, sizeof(mpc_dtor_t) * (n + m -1));
+      memmove(p->data.and.xs + n - 1, t->data.and.xs, m * sizeof(mpc_parser_t*));
+      memmove(p->data.and.dxs + n - 1, t->data.and.dxs, m * sizeof(mpc_dtor_t));
+      free(t->data.and.xs); free(t->data.and.dxs); free(t->name); free(t); 
+      continue;
+    }
+    
+    return;
+    
+  }
+  
+}
+
+void mpc_optimise(mpc_parser_t *p) {
+  mpc_optimise_unretained(p, 1);
+}
+

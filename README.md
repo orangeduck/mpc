@@ -786,6 +786,35 @@ _mpc_ provides some automatic generation of error messages. These can be enhance
 <test>:0:3: error: expected one or more of 'a' or 'd' at 'k'
 ```
 
+Misc
+====
+
+Here are some other misc functions that mpc provides. These functions are susceptible to change between versions so use them with some care.
+
+* * *
+
+```c
+void mpc_print(mpc_parser_t *p);
+```
+
+Prints out a parser in some weird format. This is generally used for debugging so don't expect to be able to understand the output right away without looking at the source code a little bit.
+
+* * *
+
+```c
+void mpc_stats(mpc_parser_t *p);
+```
+
+Prints out some basic stats about a parser. Again used for debugging and optimisation.
+
+* * *
+
+```c
+void mpc_optimise(mpc_parser_t *p);
+```
+
+Performs some basic optimisations on a parser to reduce it's size and increase its running speed.
+
 
 Limitations & FAQ
 =================

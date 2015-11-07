@@ -2,6 +2,8 @@
 
 int main(int argc, char **argv) {
   
+  mpc_result_t r;  
+  
   mpc_parser_t* Number  = mpc_new("number");
   mpc_parser_t* Symbol  = mpc_new("symbol");
   mpc_parser_t* String  = mpc_new("string");
@@ -22,10 +24,9 @@ int main(int argc, char **argv) {
     "                     | <comment> | <sexpr>  | <qexpr> ;   "
     " lispy               : /^/ <expr>* /$/ ;                  ",
     Number, Symbol, String, Comment, Sexpr, Qexpr, Expr, Lispy, NULL);
-
+  
   if (argc > 1) {
-    
-    mpc_result_t r;
+
     if (mpc_parse_contents(argv[1], Lispy, &r)) {
       mpc_ast_print(r.output);
       mpc_ast_delete(r.output);
@@ -33,10 +34,9 @@ int main(int argc, char **argv) {
       mpc_err_print(r.error);
       mpc_err_delete(r.error);
     }
-    
+        
   } else {
     
-    mpc_result_t r;
     if (mpc_parse_pipe("<stdin>", stdin, Lispy, &r)) {
       mpc_ast_print(r.output);
       mpc_ast_delete(r.output);

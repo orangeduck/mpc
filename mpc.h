@@ -314,10 +314,13 @@ mpc_err_t *mpca_lang_pipe(int flags, FILE *f, ...);
 mpc_err_t *mpca_lang_contents(int flags, const char *filename, ...);
 
 /*
-** Debug & Testing
+** Misc
 */
 
+
 void mpc_print(mpc_parser_t *p);
+void mpc_optimise(mpc_parser_t *p);
+void mpc_stats(mpc_parser_t *p);
 
 int mpc_test_pass(mpc_parser_t *p, const char *s, const void *d,
   int(*tester)(const void*, const void*), 
