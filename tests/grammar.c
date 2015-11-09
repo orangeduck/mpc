@@ -91,8 +91,46 @@ void test_language_file(void) {
   
 }
 
+void test_doge(void) {
+  
+  mpc_ast_t *t0;  
+  mpc_parser_t* Adjective = mpc_new("adjective");
+  mpc_parser_t* Noun      = mpc_new("noun");
+  mpc_parser_t* Phrase    = mpc_new("phrase");
+  mpc_parser_t* Doge      = mpc_new("doge");
+
+  mpca_lang(MPCA_LANG_DEFAULT,
+    " adjective : \"wow\" | \"many\" | \"so\" | \"such\";                 "
+    " noun      : \"lisp\" | \"language\" | \"c\" | \"book\" | \"build\"; "
+    " phrase    : <adjective> <noun>;                                     "
+    " doge      : /^/ <phrase>* /$/;                                      ",
+    Adjective, Noun, Phrase, Doge, NULL);
+  
+  t0 = 
+      mpc_ast_build(4, ">", 
+          mpc_ast_new("regex", ""),
+          mpc_ast_build(2, "phrase|>", 
+            mpc_ast_new("adjective|string", "so"),
+            mpc_ast_new("noun|string", "c")),
+          mpc_ast_build(2, "phrase|>", 
+            mpc_ast_new("adjective|string", "so"),
+            mpc_ast_new("noun|string", "c")),
+          mpc_ast_new("regex", "")
+        );
+            
+  PT_ASSERT(mpc_test_pass(Doge, "so c so c", t0, (int(*)(const void*,const void*))mpc_ast_eq, (mpc_dtor_t)mpc_ast_delete, (void(*)(const void*))mpc_ast_print));
+ 
+  PT_ASSERT(mpc_test_fail(Doge, "so a so c", t0, (int(*)(const void*,const void*))mpc_ast_eq, (mpc_dtor_t)mpc_ast_delete, (void(*)(const void*))mpc_ast_print));
+  
+  mpc_ast_delete(t0);
+  
+  mpc_cleanup(4, Adjective, Noun, Phrase, Doge);
+  
+}
+
 void suite_grammar(void) {
   pt_add_test(test_grammar, "Test Grammar", "Suite Grammar");
   pt_add_test(test_language, "Test Language", "Suite Grammar");
   pt_add_test(test_language_file, "Test Language File", "Suite Grammar");
+  pt_add_test(test_doge, "Test Doge", "Suite Grammar");
 }

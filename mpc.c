@@ -2059,6 +2059,7 @@ mpc_parser_t *mpc_re(const char *re) {
   
   RegexEnclose = mpc_whole(mpc_predictive(Regex), (mpc_dtor_t)mpc_delete);
   
+  mpc_optimise(RegexEnclose);
   mpc_optimise(Regex);
   mpc_optimise(Term);
   mpc_optimise(Factor);
@@ -2073,8 +2074,9 @@ mpc_parser_t *mpc_re(const char *re) {
     r.output = err_out;
   }
   
-  mpc_delete(RegexEnclose);
-  mpc_cleanup(5, Regex, Term, Factor, Base, Range);
+  mpc_cleanup(6, RegexEnclose, Regex, Term, Factor, Base, Range);
+  
+  mpc_optimise(r.output);
   
   return r.output;
   
@@ -3023,6 +3025,8 @@ mpc_parser_t *mpca_grammar_st(const char *grammar, mpca_grammar_st_t *st) {
   
   mpc_cleanup(5, GrammarTotal, Grammar, Term, Factor, Base);
   
+  mpc_optimise(r.output);
+  
   return (st->flags & MPCA_LANG_PREDICTIVE) ? mpc_predictive(r.output) : r.output;
   
 }
@@ -3415,12 +3419,11 @@ static void mpc_optimise_unretained(mpc_parser_t *p, int force) {
       t = p->data.and.xs[0];
       n = p->data.and.n; m = t->data.and.n;
       p->data.and.n = n + m - 1;
-      p->data.and.xs = realloc(p->data.and.xs, sizeof(mpc_parser_t*) * (n + m -1));
-      p->data.and.dxs = realloc(p->data.and.dxs, sizeof(mpc_dtor_t) * (n + m -1));
+      p->data.and.xs = realloc(p->data.and.xs, sizeof(mpc_parser_t*) * (n + m - 1));
+      p->data.and.dxs = realloc(p->data.and.dxs, sizeof(mpc_dtor_t) * (n + m - 1 - 1));
       memmove(p->data.and.xs + m, p->data.and.xs + 1, (n - 1) * sizeof(mpc_parser_t*));
       memmove(p->data.and.xs, t->data.and.xs, m * sizeof(mpc_parser_t*));
-      memmove(p->data.and.dxs + m, p->data.and.dxs + 1, (n - 1) * sizeof(mpc_dtor_t));
-      memmove(p->data.and.dxs, t->data.and.dxs, m * sizeof(mpc_dtor_t));
+      for (i = 0; i < p->data.and.n-1; i++) { p->data.and.dxs[i] = (mpc_dtor_t)mpc_ast_delete; }
       free(t->data.and.xs); free(t->data.and.dxs); free(t->name); free(t); 
       continue;
     }
@@ -3435,9 +3438,9 @@ static void mpc_optimise_unretained(mpc_parser_t *p, int force) {
       n = p->data.and.n; m = t->data.and.n;
       p->data.and.n = n + m - 1;
       p->data.and.xs = realloc(p->data.and.xs, sizeof(mpc_parser_t*) * (n + m -1));
-      p->data.and.dxs = realloc(p->data.and.dxs, sizeof(mpc_dtor_t) * (n + m -1));
+      p->data.and.dxs = realloc(p->data.and.dxs, sizeof(mpc_dtor_t) * (n + m - 1 - 1));
       memmove(p->data.and.xs + n - 1, t->data.and.xs, m * sizeof(mpc_parser_t*));
-      memmove(p->data.and.dxs + n - 1, t->data.and.dxs, m * sizeof(mpc_dtor_t));
+      for (i = 0; i < p->data.and.n-1; i++) { p->data.and.dxs[i] = (mpc_dtor_t)mpc_ast_delete; }
       free(t->data.and.xs); free(t->data.and.dxs); free(t->name); free(t); 
       continue;
     }
@@ -3465,12 +3468,11 @@ static void mpc_optimise_unretained(mpc_parser_t *p, int force) {
       t = p->data.and.xs[0];
       n = p->data.and.n; m = t->data.and.n;
       p->data.and.n = n + m - 1;
-      p->data.and.xs = realloc(p->data.and.xs, sizeof(mpc_parser_t*) * (n + m -1));
-      p->data.and.dxs = realloc(p->data.and.dxs, sizeof(mpc_dtor_t) * (n + m -1));
+      p->data.and.xs = realloc(p->data.and.xs, sizeof(mpc_parser_t*) * (n + m - 1));
+      p->data.and.dxs = realloc(p->data.and.dxs, sizeof(mpc_dtor_t) * (n + m - 1 - 1));
       memmove(p->data.and.xs + m, p->data.and.xs + 1, (n - 1) * sizeof(mpc_parser_t*));
       memmove(p->data.and.xs, t->data.and.xs, m * sizeof(mpc_parser_t*));
-      memmove(p->data.and.dxs + m, p->data.and.dxs + 1, (n - 1) * sizeof(mpc_dtor_t));
-      memmove(p->data.and.dxs, t->data.and.dxs, m * sizeof(mpc_dtor_t));
+      for (i = 0; i < p->data.and.n-1; i++) { p->data.and.dxs[i] = free; }
       free(t->data.and.xs); free(t->data.and.dxs); free(t->name); free(t); 
       continue;
     }
@@ -3485,9 +3487,9 @@ static void mpc_optimise_unretained(mpc_parser_t *p, int force) {
       n = p->data.and.n; m = t->data.and.n;
       p->data.and.n = n + m - 1;
       p->data.and.xs = realloc(p->data.and.xs, sizeof(mpc_parser_t*) * (n + m -1));
-      p->data.and.dxs = realloc(p->data.and.dxs, sizeof(mpc_dtor_t) * (n + m -1));
+      p->data.and.dxs = realloc(p->data.and.dxs, sizeof(mpc_dtor_t) * (n + m - 1 - 1));
       memmove(p->data.and.xs + n - 1, t->data.and.xs, m * sizeof(mpc_parser_t*));
-      memmove(p->data.and.dxs + n - 1, t->data.and.dxs, m * sizeof(mpc_dtor_t));
+      for (i = 0; i < p->data.and.n-1; i++) { p->data.and.dxs[i] = free; }
       free(t->data.and.xs); free(t->data.and.dxs); free(t->name); free(t); 
       continue;
     }
