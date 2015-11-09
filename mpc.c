@@ -324,6 +324,7 @@ typedef struct {
   FILE *file;
   
   int backtrack;
+  int marks_slots;
   int marks_num;
   mpc_state_t* marks;
   char* lasts;
@@ -331,6 +332,10 @@ typedef struct {
   char last;
   
 } mpc_input_t;
+
+enum {
+  MPC_INPUT_MARKS_MIN = 32
+};
 
 static mpc_input_t *mpc_input_new_string(const char *filename, const char *string) {
 
@@ -349,8 +354,9 @@ static mpc_input_t *mpc_input_new_string(const char *filename, const char *strin
   
   i->backtrack = 1;
   i->marks_num = 0;
-  i->marks = NULL;
-  i->lasts = NULL;
+  i->marks_slots = MPC_INPUT_MARKS_MIN;
+  i->marks = malloc(sizeof(mpc_state_t) * i->marks_slots);
+  i->lasts = malloc(sizeof(char) * i->marks_slots);
 
   i->last = '\0';
   
@@ -373,8 +379,9 @@ static mpc_input_t *mpc_input_new_pipe(const char *filename, FILE *pipe) {
   
   i->backtrack = 1;
   i->marks_num = 0;
-  i->marks = NULL;
-  i->lasts = NULL;
+  i->marks_slots = MPC_INPUT_MARKS_MIN;
+  i->marks = malloc(sizeof(mpc_state_t) * i->marks_slots);
+  i->lasts = malloc(sizeof(char) * i->marks_slots);
   
   i->last = '\0';
   
@@ -397,8 +404,9 @@ static mpc_input_t *mpc_input_new_file(const char *filename, FILE *file) {
   
   i->backtrack = 1;
   i->marks_num = 0;
-  i->marks = NULL;
-  i->lasts = NULL;
+  i->marks_slots = MPC_INPUT_MARKS_MIN;
+  i->marks = malloc(sizeof(mpc_state_t) * i->marks_slots);
+  i->lasts = malloc(sizeof(char) * i->marks_slots);
   
   i->last = '\0';
   
@@ -425,8 +433,13 @@ static void mpc_input_mark(mpc_input_t *i) {
   if (i->backtrack < 1) { return; }
   
   i->marks_num++;
-  i->marks = realloc(i->marks, sizeof(mpc_state_t) * i->marks_num);
-  i->lasts = realloc(i->lasts, sizeof(char) * i->marks_num);
+  
+  if (i->marks_num > i->marks_slots) {
+    i->marks_slots = i->marks_num + i->marks_num / 2;
+    i->marks = realloc(i->marks, sizeof(mpc_state_t) * i->marks_slots);
+    i->lasts = realloc(i->lasts, sizeof(char) * i->marks_slots);
+  }
+
   i->marks[i->marks_num-1] = i->state;
   i->lasts[i->marks_num-1] = i->last;
   
@@ -441,8 +454,15 @@ static void mpc_input_unmark(mpc_input_t *i) {
   if (i->backtrack < 1) { return; }
   
   i->marks_num--;
-  i->marks = realloc(i->marks, sizeof(mpc_state_t) * i->marks_num);
-  i->lasts = realloc(i->lasts, sizeof(char) * i->marks_num);
+  
+  if (i->marks_slots > i->marks_num + i->marks_num / 2
+  &&  i->marks_slots > MPC_INPUT_MARKS_MIN) {
+    i->marks_slots = 
+      i->marks_num > MPC_INPUT_MARKS_MIN ?
+      i->marks_num : MPC_INPUT_MARKS_MIN;
+    i->marks = realloc(i->marks, sizeof(mpc_state_t) * i->marks_slots);
+    i->lasts = realloc(i->lasts, sizeof(char) * i->marks_slots);      
+  }
   
   if (i->type == MPC_INPUT_PIPE && i->marks_num == 0) {
     free(i->buffer);
