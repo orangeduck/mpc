@@ -2301,14 +2301,19 @@ mpc_val_t *mpcf_trd_free(int n, mpc_val_t **xs) { return mpcf_nth_free(n, xs, 2)
 
 mpc_val_t *mpcf_strfold(int n, mpc_val_t **xs) {
   int i;
-  char *x = calloc(1, 1);
-
-  for (i = 0; i < n; i++) {
-    x = realloc(x, strlen(x) + strlen(xs[i]) + 1);
-    strcat(x, xs[i]);
-    free(xs[i]);
+  size_t l;
+  
+  if (n == 0) { return calloc(1, 1); }
+  
+  for (i = 0; i < n; i++) { l += strlen(xs[i]); }
+  
+  xs[0] = realloc(xs[0], l + 1);
+  
+  for (i = 1; i < n; i++) {
+    strcat(xs[0], xs[i]); free(xs[i]);
   }
-  return x;
+  
+  return xs[0];
 }
 
 mpc_val_t *mpcf_maths(int n, mpc_val_t **xs) {
