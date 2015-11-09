@@ -2301,7 +2301,7 @@ mpc_val_t *mpcf_trd_free(int n, mpc_val_t **xs) { return mpcf_nth_free(n, xs, 2)
 
 mpc_val_t *mpcf_strfold(int n, mpc_val_t **xs) {
   int i;
-  size_t l;
+  size_t l = 0;
   
   if (n == 0) { return calloc(1, 1); }
   
