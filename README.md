@@ -686,14 +686,14 @@ mpc_parser_t *Maths  = mpc_new("maths");
 
 mpc_define(Expr, mpc_or(2, 
   mpc_and(3, fold_maths,
-    Factor, mpc_oneof("*/"), Factor,
+    Factor, mpc_oneof("+-"), Factor,
     free, free),
   Factor
 ));
 
 mpc_define(Factor, mpc_or(2, 
   mpc_and(3, fold_maths,
-    Term, mpc_oneof("+-"), Term,
+    Term, mpc_oneof("*/"), Term,
     free, free),
   Term
 ));
