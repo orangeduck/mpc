@@ -1203,7 +1203,8 @@ static int mpc_parse_run(mpc_input_t *i, mpc_parser_t *p, mpc_result_t *r, mpc_e
 
 int mpc_parse_input(mpc_input_t *i, mpc_parser_t *p, mpc_result_t *r) {
   int x;
-  mpc_err_t *e = mpc_err_new(i, "input");
+  mpc_err_t *e = mpc_err_fail(i, "Unknown Error");
+  e->state = mpc_state_invalid();
   x = mpc_parse_run(i, p, r, &e);
   if (x) {
     mpc_err_delete_internal(i, e);
