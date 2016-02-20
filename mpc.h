@@ -81,6 +81,7 @@ typedef mpc_val_t*(*mpc_fold_t)(int,mpc_val_t**);
 */
 
 mpc_parser_t *mpc_new(const char *name);
+mpc_parser_t *mpc_copy(mpc_parser_t *a);
 mpc_parser_t *mpc_define(mpc_parser_t *p, mpc_parser_t *a);
 mpc_parser_t *mpc_undefine(mpc_parser_t *p);
 

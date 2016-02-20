@@ -1364,6 +1364,18 @@ mpc_parser_t *mpc_new(const char *name) {
   return p;
 }
 
+mpc_parser_t *mpc_copy(mpc_parser_t *a) {
+  mpc_parser_t *p = mpc_undefined();
+  p->retained = a->retained;
+  p->type = a->type;
+  p->data = a->data;
+  if (a->name) {
+    p->name = malloc(strlen(a->name)+1);
+    strcpy(p->name, a->name);
+  }
+  return p;
+}
+
 mpc_parser_t *mpc_undefine(mpc_parser_t *p) {
   mpc_undefine_unretained(p, 1);
   p->type = MPC_TYPE_UNDEFINED;

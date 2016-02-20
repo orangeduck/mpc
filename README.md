@@ -530,6 +530,16 @@ void mpc_cleanup(int n, ...);
 
 To ease the task of undefining and then deleting parsers `mpc_cleanup` can be used. It takes `n` parsers as input, and undefines them all, before deleting them all.
 
+* * *
+
+```c
+mpc_parser_t *mpc_copy(mpc_parser_t *a);
+```
+
+This function makes a copy of a parser `a`. This can be useful when you want to 
+use a parser as input for some other parsers multiple times without retaining 
+it. 
+
 
 Library Reference
 =================
