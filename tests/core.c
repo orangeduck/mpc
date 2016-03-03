@@ -114,9 +114,48 @@ void test_repeat(void) {
   
 }
 
+void test_copy(void) {
+  
+  int success;
+  mpc_result_t r;
+  mpc_parser_t* p = mpc_or(2, mpc_char('a'), mpc_char('b'));
+  mpc_parser_t* q = mpc_and(2, mpcf_strfold, p, mpc_copy(p), free);
+  
+  success = mpc_parse("test", "aa", q, &r);
+  PT_ASSERT(success);
+  PT_ASSERT_STR_EQ(r.output, "aa");
+  free(r.output);
+
+  success = mpc_parse("test", "bb", q, &r);
+  PT_ASSERT(success);
+  PT_ASSERT_STR_EQ(r.output, "bb");
+  free(r.output);
+  
+  success = mpc_parse("test", "ab", q, &r);
+  PT_ASSERT(success);
+  PT_ASSERT_STR_EQ(r.output, "ab");
+  free(r.output);
+  
+  success = mpc_parse("test", "ba", q, &r);
+  PT_ASSERT(success);
+  PT_ASSERT_STR_EQ(r.output, "ba");
+  free(r.output);
+  
+  success = mpc_parse("test", "c", p, &r);
+  PT_ASSERT(!success);
+  mpc_err_delete(r.error);
+  
+  mpc_delete(mpc_copy(p));
+  mpc_delete(mpc_copy(q));
+  
+  mpc_delete(q);
+  
+}
+
 void suite_core(void) {
   pt_add_test(test_ident,  "Test Ident",  "Suite Core");
   pt_add_test(test_maths,  "Test Maths",  "Suite Core");
   pt_add_test(test_strip,  "Test Strip",  "Suite Core");
   pt_add_test(test_repeat, "Test Repeat", "Suite Core");
+  pt_add_test(test_copy,   "Test Copy",   "Suite Core");
 }

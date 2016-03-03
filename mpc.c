@@ -1365,14 +1365,77 @@ mpc_parser_t *mpc_new(const char *name) {
 }
 
 mpc_parser_t *mpc_copy(mpc_parser_t *a) {
-  mpc_parser_t *p = mpc_undefined();
+  int i = 0;
+  mpc_parser_t *p;
+  
+  if (a->retained) { return a; }
+  
+  p = mpc_undefined();
   p->retained = a->retained;
   p->type = a->type;
   p->data = a->data;
+  
   if (a->name) {
     p->name = malloc(strlen(a->name)+1);
     strcpy(p->name, a->name);
   }
+  
+  switch (a->type) {
+    
+    case MPC_TYPE_FAIL:
+      p->data.fail.m = malloc(strlen(a->data.fail.m)+1);
+      strcpy(p->data.fail.m, a->data.fail.m);
+    break;
+    
+    case MPC_TYPE_ONEOF: 
+    case MPC_TYPE_NONEOF:
+    case MPC_TYPE_STRING:
+      p->data.string.x = malloc(strlen(a->data.string.x)+1);
+      strcpy(p->data.string.x, a->data.string.x);
+      break;
+    
+    case MPC_TYPE_APPLY:    p->data.apply.x    = mpc_copy(a->data.apply.x);    break;
+    case MPC_TYPE_APPLY_TO: p->data.apply_to.x = mpc_copy(a->data.apply_to.x); break;
+    case MPC_TYPE_PREDICT:  p->data.predict.x  = mpc_copy(a->data.predict.x);  break;
+    
+    case MPC_TYPE_MAYBE:
+    case MPC_TYPE_NOT:
+      p->data.not.x = mpc_copy(a->data.not.x);
+      break;
+    
+    case MPC_TYPE_EXPECT:
+      p->data.expect.x = mpc_copy(a->data.expect.x);
+      p->data.expect.m = malloc(strlen(a->data.expect.m)+1);
+      strcpy(p->data.expect.m, a->data.expect.m);
+      break;
+      
+    case MPC_TYPE_MANY:
+    case MPC_TYPE_MANY1:
+    case MPC_TYPE_COUNT:
+      p->data.repeat.x = mpc_copy(a->data.repeat.x);
+      break;
+    
+    case MPC_TYPE_OR:
+      p->data.or.xs = malloc(a->data.or.n * sizeof(mpc_parser_t*));
+      for (i = 0; i < a->data.or.n; i++) {
+        p->data.or.xs[i] = mpc_copy(a->data.or.xs[i]);
+      }
+    break;
+    case MPC_TYPE_AND:
+      p->data.and.xs = malloc(a->data.and.n * sizeof(mpc_parser_t*));
+      for (i = 0; i < a->data.and.n; i++) {
+        p->data.and.xs[i] = mpc_copy(a->data.and.xs[i]);
+      }
+      p->data.and.dxs = malloc((a->data.and.n-1) * sizeof(mpc_dtor_t));
+      for (i = 0; i < a->data.and.n-1; i++) {
+        p->data.and.dxs[i] = a->data.and.dxs[i];
+      }
+    break;
+    
+    default: break;
+  }
+
+  
   return p;
 }
 
