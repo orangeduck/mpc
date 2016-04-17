@@ -276,6 +276,11 @@ void mpc_ast_delete(mpc_ast_t *a);
 void mpc_ast_print(mpc_ast_t *a);
 void mpc_ast_print_to(mpc_ast_t *a, FILE *fp);
 
+int mpc_ast_get_index(mpc_ast_t *ast, const char *tag);
+int mpc_ast_get_index_lb(mpc_ast_t *ast, const char *tag, int lb);
+mpc_ast_t *mpc_ast_get_child(mpc_ast_t *ast, const char *tag);
+mpc_ast_t *mpc_ast_get_child_lb(mpc_ast_t *ast, const char *tag, int lb);
+
 /*
 ** Warning: This function currently doesn't test for equality of the `state` member!
 */

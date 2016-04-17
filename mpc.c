@@ -2776,6 +2776,38 @@ void mpc_ast_print_to(mpc_ast_t *a, FILE *fp) {
   mpc_ast_print_depth(a, 0, fp);
 }
 
+int mpc_ast_get_index(mpc_ast_t *ast, const char *tag) {
+    return mpc_ast_get_index_lb(ast, tag, 0);
+}
+
+int mpc_ast_get_index_lb(mpc_ast_t *ast, const char *tag, int lb) {
+    int i;
+
+    for(i=lb; i<ast->children_num; i++) {
+        if(strcmp(ast->children[i]->tag, tag) == 0) {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+mpc_ast_t *mpc_ast_get_child(mpc_ast_t *ast, const char *tag) {
+    return mpc_ast_get_child_lb(ast, tag, 0);
+}
+
+mpc_ast_t *mpc_ast_get_child_lb(mpc_ast_t *ast, const char *tag, int lb) {
+    int i;
+
+    for(i=lb; i<ast->children_num; i++) {
+        if(strcmp(ast->children[i]->tag, tag) == 0) {
+            return ast->children[i];
+        }
+    }
+
+    return NULL;
+}
+
 mpc_val_t *mpcf_fold_ast(int n, mpc_val_t **xs) {
   
   int i, j;
