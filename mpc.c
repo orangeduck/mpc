@@ -2841,6 +2841,10 @@ mpc_ast_trav_t *mpc_ast_traverse_start(mpc_ast_t *ast,
             }
 
             break;
+
+        default:
+            /* Unreachable, but compiler complaints */
+            break;
     }
 
     return trav;
@@ -2920,6 +2924,10 @@ mpc_ast_t *mpc_ast_traverse_next(mpc_ast_trav_t **trav) {
 
                 *trav = n_trav;
             }
+
+        default:
+            /* Unreachable, but compiler complaints */
+            break;
     }
 
     return ret;
