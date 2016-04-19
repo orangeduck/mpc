@@ -5,7 +5,8 @@ int main(int argc, char *argv[]) {
   mpc_parser_t *Input  = mpc_new("input");
   mpc_parser_t *Node  = mpc_new("node");
   mpc_parser_t *Leaf  = mpc_new("leaf");
-  mpc_ast_t *ast, *tree, *child, *child_sub;
+  mpc_ast_t *ast, *tree, *child, *child_sub, *ast_next;
+  mpc_ast_trav_t *trav;
   mpc_result_t r;
   int index, lb;
 
@@ -63,6 +64,32 @@ int main(int argc, char *argv[]) {
     lb = index + 1;
     index     = mpc_ast_get_index_lb(child, "node|leaf|regex", lb);
     child_sub = mpc_ast_get_child_lb(child, "node|leaf|regex", lb);
+  }
+
+  /* Traversal */
+  printf("Pre order tree traversal.\n");
+  trav = mpc_ast_traverse_start(ast, mpc_ast_trav_order_pre);
+
+  ast_next = mpc_ast_traverse_next(&trav);
+
+  while(ast_next != NULL) {
+    printf("Tag: %s; Contents: %s\n",
+      ast_next->tag,
+      ast_next->contents);
+    ast_next = mpc_ast_traverse_next(&trav);
+  }
+
+  printf("Post order tree traversal.\n");
+
+  trav = mpc_ast_traverse_start(ast, mpc_ast_trav_order_post);
+
+  ast_next = mpc_ast_traverse_next(&trav);
+
+  while(ast_next != NULL) {
+    printf("Tag: %s; Contents: %s\n",
+      ast_next->tag,
+      ast_next->contents);
+    ast_next = mpc_ast_traverse_next(&trav);
   }
 
   /* Clean up and return */

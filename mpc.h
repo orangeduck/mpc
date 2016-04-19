@@ -281,6 +281,23 @@ int mpc_ast_get_index_lb(mpc_ast_t *ast, const char *tag, int lb);
 mpc_ast_t *mpc_ast_get_child(mpc_ast_t *ast, const char *tag);
 mpc_ast_t *mpc_ast_get_child_lb(mpc_ast_t *ast, const char *tag, int lb);
 
+typedef enum {
+  mpc_ast_trav_order_pre,
+  mpc_ast_trav_order_post
+} mpc_ast_trav_order_t;
+
+typedef struct mpc_ast_trav_t {
+  mpc_ast_t             *curr_node;
+  struct mpc_ast_trav_t *parent;
+  int                    curr_child;
+  mpc_ast_trav_order_t   order;
+} mpc_ast_trav_t;
+
+mpc_ast_trav_t *mpc_ast_traverse_start(mpc_ast_t *ast,
+                                       mpc_ast_trav_order_t order);
+
+mpc_ast_t *mpc_ast_traverse_next(mpc_ast_trav_t **trav);
+
 /*
 ** Warning: This function currently doesn't test for equality of the `state` member!
 */
