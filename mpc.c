@@ -2811,126 +2811,126 @@ mpc_ast_t *mpc_ast_get_child_lb(mpc_ast_t *ast, const char *tag, int lb) {
 mpc_ast_trav_t *mpc_ast_traverse_start(mpc_ast_t *ast,
                                        mpc_ast_trav_order_t order)
 {
-    mpc_ast_trav_t *trav, *n_trav;
-    mpc_ast_t *cnode = ast;
+  mpc_ast_trav_t *trav, *n_trav;
+  mpc_ast_t *cnode = ast;
 
-    /* Create the traversal structure */
-    trav = malloc(sizeof(mpc_ast_trav_t));
-    trav->curr_node = cnode;
-    trav->parent = NULL;
-    trav->curr_child = 0;
-    trav->order = order;
+  /* Create the traversal structure */
+  trav = malloc(sizeof(mpc_ast_trav_t));
+  trav->curr_node = cnode;
+  trav->parent = NULL;
+  trav->curr_child = 0;
+  trav->order = order;
 
-    /* Get start node */
-    switch(order) {
-        case mpc_ast_trav_order_pre:
-            /* Nothing else is needed for pre order start */
-            break;
+  /* Get start node */
+  switch(order) {
+    case mpc_ast_trav_order_pre:
+      /* Nothing else is needed for pre order start */
+      break;
 
-        case mpc_ast_trav_order_post:
-            while(cnode->children_num > 0) {
-                cnode = cnode->children[0];
+    case mpc_ast_trav_order_post:
+      while(cnode->children_num > 0) {
+        cnode = cnode->children[0];
 
-                n_trav = malloc(sizeof(mpc_ast_trav_t));
-                n_trav->curr_node = cnode;
-                n_trav->parent = trav;
-                n_trav->curr_child = 0;
-                n_trav->order = order;
+        n_trav = malloc(sizeof(mpc_ast_trav_t));
+        n_trav->curr_node = cnode;
+        n_trav->parent = trav;
+        n_trav->curr_child = 0;
+        n_trav->order = order;
 
-                trav = n_trav;
-            }
+        trav = n_trav;
+      }
 
-            break;
+      break;
 
-        default:
-            /* Unreachable, but compiler complaints */
-            break;
-    }
+    default:
+      /* Unreachable, but compiler complaints */
+      break;
+  }
 
-    return trav;
+  return trav;
 }
 
 mpc_ast_t *mpc_ast_traverse_next(mpc_ast_trav_t **trav) {
-    mpc_ast_trav_t *n_trav, *to_free;
-    mpc_ast_t *ret = NULL;
-    int cchild;
+  mpc_ast_trav_t *n_trav, *to_free;
+  mpc_ast_t *ret = NULL;
+  int cchild;
 
-    /* The end of traversal was reached */
-    if(*trav == NULL) return NULL;
+  /* The end of traversal was reached */
+  if(*trav == NULL) return NULL;
 
-    switch((*trav)->order) {
-        case mpc_ast_trav_order_pre:
-            ret = (*trav)->curr_node;
+  switch((*trav)->order) {
+    case mpc_ast_trav_order_pre:
+      ret = (*trav)->curr_node;
 
-            /* If there aren't any more children, go up */
-            while(*trav != NULL &&
-                  (*trav)->curr_child >= (*trav)->curr_node->children_num)
-            {
-                to_free = *trav;
-                *trav = (*trav)->parent;
-                free(to_free);
-            }
+      /* If there aren't any more children, go up */
+      while(*trav != NULL &&
+        (*trav)->curr_child >= (*trav)->curr_node->children_num)
+      {
+        to_free = *trav;
+        *trav = (*trav)->parent;
+        free(to_free);
+      }
 
-            /* If trav is NULL, the end was reached */
-            if(*trav == NULL) {
-                break;
-            }
+      /* If trav is NULL, the end was reached */
+      if(*trav == NULL) {
+        break;
+      }
 
-            /* Go to next child */
-            n_trav = malloc(sizeof(mpc_ast_trav_t));
+      /* Go to next child */
+      n_trav = malloc(sizeof(mpc_ast_trav_t));
 
-            cchild = (*trav)->curr_child;
-            n_trav->curr_node = (*trav)->curr_node->children[cchild];
-            n_trav->parent = *trav;
-            n_trav->curr_child = 0;
-            n_trav->order = (*trav)->order;
+      cchild = (*trav)->curr_child;
+      n_trav->curr_node = (*trav)->curr_node->children[cchild];
+      n_trav->parent = *trav;
+      n_trav->curr_child = 0;
+      n_trav->order = (*trav)->order;
 
-            (*trav)->curr_child++;
-            *trav = n_trav;
+      (*trav)->curr_child++;
+      *trav = n_trav;
 
-            break;
+      break;
 
-        case mpc_ast_trav_order_post:
-            ret = (*trav)->curr_node;
+    case mpc_ast_trav_order_post:
+      ret = (*trav)->curr_node;
 
-            /* Move up tree to the parent If the parent doesn't have any more
-             * nodes, then this is the current node. If it does, move down to
-             * its left most child. Also, free the previous traversal node */
-            to_free = *trav;
-            *trav = (*trav)->parent;
-            free(to_free);
+      /* Move up tree to the parent If the parent doesn't have any more nodes,
+       * then this is the current node. If it does, move down to its left most
+       * child. Also, free the previous traversal node */
+      to_free = *trav;
+      *trav = (*trav)->parent;
+      free(to_free);
 
-            if(*trav == NULL)
-                break;
+      if(*trav == NULL)
+        break;
 
-            /* Next child */
-            (*trav)->curr_child++;
+      /* Next child */
+      (*trav)->curr_child++;
 
-            /* If there aren't any more children, this is the next node */
-            if((*trav)->curr_child >= (*trav)->curr_node->children_num) {
-                break;
-            }
+      /* If there aren't any more children, this is the next node */
+      if((*trav)->curr_child >= (*trav)->curr_node->children_num) {
+        break;
+      }
 
-            /* If there are still more children, find the leftmost child from
-             * this node */
-            while((*trav)->curr_node->children_num > 0) {
-                n_trav = malloc(sizeof(mpc_ast_trav_t));
+      /* If there are still more children, find the leftmost child from this
+       * node */
+      while((*trav)->curr_node->children_num > 0) {
+        n_trav = malloc(sizeof(mpc_ast_trav_t));
 
-                cchild = (*trav)->curr_child;
-                n_trav->curr_node = (*trav)->curr_node->children[cchild];
-                n_trav->parent = *trav;
-                n_trav->curr_child = 0;
-                n_trav->order = (*trav)->order;
+        cchild = (*trav)->curr_child;
+        n_trav->curr_node = (*trav)->curr_node->children[cchild];
+        n_trav->parent = *trav;
+        n_trav->curr_child = 0;
+        n_trav->order = (*trav)->order;
 
-                *trav = n_trav;
-            }
+        *trav = n_trav;
+      }
 
-        default:
-            /* Unreachable, but compiler complaints */
-            break;
-    }
+    default:
+      /* Unreachable, but compiler complaints */
+      break;
+  }
 
-    return ret;
+  return ret;
 }
 
 mpc_val_t *mpcf_fold_ast(int n, mpc_val_t **xs) {
