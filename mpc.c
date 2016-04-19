@@ -2824,6 +2824,7 @@ mpc_ast_trav_t *mpc_ast_traverse_start(mpc_ast_t *ast,
     /* Get start node */
     switch(order) {
         case mpc_ast_trav_order_pre:
+            /* Nothing else is needed for pre order start */
             break;
 
         case mpc_ast_trav_order_post:
@@ -2850,10 +2851,39 @@ mpc_ast_t *mpc_ast_traverse_next(mpc_ast_trav_t **trav) {
     mpc_ast_t *ret = NULL;
     int cchild;
 
+    /* The end of traversal was reached */
     if(*trav == NULL) return NULL;
 
     switch((*trav)->order) {
         case mpc_ast_trav_order_pre:
+            ret = (*trav)->curr_node;
+
+            /* If there aren't any more children, go up */
+            while(*trav != NULL &&
+                  (*trav)->curr_child >= (*trav)->curr_node->children_num)
+            {
+                to_free = *trav;
+                *trav = (*trav)->parent;
+                free(to_free);
+            }
+
+            /* If trav is NULL, the end was reached */
+            if(*trav == NULL) {
+                break;
+            }
+
+            /* Go to next child */
+            n_trav = malloc(sizeof(mpc_ast_trav_t));
+
+            cchild = (*trav)->curr_child;
+            n_trav->curr_node = (*trav)->curr_node->children[cchild];
+            n_trav->parent = *trav;
+            n_trav->curr_child = 0;
+            n_trav->order = (*trav)->order;
+
+            (*trav)->curr_child++;
+            *trav = n_trav;
+
             break;
 
         case mpc_ast_trav_order_post:
