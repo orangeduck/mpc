@@ -20,4 +20,5 @@ examples/%: examples/%.c mpc.c
 	$(CC) $(CFLAGS) $^ -lm -o $@
   
 clean:
-	rm -rf test examples/doge examples/lispy examples/maths examples/smallc
+	rm -rf test examples/doge examples/lispy examples/maths examples/smallc \
+	examples/foobar examples/tree_traversal
