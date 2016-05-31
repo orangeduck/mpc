@@ -298,6 +298,8 @@ mpc_ast_trav_t *mpc_ast_traverse_start(mpc_ast_t *ast,
 
 mpc_ast_t *mpc_ast_traverse_next(mpc_ast_trav_t **trav);
 
+void mpc_ast_traverse_free(mpc_ast_trav_t **trav);
+
 /*
 ** Warning: This function currently doesn't test for equality of the `state` member!
 */

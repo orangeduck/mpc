@@ -2933,6 +2933,17 @@ mpc_ast_t *mpc_ast_traverse_next(mpc_ast_trav_t **trav) {
   return ret;
 }
 
+void mpc_ast_traverse_free(mpc_ast_trav_t **trav) {
+  mpc_ast_trav_t *n_trav;
+
+  /* Go through parents until all are free */
+  while(*trav != NULL) {
+      n_trav = (*trav)->parent;
+      free(*trav);
+      *trav = n_trav;
+  }
+}
+
 mpc_val_t *mpcf_fold_ast(int n, mpc_val_t **xs) {
   
   int i, j;
