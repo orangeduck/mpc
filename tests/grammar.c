@@ -25,7 +25,7 @@ void test_grammar(void) {
   
   t2 = mpc_ast_build(3, ">",
       
-      mpc_ast_build(3, "value|>", 
+      mpc_ast_build(3, "product|value|>",
         mpc_ast_new("char", "("),
         mpc_ast_build(3, "expression|>",
           
@@ -167,10 +167,98 @@ void test_partial(void) {
 
 }
 
+void test_qscript(void) {
+  
+  mpc_ast_t *t0;
+  mpc_parser_t *Qscript = mpc_new("qscript");
+  mpc_parser_t *Comment = mpc_new("comment");
+  mpc_parser_t *Resource = mpc_new("resource");
+  mpc_parser_t *Rtype = mpc_new("rtype");
+  mpc_parser_t *Rname = mpc_new("rname");
+  mpc_parser_t *InnerBlock = mpc_new("inner_block");
+  mpc_parser_t *Statement = mpc_new("statement");
+  mpc_parser_t *Function = mpc_new("function");
+  mpc_parser_t *Parameter = mpc_new("parameter");
+  mpc_parser_t *Literal = mpc_new("literal");
+  mpc_parser_t *Block = mpc_new("block");
+  mpc_parser_t *Seperator = mpc_new("seperator");
+  mpc_parser_t *Qstring = mpc_new("qstring");
+  mpc_parser_t *SimpleStr = mpc_new("simplestr");
+  mpc_parser_t *ComplexStr = mpc_new("complexstr");
+  mpc_parser_t *Number = mpc_new("number");
+  mpc_parser_t *Float = mpc_new("float");
+  mpc_parser_t *Int = mpc_new("int");
+  
+  mpc_err_t *err = mpca_lang(0,
+    "  qscript        : /^/ (<comment> | <resource>)* /$/ ;\n"
+    "   comment     : '#' /[^\\n]*/ ;\n"
+    "resource       : '[' (<rtype> <rname>) ']' <inner_block> ;\n"
+    "   rtype       : /[*]*/ ;\n"
+    "   rname       : <qstring> ;\n"
+    "\n"
+    "inner_block    : (<comment> | <statement>)* ;\n"
+    "   statement   : <function> '(' (<comment> | <parameter> | <block>)* ')'  <seperator> ;\n"
+    "   function    : <qstring> ;\n"
+    "   parameter   : (<statement> | <literal>) ;\n"
+    "      literal  : (<number> | <qstring>) <seperator> ;\n"
+    "   block       : '{' <inner_block> '}' ;\n"
+    "   seperator   : ',' | \"\" ;\n"
+    "\n"
+    "qstring        : (<complexstr> | <simplestr>) <qstring>* ;\n"
+    "   simplestr   : /[a-zA-Z0-9_!@#$%^&\\*_+\\-\\.=\\/<>]+/ ;\n"
+    "   complexstr  : (/\"[^\"]*\"/ | /'[^']*'/) ;\n"
+    "\n"
+    "number         : (<float> | <int>) ;\n"
+    "   float       : /[-+]?[0-9]+\\.[0-9]+/ ;\n"
+    "   int         : /[-+]?[0-9]+/ ;\n",
+  Qscript, Comment, Resource, Rtype, Rname, InnerBlock, Statement, Function,
+  Parameter, Literal, Block, Seperator, Qstring, SimpleStr, ComplexStr, Number,
+  Float, Int, NULL);
+ 
+  PT_ASSERT(err == NULL);
+  
+  t0 = mpc_ast_build(3, ">",
+          mpc_ast_new("regex", ""),
+          mpc_ast_build(5, "resource|>",
+            mpc_ast_new("char", "["),
+            mpc_ast_new("rtype|regex", ""),
+            mpc_ast_new("rname|qstring|simplestr|regex", "my_func"),
+            mpc_ast_new("char", "]"),
+            mpc_ast_build(5, "inner_block|statement|>",
+              mpc_ast_new("function|qstring|simplestr|regex", "echo"),
+              mpc_ast_new("char", "("),
+              mpc_ast_build(2, "parameter|literal|>",
+                mpc_ast_build(2, "qstring|>",
+                  mpc_ast_new("simplestr|regex", "a"),
+                  mpc_ast_build(2, "qstring|>",
+                    mpc_ast_new("simplestr|regex", "b"),
+                    mpc_ast_new("qstring|simplestr|regex", "c")
+                  )
+                ),
+                mpc_ast_new("seperator|string", "")
+              ),
+              mpc_ast_new("char", ")"),
+              mpc_ast_new("seperator|string", "")
+            )
+          ),
+          mpc_ast_new("regex", ""));
+  
+  PT_ASSERT(mpc_test_pass(Qscript, "[my_func]\n  echo (a b c)\n", t0,
+    (int(*)(const void*,const void*))mpc_ast_eq,
+    (mpc_dtor_t)mpc_ast_delete,
+    (void(*)(const void*))mpc_ast_print));
+  
+  mpc_cleanup(18, Qscript, Comment, Resource, Rtype, Rname, InnerBlock,
+  Statement, Function, Parameter, Literal, Block, Seperator, Qstring,
+  SimpleStr, ComplexStr, Number, Float, Int);
+  
+}
+
 void suite_grammar(void) {
   pt_add_test(test_grammar, "Test Grammar", "Suite Grammar");
   pt_add_test(test_language, "Test Language", "Suite Grammar");
   pt_add_test(test_language_file, "Test Language File", "Suite Grammar");
   pt_add_test(test_doge, "Test Doge", "Suite Grammar");
   pt_add_test(test_partial, "Test Partial", "Suite Grammar");
+  pt_add_test(test_qscript, "Test QScript", "Suite Grammar");
 }

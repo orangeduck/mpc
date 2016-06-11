@@ -269,6 +269,7 @@ mpc_ast_t *mpc_ast_build(int n, const char *tag, ...);
 mpc_ast_t *mpc_ast_add_root(mpc_ast_t *a);
 mpc_ast_t *mpc_ast_add_child(mpc_ast_t *r, mpc_ast_t *a);
 mpc_ast_t *mpc_ast_add_tag(mpc_ast_t *a, const char *t);
+mpc_ast_t *mpc_ast_add_root_tag(mpc_ast_t *a, const char *t);
 mpc_ast_t *mpc_ast_tag(mpc_ast_t *a, const char *t);
 mpc_ast_t *mpc_ast_state(mpc_ast_t *a, mpc_state_t s);
 

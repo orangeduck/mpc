@@ -2730,6 +2730,14 @@ mpc_ast_t *mpc_ast_add_tag(mpc_ast_t *a, const char *t) {
   return a;
 }
 
+mpc_ast_t *mpc_ast_add_root_tag(mpc_ast_t *a, const char *t) {
+  if (a == NULL) { return a; }
+  a->tag = realloc(a->tag, (strlen(t)-1) + strlen(a->tag) + 1);
+  memmove(a->tag + (strlen(t)-1), a->tag, strlen(a->tag)+1);
+  memmove(a->tag, t, (strlen(t)-1));
+  return a;
+}
+
 mpc_ast_t *mpc_ast_tag(mpc_ast_t *a, const char *t) {
   a->tag = realloc(a->tag, strlen(t) + 1);
   strcpy(a->tag, t);
@@ -2961,16 +2969,16 @@ mpc_val_t *mpcf_fold_ast(int n, mpc_val_t **xs) {
     
     if (as[i] == NULL) { continue; }
     
-    if (as[i] && as[i]->children_num > 0) {
-      
+    if        (as[i] && as[i]->children_num == 0) {
+      mpc_ast_add_child(r, as[i]);
+    } else if (as[i] && as[i]->children_num == 1) {
+      mpc_ast_add_child(r, mpc_ast_add_root_tag(as[i]->children[0], as[i]->tag));
+      mpc_ast_delete_no_children(as[i]);
+    } else if (as[i] && as[i]->children_num >= 2) {
       for (j = 0; j < as[i]->children_num; j++) {
         mpc_ast_add_child(r, as[i]->children[j]);
       }
-      
       mpc_ast_delete_no_children(as[i]);
-      
-    } else if (as[i] && as[i]->children_num == 0) {
-      mpc_ast_add_child(r, as[i]);
     }
   
   }
