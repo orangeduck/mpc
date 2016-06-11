@@ -892,6 +892,7 @@ struct mpc_parser_t {
   char retained;
   char *name;
   char type;
+  int flags;
   mpc_pdata_t data;
 };
 
@@ -1353,6 +1354,12 @@ static mpc_parser_t *mpc_undefined(void) {
   p->retained = 0;
   p->type = MPC_TYPE_UNDEFINED;
   p->name = NULL;
+  p->flags = 0;
+  return p;
+}
+
+mpc_parser_t *mpc_flag(mpc_parser_t *p, int flag) {
+  p->flags |= flag;
   return p;
 }
 
@@ -2654,6 +2661,8 @@ mpc_ast_t *mpc_ast_new(const char *tag, const char *contents) {
   
   mpc_ast_t *a = malloc(sizeof(mpc_ast_t));
   
+  a->flags = 0;
+  
   a->tag = malloc(strlen(tag) + 1);
   strcpy(a->tag, tag);
   
@@ -2669,21 +2678,21 @@ mpc_ast_t *mpc_ast_new(const char *tag, const char *contents) {
 }
 
 mpc_ast_t *mpc_ast_build(int n, const char *tag, ...) {
-  
-  mpc_ast_t *a = mpc_ast_new(tag, "");
-  
-  int i;
+  mpc_ast_t *a;
   va_list va;
   va_start(va, tag);
-  
+  a = mpc_ast_build_va(n, tag, va);
+  va_end(va);
+  return a;
+}
+
+mpc_ast_t *mpc_ast_build_va(int n, const char *tag, va_list va) {
+  mpc_ast_t *a = mpc_ast_new(tag, "");
+  int i;
   for (i = 0; i < n; i++) {
     mpc_ast_add_child(a, va_arg(va, mpc_ast_t*));
   }
-  
-  va_end(va);
-  
   return a;
-  
 }
 
 mpc_ast_t *mpc_ast_add_root(mpc_ast_t *a) {
@@ -2705,6 +2714,7 @@ int mpc_ast_eq(mpc_ast_t *a, mpc_ast_t *b) {
 
   if (strcmp(a->tag, b->tag) != 0) { return 0; }
   if (strcmp(a->contents, b->contents) != 0) { return 0; }
+  if (a->flags != b->flags) { return 0; }
   if (a->children_num != b->children_num) { return 0; }
   
   for (i = 0; i < a->children_num; i++) {
@@ -2738,6 +2748,11 @@ mpc_ast_t *mpc_ast_add_root_tag(mpc_ast_t *a, const char *t) {
   return a;
 }
 
+mpc_ast_t *mpc_ast_add_flag(mpc_ast_t *a, int *flag) {
+  a->flags |= *flag;
+  return a;
+}
+
 mpc_ast_t *mpc_ast_tag(mpc_ast_t *a, const char *t) {
   a->tag = realloc(a->tag, strlen(t) + 1);
   strcpy(a->tag, t);
@@ -2762,12 +2777,12 @@ static void mpc_ast_print_depth(mpc_ast_t *a, int d, FILE *fp) {
   for (i = 0; i < d; i++) { fprintf(fp, "  "); }
   
   if (strlen(a->contents)) {
-    fprintf(fp, "%s:%lu:%lu '%s'\n", a->tag, 
+    fprintf(fp, "[%i] %s:%lu:%lu '%s'\n", a->flags, a->tag, 
       (long unsigned int)(a->state.row+1),
       (long unsigned int)(a->state.col+1),
       a->contents);
   } else {
-    fprintf(fp, "%s \n", a->tag);
+    fprintf(fp, "[%i] %s \n", a->flags, a->tag);
   }
   
   for (i = 0; i < a->children_num; i++) {
@@ -2972,7 +2987,8 @@ mpc_val_t *mpcf_fold_ast(int n, mpc_val_t **xs) {
     if        (as[i] && as[i]->children_num == 0) {
       mpc_ast_add_child(r, as[i]);
     } else if (as[i] && as[i]->children_num == 1) {
-      mpc_ast_add_child(r, mpc_ast_add_root_tag(as[i]->children[0], as[i]->tag));
+      mpc_ast_add_child(r, 
+        mpc_ast_add_flag(mpc_ast_add_root_tag(as[i]->children[0], as[i]->tag), &as[i]->flags));
       mpc_ast_delete_no_children(as[i]);
     } else if (as[i] && as[i]->children_num >= 2) {
       for (j = 0; j < as[i]->children_num; j++) {
@@ -3015,6 +3031,10 @@ mpc_parser_t *mpca_tag(mpc_parser_t *a, const char *t) {
 
 mpc_parser_t *mpca_add_tag(mpc_parser_t *a, const char *t) {
   return mpc_apply_to(a, (mpc_apply_to_t)mpc_ast_add_tag, (void*)t);
+}
+
+mpc_parser_t *mpca_flag(mpc_parser_t *a, int *flag) {
+  return mpc_apply_to(a, (mpc_apply_to_t)mpc_ast_add_flag, (void*)flag);
 }
 
 mpc_parser_t *mpca_root(mpc_parser_t *a) {
@@ -3157,25 +3177,34 @@ static mpc_val_t *mpcaf_grammar_repeat(int n, mpc_val_t **xs) {
 static mpc_val_t *mpcaf_grammar_string(mpc_val_t *x, void *s) {
   mpca_grammar_st_t *st = s;
   char *y = mpcf_unescape(x);
-  mpc_parser_t *p = (st->flags & MPCA_LANG_WHITESPACE_SENSITIVE) ? mpc_string(y) : mpc_tok(mpc_string(y));
+  mpc_parser_t *p = mpc_string(y);
   free(y);
-  return mpca_state(mpca_tag(mpc_apply(p, mpcf_str_ast), "string"));
+  if (!(st->flags & MPCA_LANG_WHITESPACE_SENSITIVE)) { p = mpc_tok(p); }
+  p = mpc_apply(p, mpcf_str_ast);
+  if (!(st->flags & MPCA_LANG_NO_TAGS)) { p = mpca_tag(p, "string"); }
+  return mpca_state(p);
 }
 
 static mpc_val_t *mpcaf_grammar_char(mpc_val_t *x, void *s) {
   mpca_grammar_st_t *st = s;
   char *y = mpcf_unescape(x);
-  mpc_parser_t *p = (st->flags & MPCA_LANG_WHITESPACE_SENSITIVE) ? mpc_char(y[0]) : mpc_tok(mpc_char(y[0]));
+  mpc_parser_t *p = mpc_char(y[0]);
   free(y);
-  return mpca_state(mpca_tag(mpc_apply(p, mpcf_str_ast), "char"));
+  if (!(st->flags & MPCA_LANG_WHITESPACE_SENSITIVE)) { p = mpc_tok(p); }
+  p = mpc_apply(p, mpcf_str_ast);
+  if (!(st->flags & MPCA_LANG_NO_TAGS)) { p = mpca_tag(p, "char"); }
+  return mpca_state(p);
 }
 
 static mpc_val_t *mpcaf_grammar_regex(mpc_val_t *x, void *s) {
   mpca_grammar_st_t *st = s;
   char *y = mpcf_unescape_regex(x);
-  mpc_parser_t *p = (st->flags & MPCA_LANG_WHITESPACE_SENSITIVE) ? mpc_re(y) : mpc_tok(mpc_re(y));
+  mpc_parser_t *p = mpc_re(y);
   free(y);
-  return mpca_state(mpca_tag(mpc_apply(p, mpcf_str_ast), "regex"));
+  if (!(st->flags & MPCA_LANG_WHITESPACE_SENSITIVE)) { p = mpc_tok(p); }
+  p = mpc_apply(p, mpcf_str_ast);
+  if (!(st->flags & MPCA_LANG_NO_TAGS)) { p = mpca_tag(p, "regex"); }
+  return mpca_state(p);
 }
 
 /* Should this just use `isdigit` instead? */
@@ -3239,11 +3268,11 @@ static mpc_val_t *mpcaf_grammar_id(mpc_val_t *x, void *s) {
   mpca_grammar_st_t *st = s;
   mpc_parser_t *p = mpca_grammar_find_parser(x, st);
   free(x);
-
-  if (p->name) {
-    return mpca_state(mpca_root(mpca_add_tag(p, p->name)));
+  
+  if (p->name && !(st->flags & MPCA_LANG_NO_TAGS)) {
+    return mpca_state(mpca_root(mpca_flag(mpca_add_tag(p, p->name), &p->flags)));
   } else {
-    return mpca_state(mpca_root(p));
+    return mpca_state(mpca_root(mpca_flag(p, &p->flags)));
   }
 }
 

@@ -254,6 +254,98 @@ void test_qscript(void) {
   
 }
 
+static mpc_ast_t *mpc_ast_new_flag(int flag, const char* contents) {
+  return mpc_ast_add_flag(mpc_ast_new("", contents), &flag);
+}
+
+static mpc_ast_t *mpc_ast_build_flag(int num, int flag, ...) {
+  mpc_ast_t *ast;
+  va_list va;
+  va_start(va, flag);
+  ast = mpc_ast_build_va(num, ">", va);
+  va_end(va);
+  return mpc_ast_add_flag(ast, &flag);
+}
+
+enum {
+  FLAG_NONE  = 0x00,
+  FLAG_EXPR  = 0x01,
+  FLAG_PROD  = 0x02,
+  FLAG_VALUE = 0x04,
+  FLAG_MATHS = 0x08
+};
+
+void test_notags(void) {
+  
+  mpc_parser_t *Expr, *Prod, *Value, *Maths;
+  mpc_ast_t *t0, *t1, *t2;
+
+  Expr  = mpc_flag(mpc_new("expression"), FLAG_EXPR);
+  Prod  = mpc_flag(mpc_new("product"),    FLAG_PROD);
+  Value = mpc_flag(mpc_new("value"),      FLAG_VALUE);
+  Maths = mpc_flag(mpc_new("maths"),      FLAG_MATHS);
+  
+  mpca_lang(MPCA_LANG_NO_TAGS,
+    " expression : <product> (('+' | '-') <product>)*; "
+    " product : <value>   (('*' | '/')   <value>)*;    "
+    " value : /[0-9]+/ | '(' <expression> ')';         "
+    " maths : /^/ <expression> /$/;                    ",
+    Expr, Prod, Value, Maths);
+  
+  t0 = mpc_ast_build_flag(3, FLAG_NONE,
+    mpc_ast_new_flag(FLAG_NONE, ""),
+    mpc_ast_new_flag(FLAG_EXPR|FLAG_PROD|FLAG_VALUE, "24"),
+    mpc_ast_new_flag(FLAG_NONE, "")
+  );
+  
+  t1 = mpc_ast_build_flag(3, FLAG_NONE,
+    mpc_ast_new_flag(FLAG_NONE, ""),
+    mpc_ast_build_flag(3, FLAG_EXPR|FLAG_PROD|FLAG_VALUE,
+      mpc_ast_new_flag(FLAG_NONE, "("),
+      mpc_ast_new_flag(FLAG_EXPR|FLAG_PROD|FLAG_VALUE, "5"),
+      mpc_ast_new_flag(FLAG_NONE, ")")
+    ),
+    mpc_ast_new_flag(FLAG_NONE, "")
+  );
+  
+  t2 = mpc_ast_build_flag(3, FLAG_NONE,
+    mpc_ast_new_flag(FLAG_NONE, ""),
+    mpc_ast_build_flag(3, FLAG_EXPR,
+      mpc_ast_build_flag(3, FLAG_PROD|FLAG_VALUE,
+        mpc_ast_new_flag(FLAG_NONE, "("),
+        mpc_ast_build_flag(3, FLAG_EXPR,
+          mpc_ast_build_flag(5, FLAG_PROD,
+            mpc_ast_new_flag(FLAG_VALUE, "4"),
+            mpc_ast_new_flag(FLAG_NONE, "*"),
+            mpc_ast_new_flag(FLAG_VALUE, "2"),
+            mpc_ast_new_flag(FLAG_NONE, "*"),
+            mpc_ast_new_flag(FLAG_VALUE, "11")      
+          ),
+          mpc_ast_new_flag(FLAG_NONE, "+"),
+          mpc_ast_new_flag(FLAG_PROD|FLAG_VALUE, "2")
+        ),
+        mpc_ast_new_flag(FLAG_NONE, ")")
+      ),
+      mpc_ast_new_flag(FLAG_NONE, "+"),
+      mpc_ast_new_flag(FLAG_PROD|FLAG_VALUE, "5")
+    ),
+    mpc_ast_new_flag(FLAG_NONE, "")
+  );
+  
+  PT_ASSERT(mpc_test_pass(Maths, "  24 ", t0, (int(*)(const void*,const void*))mpc_ast_eq, (mpc_dtor_t)mpc_ast_delete, (void(*)(const void*))mpc_ast_print));
+  PT_ASSERT(mpc_test_pass(Maths, "(5)", t1, (int(*)(const void*,const void*))mpc_ast_eq, (mpc_dtor_t)mpc_ast_delete, (void(*)(const void*))mpc_ast_print));
+  PT_ASSERT(mpc_test_pass(Maths, "(4 * 2 * 11 + 2) + 5", t2, (int(*)(const void*,const void*))mpc_ast_eq, (mpc_dtor_t)mpc_ast_delete, (void(*)(const void*))mpc_ast_print));
+  PT_ASSERT(mpc_test_fail(Maths, "a", t0, (int(*)(const void*,const void*))mpc_ast_eq, (mpc_dtor_t)mpc_ast_delete, (void(*)(const void*))mpc_ast_print));
+  PT_ASSERT(mpc_test_fail(Maths, "2b+4", t0, (int(*)(const void*,const void*))mpc_ast_eq, (mpc_dtor_t)mpc_ast_delete, (void(*)(const void*))mpc_ast_print));
+
+  mpc_ast_delete(t0);
+  mpc_ast_delete(t1);
+  mpc_ast_delete(t2);
+  
+  mpc_cleanup(4, Expr, Prod, Value, Maths);
+  
+}
+
 void suite_grammar(void) {
   pt_add_test(test_grammar, "Test Grammar", "Suite Grammar");
   pt_add_test(test_language, "Test Language", "Suite Grammar");
@@ -261,4 +353,5 @@ void suite_grammar(void) {
   pt_add_test(test_doge, "Test Doge", "Suite Grammar");
   pt_add_test(test_partial, "Test Partial", "Suite Grammar");
   pt_add_test(test_qscript, "Test QScript", "Suite Grammar");
+  pt_add_test(test_notags, "Test No Tags", "Suite Grammar");
 }

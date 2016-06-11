@@ -84,6 +84,7 @@ mpc_parser_t *mpc_new(const char *name);
 mpc_parser_t *mpc_copy(mpc_parser_t *a);
 mpc_parser_t *mpc_define(mpc_parser_t *p, mpc_parser_t *a);
 mpc_parser_t *mpc_undefine(mpc_parser_t *p);
+mpc_parser_t *mpc_flag(mpc_parser_t *p, int flag);
 
 void mpc_delete(mpc_parser_t *p);
 void mpc_cleanup(int n, ...);
@@ -259,6 +260,7 @@ mpc_parser_t *mpc_re(const char *re);
 typedef struct mpc_ast_t {
   char *tag;
   char *contents;
+  int flags;
   mpc_state_t state;
   int children_num;
   struct mpc_ast_t** children;
@@ -266,10 +268,12 @@ typedef struct mpc_ast_t {
 
 mpc_ast_t *mpc_ast_new(const char *tag, const char *contents);
 mpc_ast_t *mpc_ast_build(int n, const char *tag, ...);
+mpc_ast_t *mpc_ast_build_va(int n, const char *tag, va_list va);
 mpc_ast_t *mpc_ast_add_root(mpc_ast_t *a);
 mpc_ast_t *mpc_ast_add_child(mpc_ast_t *r, mpc_ast_t *a);
 mpc_ast_t *mpc_ast_add_tag(mpc_ast_t *a, const char *t);
 mpc_ast_t *mpc_ast_add_root_tag(mpc_ast_t *a, const char *t);
+mpc_ast_t *mpc_ast_add_flag(mpc_ast_t *a, int *flag);
 mpc_ast_t *mpc_ast_tag(mpc_ast_t *a, const char *t);
 mpc_ast_t *mpc_ast_state(mpc_ast_t *a, mpc_state_t s);
 
@@ -311,6 +315,7 @@ mpc_val_t *mpcf_str_ast(mpc_val_t *c);
 mpc_val_t *mpcf_state_ast(int n, mpc_val_t **xs);
 
 mpc_parser_t *mpca_tag(mpc_parser_t *a, const char *t);
+mpc_parser_t *mpca_flag(mpc_parser_t *a, int *flag);
 mpc_parser_t *mpca_add_tag(mpc_parser_t *a, const char *t);
 mpc_parser_t *mpca_root(mpc_parser_t *a);
 mpc_parser_t *mpca_state(mpc_parser_t *a);
@@ -327,9 +332,10 @@ mpc_parser_t *mpca_or(int n, ...);
 mpc_parser_t *mpca_and(int n, ...);
 
 enum {
-  MPCA_LANG_DEFAULT              = 0,
-  MPCA_LANG_PREDICTIVE           = 1,
-  MPCA_LANG_WHITESPACE_SENSITIVE = 2
+  MPCA_LANG_DEFAULT              = 0x0,
+  MPCA_LANG_PREDICTIVE           = 0x1,
+  MPCA_LANG_WHITESPACE_SENSITIVE = 0x2,
+  MPCA_LANG_NO_TAGS              = 0x4
 };
 
 mpc_parser_t *mpca_grammar(int flags, const char *grammar, ...);
