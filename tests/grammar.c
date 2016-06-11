@@ -128,9 +128,49 @@ void test_doge(void) {
   
 }
 
+void test_partial(void) {
+  
+  mpc_ast_t *t0;
+  mpc_err_t *err;
+
+  mpc_parser_t *Line = mpc_new("line");
+  mpc_parser_t *Number = mpc_new("number");
+  mpc_parser_t *QuotedString = mpc_new("quoted_string");
+  mpc_parser_t *LinePragma = mpc_new("linepragma");
+  mpc_parser_t *Parser = mpc_new("parser");
+  
+  mpc_define(Line, mpca_tag(mpc_apply(mpc_sym("#line"), mpcf_str_ast), "string"));
+  
+  err = mpca_lang(MPCA_LANG_PREDICTIVE,
+    "number        : /[0-9]+/ ;\n"
+    "quoted_string : /\"(\\.|[^\"])*\"/ ;\n"
+    "linepragma    : <line> <number> <quoted_string>;\n"
+    "parser        : /^/ (<linepragma>)* /$/ ;\n",
+    Line, Number, QuotedString, LinePragma, Parser, NULL);
+  
+  PT_ASSERT(err == NULL);
+  
+  t0 = mpc_ast_build(3, ">", 
+          mpc_ast_new("regex", ""),
+          mpc_ast_build(3, "linepragma|>", 
+            mpc_ast_new("line|string", "#line"),
+            mpc_ast_new("number|regex", "10"),
+            mpc_ast_new("quoted_string|regex", "\"test\"")),
+          mpc_ast_new("regex", ""));
+  
+  PT_ASSERT(mpc_test_pass(Parser, "#line 10 \"test\"", t0, 
+    (int(*)(const void*,const void*))mpc_ast_eq, 
+    (mpc_dtor_t)mpc_ast_delete, 
+    (void(*)(const void*))mpc_ast_print));
+  
+  mpc_cleanup(5, Line, Number, QuotedString, LinePragma, Parser);
+
+}
+
 void suite_grammar(void) {
   pt_add_test(test_grammar, "Test Grammar", "Suite Grammar");
   pt_add_test(test_language, "Test Language", "Suite Grammar");
   pt_add_test(test_language_file, "Test Language File", "Suite Grammar");
   pt_add_test(test_doge, "Test Doge", "Suite Grammar");
+  pt_add_test(test_partial, "Test Partial", "Suite Grammar");
 }
