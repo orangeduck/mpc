@@ -356,6 +356,31 @@ static mpc_input_t *mpc_input_new_string(const char *filename, const char *strin
   return i;
 }
 
+static mpc_input_t *mpc_input_new_nstring(const char *filename, const char *string, size_t length) {
+
+  mpc_input_t *i = malloc(sizeof(mpc_input_t));
+  
+  i->filename = malloc(strlen(filename) + 1);
+  strcpy(i->filename, filename);
+  i->type = MPC_INPUT_STRING;
+  
+  i->state = mpc_state_new();
+  
+  i->string = malloc(length + 1);
+  strncpy(i->string, string, length);
+  i->buffer = NULL;
+  i->file = NULL;
+  
+  i->backtrack = 1;
+  i->marks_num = 0;
+  i->marks = NULL;
+  i->lasts = NULL;
+
+  i->last = '\0';
+  
+  return i;
+}
+
 static mpc_input_t *mpc_input_new_pipe(const char *filename, FILE *pipe) {
 
   mpc_input_t *i = malloc(sizeof(mpc_input_t));
@@ -1181,6 +1206,14 @@ int mpc_parse_input(mpc_input_t *i, mpc_parser_t *init, mpc_result_t *final) {
 int mpc_parse(const char *filename, const char *string, mpc_parser_t *p, mpc_result_t *r) {
   int x;
   mpc_input_t *i = mpc_input_new_string(filename, string);
+  x = mpc_parse_input(i, p, r);
+  mpc_input_delete(i);
+  return x;
+}
+
+int mpc_nparse(const char *filename, const char *string, size_t length, mpc_parser_t *p, mpc_result_t *r) {
+  int x;
+  mpc_input_t *i = mpc_input_new_nstring(filename, string, length);
   x = mpc_parse_input(i, p, r);
   mpc_input_delete(i);
   return x;
