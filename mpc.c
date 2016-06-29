@@ -20,257 +20,6 @@ static mpc_state_t mpc_state_new(void) {
   return s;
 }
 
-static mpc_state_t *mpc_state_copy(mpc_state_t s) {
-  mpc_state_t *r = malloc(sizeof(mpc_state_t));
-  memcpy(r, &s, sizeof(mpc_state_t));
-  return r;
-}
-
-/*
-** Error Type
-*/
-
-static mpc_err_t *mpc_err_new(const char *filename, mpc_state_t s, const char *expected, char recieved) {
-  mpc_err_t *x = malloc(sizeof(mpc_err_t));
-  x->filename = malloc(strlen(filename) + 1);
-  strcpy(x->filename, filename);
-  x->state = s;
-  x->expected_num = 1;
-  x->expected = malloc(sizeof(char*));
-  x->expected[0] = malloc(strlen(expected) + 1);
-  strcpy(x->expected[0], expected);
-  x->failure = NULL;
-  x->recieved = recieved;
-  return x;
-}
-
-static mpc_err_t *mpc_err_fail(const char *filename, mpc_state_t s, const char *failure) {
-  mpc_err_t *x = malloc(sizeof(mpc_err_t));
-  x->filename = malloc(strlen(filename) + 1);
-  strcpy(x->filename, filename);
-  x->state = s;
-  x->expected_num = 0;
-  x->expected = NULL;
-  x->failure = malloc(strlen(failure) + 1);
-  strcpy(x->failure, failure);
-  x->recieved = ' ';
-  return x;
-}
-
-void mpc_err_delete(mpc_err_t *x) {
-
-  int i;
-  for (i = 0; i < x->expected_num; i++) {
-    free(x->expected[i]);
-  }
-  
-  free(x->expected);
-  free(x->filename);
-  free(x->failure);
-  free(x);
-}
-
-static int mpc_err_contains_expected(mpc_err_t *x, char *expected) {
-  
-  int i;
-  for (i = 0; i < x->expected_num; i++) {
-    if (strcmp(x->expected[i], expected) == 0) { return 1; }
-  }
-  
-  return 0;
-}
-
-static void mpc_err_add_expected(mpc_err_t *x, char *expected) {
-  
-  x->expected_num++;
-  x->expected = realloc(x->expected, sizeof(char*) * x->expected_num);
-  x->expected[x->expected_num-1] = malloc(strlen(expected) + 1);
-  strcpy(x->expected[x->expected_num-1], expected);
-  
-}
-
-static void mpc_err_clear_expected(mpc_err_t *x, char *expected) {
-  
-  int i;
-  for (i = 0; i < x->expected_num; i++) {
-    free(x->expected[i]);
-  }
-  x->expected_num = 1;
-  x->expected = realloc(x->expected, sizeof(char*) * x->expected_num);
-  x->expected[0] = malloc(strlen(expected) + 1);
-  strcpy(x->expected[0], expected);
-  
-}
-
-void mpc_err_print(mpc_err_t *x) {
-  mpc_err_print_to(x, stdout);
-}
-
-void mpc_err_print_to(mpc_err_t *x, FILE *f) {
-  char *str = mpc_err_string(x);
-  fprintf(f, "%s", str);
-  free(str);
-}
-
-void mpc_err_string_cat(char *buffer, int *pos, int *max, char const *fmt, ...) {
-  /* TODO: Error Checking on Length */
-  int left = ((*max) - (*pos));
-  va_list va;
-  va_start(va, fmt);
-  if (left < 0) { left = 0;}
-  (*pos) += vsprintf(buffer + (*pos), fmt, va);
-  va_end(va);
-}
-
-static char char_unescape_buffer[3];
-
-static const char *mpc_err_char_unescape(char c) {
-  
-  char_unescape_buffer[0] = '\'';
-  char_unescape_buffer[1] = ' ';
-  char_unescape_buffer[2] = '\'';
-  
-  switch (c) {
-    
-    case '\a': return "bell";
-    case '\b': return "backspace";
-    case '\f': return "formfeed";
-    case '\r': return "carriage return";
-    case '\v': return "vertical tab";
-    case '\0': return "end of input";
-    case '\n': return "newline";
-    case '\t': return "tab";
-    case ' ' : return "space";
-    default:
-      char_unescape_buffer[1] = c;
-      return char_unescape_buffer;
-  }
-  
-}
-
-char *mpc_err_string(mpc_err_t *x) {
-  
-  char *buffer = calloc(1, 1024);
-  int max = 1023;
-  int pos = 0; 
-  int i;
-  
-  if (x->failure) {
-    mpc_err_string_cat(buffer, &pos, &max,
-    "%s: error: %s\n", x->filename, x->failure);
-    return buffer;
-  }
-  
-  mpc_err_string_cat(buffer, &pos, &max, 
-    "%s:%i:%i: error: expected ", x->filename, x->state.row+1, x->state.col+1);
-  
-  if (x->expected_num == 0) { mpc_err_string_cat(buffer, &pos, &max, "ERROR: NOTHING EXPECTED"); }
-  if (x->expected_num == 1) { mpc_err_string_cat(buffer, &pos, &max, "%s", x->expected[0]); }
-  if (x->expected_num >= 2) {
-  
-    for (i = 0; i < x->expected_num-2; i++) {
-      mpc_err_string_cat(buffer, &pos, &max, "%s, ", x->expected[i]);
-    } 
-    
-    mpc_err_string_cat(buffer, &pos, &max, "%s or %s", 
-      x->expected[x->expected_num-2], 
-      x->expected[x->expected_num-1]);
-  }
-  
-  mpc_err_string_cat(buffer, &pos, &max, " at ");
-  mpc_err_string_cat(buffer, &pos, &max, mpc_err_char_unescape(x->recieved));
-  mpc_err_string_cat(buffer, &pos, &max, "\n");
-  
-  return realloc(buffer, strlen(buffer) + 1);
-}
-
-static mpc_err_t *mpc_err_or(mpc_err_t** x, int n) {
-  
-  int i, j;
-  mpc_err_t *e = malloc(sizeof(mpc_err_t));
-  e->state = mpc_state_invalid();
-  e->expected_num = 0;
-  e->expected = NULL;
-  e->failure = NULL;
-  e->filename = malloc(strlen(x[0]->filename)+1);
-  strcpy(e->filename, x[0]->filename);
-  
-  for (i = 0; i < n; i++) {
-    if (x[i]->state.pos > e->state.pos) { e->state = x[i]->state; }
-  }
-  
-  for (i = 0; i < n; i++) {
-    
-    if (x[i]->state.pos < e->state.pos) { continue; }
-    
-    if (x[i]->failure) {
-      e->failure = malloc(strlen(x[i]->failure)+1);
-      strcpy(e->failure, x[i]->failure);
-      break;
-    }
-    
-    e->recieved = x[i]->recieved;
-    
-    for (j = 0; j < x[i]->expected_num; j++) {
-      if (!mpc_err_contains_expected(e, x[i]->expected[j])) { mpc_err_add_expected(e, x[i]->expected[j]); }
-    }
-  }
-  
-  for (i = 0; i < n; i++) {
-    mpc_err_delete(x[i]);
-  }
-  
-  return e;
-}
-
-static mpc_err_t *mpc_err_repeat(mpc_err_t *x, const char *prefix) {
-
-  int i;
-  char *expect = malloc(strlen(prefix) + 1);
-  strcpy(expect, prefix);
-  
-  if (x->expected_num == 1) {
-    expect = realloc(expect, strlen(expect) + strlen(x->expected[0]) + 1);
-    strcat(expect, x->expected[0]);
-  }
-  
-  if (x->expected_num > 1) {
-  
-    for (i = 0; i < x->expected_num-2; i++) {
-      expect = realloc(expect, strlen(expect) + strlen(x->expected[i]) + strlen(", ") + 1);
-      strcat(expect, x->expected[i]);
-      strcat(expect, ", ");
-    }
-    
-    expect = realloc(expect, strlen(expect) + strlen(x->expected[x->expected_num-2]) + strlen(" or ") + 1);
-    strcat(expect, x->expected[x->expected_num-2]);
-    strcat(expect, " or ");
-    expect = realloc(expect, strlen(expect) + strlen(x->expected[x->expected_num-1]) + 1);
-    strcat(expect, x->expected[x->expected_num-1]);
-
-  }
-  
-  mpc_err_clear_expected(x, expect);
-  free(expect);
-  
-  return x;
-
-}
-
-static mpc_err_t *mpc_err_many1(mpc_err_t *x) {
-  return mpc_err_repeat(x, "one or more of ");
-}
-
-static mpc_err_t *mpc_err_count(mpc_err_t *x, int n) {
-  mpc_err_t *y;
-  int digits = n/10 + 1;
-  char *prefix = malloc(digits + strlen(" of ") + 1);
-  sprintf(prefix, "%i of ", n);
-  y = mpc_err_repeat(x, prefix);
-  free(prefix);
-  return y;
-}
-
 /*
 ** Input Type
 */
@@ -312,6 +61,18 @@ enum {
   MPC_INPUT_PIPE   = 2
 };
 
+enum {
+  MPC_INPUT_MARKS_MIN = 32
+};
+
+enum {
+  MPC_INPUT_MEM_NUM = 512
+};
+
+typedef struct {
+  char mem[64];
+} mpc_mem_t;
+
 typedef struct {
 
   int type;
@@ -322,12 +83,18 @@ typedef struct {
   char *buffer;
   FILE *file;
   
+  int suppress;
   int backtrack;
+  int marks_slots;
   int marks_num;
-  mpc_state_t* marks;
-  char* lasts;
+  mpc_state_t *marks;
   
+  char *lasts;
   char last;
+  
+  size_t mem_index;
+  char mem_full[MPC_INPUT_MEM_NUM];
+  mpc_mem_t mem[MPC_INPUT_MEM_NUM];
   
 } mpc_input_t;
 
@@ -346,12 +113,16 @@ static mpc_input_t *mpc_input_new_string(const char *filename, const char *strin
   i->buffer = NULL;
   i->file = NULL;
   
+  i->suppress = 0;
   i->backtrack = 1;
   i->marks_num = 0;
-  i->marks = NULL;
-  i->lasts = NULL;
-
+  i->marks_slots = MPC_INPUT_MARKS_MIN;
+  i->marks = malloc(sizeof(mpc_state_t) * i->marks_slots);
+  i->lasts = malloc(sizeof(char) * i->marks_slots);
   i->last = '\0';
+  
+  i->mem_index = 0;
+  memset(i->mem_full, 0, sizeof(char) * MPC_INPUT_MEM_NUM);
   
   return i;
 }
@@ -395,12 +166,16 @@ static mpc_input_t *mpc_input_new_pipe(const char *filename, FILE *pipe) {
   i->buffer = NULL;
   i->file = pipe;
   
+  i->suppress = 0;
   i->backtrack = 1;
   i->marks_num = 0;
-  i->marks = NULL;
-  i->lasts = NULL;
-  
+  i->marks_slots = MPC_INPUT_MARKS_MIN;
+  i->marks = malloc(sizeof(mpc_state_t) * i->marks_slots);
+  i->lasts = malloc(sizeof(char) * i->marks_slots);
   i->last = '\0';
+  
+  i->mem_index = 0;
+  memset(i->mem_full, 0, sizeof(char) * MPC_INPUT_MEM_NUM);
   
   return i;
   
@@ -419,12 +194,16 @@ static mpc_input_t *mpc_input_new_file(const char *filename, FILE *file) {
   i->buffer = NULL;
   i->file = file;
   
+  i->suppress = 0;
   i->backtrack = 1;
   i->marks_num = 0;
-  i->marks = NULL;
-  i->lasts = NULL;
-  
+  i->marks_slots = MPC_INPUT_MARKS_MIN;
+  i->marks = malloc(sizeof(mpc_state_t) * i->marks_slots);
+  i->lasts = malloc(sizeof(char) * i->marks_slots);
   i->last = '\0';
+  
+  i->mem_index = 0;
+  memset(i->mem_full, 0, sizeof(char) * MPC_INPUT_MEM_NUM);
   
   return i;
 }
@@ -441,16 +220,88 @@ static void mpc_input_delete(mpc_input_t *i) {
   free(i);
 }
 
+static int mpc_mem_ptr(mpc_input_t *i, void *p) {
+  return
+    (char*)p >= (char*)(i->mem) &&
+    (char*)p <  (char*)(i->mem) + (MPC_INPUT_MEM_NUM * sizeof(mpc_mem_t));
+}
+
+static void *mpc_malloc(mpc_input_t *i, size_t n) {
+  size_t j;
+  char *p;
+  
+  if (n > sizeof(mpc_mem_t)) { return malloc(n); }
+  
+  j = i->mem_index;
+  do {
+    if (!i->mem_full[i->mem_index]) {
+      p = (void*)(i->mem + i->mem_index);
+      i->mem_full[i->mem_index] = 1;
+      i->mem_index = (i->mem_index+1) % MPC_INPUT_MEM_NUM;
+      return p;
+    }
+    i->mem_index = (i->mem_index+1) % MPC_INPUT_MEM_NUM;
+  } while (j != i->mem_index);
+  
+  return malloc(n);
+}
+
+static void *mpc_calloc(mpc_input_t *i, size_t n, size_t m) {
+  char *x = mpc_malloc(i, n * m);
+  memset(x, 0, n * m);
+  return x;
+}
+
+static void mpc_free(mpc_input_t *i, void *p) {
+  size_t j;
+  if (!mpc_mem_ptr(i, p)) { free(p); return; }
+  j = ((size_t)(((char*)p) - ((char*)i->mem))) / sizeof(mpc_mem_t);
+  i->mem_full[j] = 0;
+}
+
+static void *mpc_realloc(mpc_input_t *i, void *p, size_t n) {
+  
+  char *q = NULL;
+  
+  if (!mpc_mem_ptr(i, p)) { return realloc(p, n); }
+  
+  if (n > sizeof(mpc_mem_t)) {
+    q = malloc(n);
+    memcpy(q, p, sizeof(mpc_mem_t));
+    mpc_free(i, p);
+    return q;
+  }
+  
+  return p;
+}
+
+static void *mpc_export(mpc_input_t *i, void *p) {
+  char *q = NULL;
+  if (!mpc_mem_ptr(i, p)) { return p; }
+  q = malloc(sizeof(mpc_mem_t));
+  memcpy(q, p, sizeof(mpc_mem_t));
+  mpc_free(i, p);
+  return q; 
+}
+
 static void mpc_input_backtrack_disable(mpc_input_t *i) { i->backtrack--; }
 static void mpc_input_backtrack_enable(mpc_input_t *i) { i->backtrack++; }
+
+static void mpc_input_suppress_disable(mpc_input_t *i) { i->suppress--; }
+static void mpc_input_suppress_enable(mpc_input_t *i) { i->suppress++; }
 
 static void mpc_input_mark(mpc_input_t *i) {
   
   if (i->backtrack < 1) { return; }
   
   i->marks_num++;
-  i->marks = realloc(i->marks, sizeof(mpc_state_t) * i->marks_num);
-  i->lasts = realloc(i->lasts, sizeof(char) * i->marks_num);
+  
+  if (i->marks_num > i->marks_slots) {
+    i->marks_slots = i->marks_num + i->marks_num / 2;
+    i->marks = realloc(i->marks, sizeof(mpc_state_t) * i->marks_slots);
+    i->lasts = realloc(i->lasts, sizeof(char) * i->marks_slots);
+  }
+
   i->marks[i->marks_num-1] = i->state;
   i->lasts[i->marks_num-1] = i->last;
   
@@ -465,8 +316,15 @@ static void mpc_input_unmark(mpc_input_t *i) {
   if (i->backtrack < 1) { return; }
   
   i->marks_num--;
-  i->marks = realloc(i->marks, sizeof(mpc_state_t) * i->marks_num);
-  i->lasts = realloc(i->lasts, sizeof(char) * i->marks_num);
+  
+  if (i->marks_slots > i->marks_num + i->marks_num / 2
+  &&  i->marks_slots > MPC_INPUT_MARKS_MIN) {
+    i->marks_slots = 
+      i->marks_num > MPC_INPUT_MARKS_MIN ?
+      i->marks_num : MPC_INPUT_MARKS_MIN;
+    i->marks = realloc(i->marks, sizeof(mpc_state_t) * i->marks_slots);
+    i->lasts = realloc(i->lasts, sizeof(char) * i->marks_slots);      
+  }
   
   if (i->type == MPC_INPUT_PIPE && i->marks_num == 0) {
     free(i->buffer);
@@ -587,10 +445,8 @@ static int mpc_input_failure(mpc_input_t *i, char c) {
 
 static int mpc_input_success(mpc_input_t *i, char c, char **o) {
   
-  if (i->type == MPC_INPUT_PIPE &&
-      i->buffer &&
-      !mpc_input_buffer_in_range(i)) {
-    
+  if (i->type == MPC_INPUT_PIPE
+  &&  i->buffer && !mpc_input_buffer_in_range(i)) {
     i->buffer = realloc(i->buffer, strlen(i->buffer) + 2);
     i->buffer[strlen(i->buffer) + 1] = '\0';
     i->buffer[strlen(i->buffer) + 0] = c;
@@ -606,7 +462,7 @@ static int mpc_input_success(mpc_input_t *i, char c, char **o) {
   }
   
   if (o) {
-    (*o) = malloc(2);
+    (*o) = mpc_malloc(i, 2);
     (*o)[0] = c;
     (*o)[1] = '\0';
   }
@@ -652,14 +508,11 @@ static int mpc_input_satisfy(mpc_input_t *i, int(*cond)(char), char **o) {
 
 static int mpc_input_string(mpc_input_t *i, const char *c, char **o) {
   
-  char *co = NULL;
   const char *x = c;
 
   mpc_input_mark(i);
   while (*x) {
-    if (mpc_input_char(i, *x, &co)) {
-      free(co);
-    } else {
+    if (!mpc_input_char(i, *x, NULL)) {
       mpc_input_rewind(i);
       return 0;
     }
@@ -667,13 +520,328 @@ static int mpc_input_string(mpc_input_t *i, const char *c, char **o) {
   }
   mpc_input_unmark(i);
   
-  *o = malloc(strlen(c) + 1);
+  *o = mpc_malloc(i, strlen(c) + 1);
   strcpy(*o, c);
   return 1;
 }
 
-static int mpc_input_anchor(mpc_input_t* i, int(*f)(char,char)) {
+static int mpc_input_anchor(mpc_input_t* i, int(*f)(char,char), char **o) {
+  *o = NULL;
   return f(i->last, mpc_input_peekc(i));
+}
+
+static mpc_state_t *mpc_input_state_copy(mpc_input_t *i) {
+  mpc_state_t *r = mpc_malloc(i, sizeof(mpc_state_t));
+  memcpy(r, &i->state, sizeof(mpc_state_t));
+  return r;
+}
+
+/*
+** Error Type
+*/
+
+void mpc_err_delete(mpc_err_t *x) {
+  int i;
+  for (i = 0; i < x->expected_num; i++) { free(x->expected[i]); }
+  free(x->expected);
+  free(x->filename);
+  free(x->failure);
+  free(x);
+}
+
+void mpc_err_print(mpc_err_t *x) {
+  mpc_err_print_to(x, stdout);
+}
+
+void mpc_err_print_to(mpc_err_t *x, FILE *f) {
+  char *str = mpc_err_string(x);
+  fprintf(f, "%s", str);
+  free(str);
+}
+
+static void mpc_err_string_cat(char *buffer, int *pos, int *max, char const *fmt, ...) {
+  /* TODO: Error Checking on Length */
+  int left = ((*max) - (*pos));
+  va_list va;
+  va_start(va, fmt);
+  if (left < 0) { left = 0;}
+  (*pos) += vsprintf(buffer + (*pos), fmt, va);
+  va_end(va);
+}
+
+static char char_unescape_buffer[4];
+
+static const char *mpc_err_char_unescape(char c) {
+  
+  char_unescape_buffer[0] = '\'';
+  char_unescape_buffer[1] = ' ';
+  char_unescape_buffer[2] = '\'';
+  char_unescape_buffer[3] = '\0';
+  
+  switch (c) {
+    case '\a': return "bell";
+    case '\b': return "backspace";
+    case '\f': return "formfeed";
+    case '\r': return "carriage return";
+    case '\v': return "vertical tab";
+    case '\0': return "end of input";
+    case '\n': return "newline";
+    case '\t': return "tab";
+    case ' ' : return "space";
+    default:
+      char_unescape_buffer[1] = c;
+      return char_unescape_buffer;
+  }
+  
+}
+
+char *mpc_err_string(mpc_err_t *x) {
+
+  int i;  
+  int pos = 0; 
+  int max = 1023;
+  char *buffer = calloc(1, 1024);
+  
+  if (x->failure) {
+    mpc_err_string_cat(buffer, &pos, &max,
+    "%s: error: %s\n", x->filename, x->failure);
+    return buffer;
+  }
+  
+  mpc_err_string_cat(buffer, &pos, &max, 
+    "%s:%i:%i: error: expected ", x->filename, x->state.row+1, x->state.col+1);
+  
+  if (x->expected_num == 0) { mpc_err_string_cat(buffer, &pos, &max, "ERROR: NOTHING EXPECTED"); }
+  if (x->expected_num == 1) { mpc_err_string_cat(buffer, &pos, &max, "%s", x->expected[0]); }
+  if (x->expected_num >= 2) {
+  
+    for (i = 0; i < x->expected_num-2; i++) {
+      mpc_err_string_cat(buffer, &pos, &max, "%s, ", x->expected[i]);
+    } 
+    
+    mpc_err_string_cat(buffer, &pos, &max, "%s or %s", 
+      x->expected[x->expected_num-2], 
+      x->expected[x->expected_num-1]);
+  }
+  
+  mpc_err_string_cat(buffer, &pos, &max, " at ");
+  mpc_err_string_cat(buffer, &pos, &max, mpc_err_char_unescape(x->recieved));
+  mpc_err_string_cat(buffer, &pos, &max, "\n");
+  
+  return realloc(buffer, strlen(buffer) + 1);
+}
+
+static mpc_err_t *mpc_err_new(mpc_input_t *i, const char *expected) {
+  mpc_err_t *x;
+  if (i->suppress) { return NULL; }
+  x = mpc_malloc(i, sizeof(mpc_err_t));
+  x->filename = mpc_malloc(i, strlen(i->filename) + 1);
+  strcpy(x->filename, i->filename);
+  x->state = i->state;
+  x->expected_num = 1;
+  x->expected = mpc_malloc(i, sizeof(char*));
+  x->expected[0] = mpc_malloc(i, strlen(expected) + 1);
+  strcpy(x->expected[0], expected);
+  x->failure = NULL;
+  x->recieved = mpc_input_peekc(i);
+  return x;
+}
+
+static mpc_err_t *mpc_err_fail(mpc_input_t *i, const char *failure) {
+  mpc_err_t *x;
+  if (i->suppress) { return NULL; }
+  x = mpc_malloc(i, sizeof(mpc_err_t));
+  x->filename = mpc_malloc(i, strlen(i->filename) + 1);
+  strcpy(x->filename, i->filename);
+  x->state = i->state;
+  x->expected_num = 0;
+  x->expected = NULL;
+  x->failure = mpc_malloc(i, strlen(failure) + 1);
+  strcpy(x->failure, failure);
+  x->recieved = ' ';
+  return x;
+}
+
+static mpc_err_t *mpc_err_file(const char *filename, const char *failure) {
+  mpc_err_t *x;
+  x = malloc(sizeof(mpc_err_t));
+  x->filename = malloc(strlen(filename) + 1);
+  strcpy(x->filename, filename);
+  x->state = mpc_state_new();
+  x->expected_num = 0;
+  x->expected = NULL;
+  x->failure = malloc(strlen(failure) + 1);
+  strcpy(x->failure, failure);
+  x->recieved = ' ';
+  return x;
+}
+
+static void mpc_err_delete_internal(mpc_input_t *i, mpc_err_t *x) {
+  int j;
+  if (x == NULL) { return; }
+  for (j = 0; j < x->expected_num; j++) { mpc_free(i, x->expected[j]); }
+  mpc_free(i, x->expected);
+  mpc_free(i, x->filename);
+  mpc_free(i, x->failure);
+  mpc_free(i, x);
+}
+
+static mpc_err_t *mpc_err_export(mpc_input_t *i, mpc_err_t *x) {
+  int j;
+  for (j = 0; j < x->expected_num; j++) {
+    x->expected[j] = mpc_export(i, x->expected[j]);
+  }
+  x->expected = mpc_export(i, x->expected);
+  x->filename = mpc_export(i, x->filename);
+  x->failure = mpc_export(i, x->failure);
+  return mpc_export(i, x);
+}
+
+static int mpc_err_contains_expected(mpc_input_t *i, mpc_err_t *x, char *expected) {
+  int j;
+  (void)i;
+  for (j = 0; j < x->expected_num; j++) {
+    if (strcmp(x->expected[j], expected) == 0) { return 1; }
+  }
+  return 0;
+}
+
+static void mpc_err_add_expected(mpc_input_t *i, mpc_err_t *x, char *expected) {
+  (void)i;
+  x->expected_num++;
+  x->expected = mpc_realloc(i, x->expected, sizeof(char*) * x->expected_num);
+  x->expected[x->expected_num-1] = mpc_malloc(i, strlen(expected) + 1);
+  strcpy(x->expected[x->expected_num-1], expected);
+}
+
+static mpc_err_t *mpc_err_or(mpc_input_t *i, mpc_err_t** x, int n) {
+  
+  int j, k, fst;
+  mpc_err_t *e;
+  
+  fst = -1;
+  for (j = 0; j < n; j++) {
+    if (x[j] != NULL) { fst = j; }
+  }
+  
+  if (fst == -1) { return NULL; }
+  
+  e = mpc_malloc(i, sizeof(mpc_err_t));
+  e->state = mpc_state_invalid();
+  e->expected_num = 0;
+  e->expected = NULL;
+  e->failure = NULL;
+  e->filename = mpc_malloc(i, strlen(x[fst]->filename)+1);
+  strcpy(e->filename, x[fst]->filename);
+  
+  for (j = 0; j < n; j++) {
+    if (x[j] == NULL) { continue; }
+    if (x[j]->state.pos > e->state.pos) { e->state = x[j]->state; }
+  }
+  
+  for (j = 0; j < n; j++) {
+    if (x[j] == NULL) { continue; }
+    if (x[j]->state.pos < e->state.pos) { continue; }
+    
+    if (x[j]->failure) {
+      e->failure = mpc_malloc(i, strlen(x[j]->failure)+1);
+      strcpy(e->failure, x[j]->failure);
+      break;
+    }
+    
+    e->recieved = x[j]->recieved;
+    
+    for (k = 0; k < x[j]->expected_num; k++) {
+      if (!mpc_err_contains_expected(i, e, x[j]->expected[k])) {
+        mpc_err_add_expected(i, e, x[j]->expected[k]);
+      }
+    }
+  }
+  
+  for (j = 0; j < n; j++) {
+    if (x[j] == NULL) { continue; }
+    mpc_err_delete_internal(i, x[j]);
+  }
+  
+  return e;
+}
+
+static mpc_err_t *mpc_err_repeat(mpc_input_t *i, mpc_err_t *x, const char *prefix) {
+
+  int j = 0;
+  size_t l = 0;
+  char *expect = NULL;
+  
+  if (x == NULL) { return NULL; }
+  
+  if (x->expected_num == 0) {
+    expect = mpc_calloc(i, 1, 1);
+    x->expected_num = 1;
+    x->expected = mpc_realloc(i, x->expected, sizeof(char*) * x->expected_num);
+    x->expected[0] = expect;
+    return x;
+  }
+  
+  else if (x->expected_num == 1) {
+    expect = mpc_malloc(i, strlen(prefix) + strlen(x->expected[0]) + 1);
+    strcpy(expect, prefix);
+    strcat(expect, x->expected[0]);
+    mpc_free(i, x->expected[0]);
+    x->expected[0] = expect;
+    return x;
+  }
+  
+  else if (x->expected_num > 1) {
+    
+    l += strlen(prefix);
+    for (j = 0; j < x->expected_num-2; j++) {
+      l += strlen(x->expected[j]) + strlen(", ");
+    }
+    l += strlen(x->expected[x->expected_num-2]);
+    l += strlen(" or ");
+    l += strlen(x->expected[x->expected_num-1]);
+    
+    expect = mpc_malloc(i, l + 1);
+    
+    strcpy(expect, prefix);
+    for (j = 0; j < x->expected_num-2; j++) {
+      strcat(expect, x->expected[j]); strcat(expect, ", ");
+    }
+    strcat(expect, x->expected[x->expected_num-2]);
+    strcat(expect, " or ");
+    strcat(expect, x->expected[x->expected_num-1]);
+
+    for (j = 0; j < x->expected_num; j++) { mpc_free(i, x->expected[j]); }
+    
+    x->expected_num = 1;
+    x->expected = mpc_realloc(i, x->expected, sizeof(char*) * x->expected_num);
+    x->expected[0] = expect;
+    return x;
+  }
+  
+  return NULL;
+}
+
+static mpc_err_t *mpc_err_many1(mpc_input_t *i, mpc_err_t *x) {
+  return mpc_err_repeat(i, x, "one or more of ");
+}
+
+static mpc_err_t *mpc_err_count(mpc_input_t *i, mpc_err_t *x, int n) {
+  mpc_err_t *y;
+  int digits = n/10 + 1;
+  char *prefix;
+  prefix = mpc_malloc(i, digits + strlen(" of ") + 1);
+  sprintf(prefix, "%i of ", n);
+  y = mpc_err_repeat(i, x, prefix);
+  mpc_free(i, prefix);
+  return y;
+}
+
+static mpc_err_t *mpc_err_merge(mpc_input_t *i, mpc_err_t *x, mpc_err_t *y) {
+  mpc_err_t *errs[2];
+  errs[0] = x;
+  errs[1] = y;
+  return mpc_err_or(i, errs, 2);
 }
 
 /*
@@ -752,456 +920,325 @@ struct mpc_parser_t {
   mpc_pdata_t data;
 };
 
-/*
-** Stack Type
-*/
+static mpc_val_t *mpcf_input_nth_free(mpc_input_t *i, int n, mpc_val_t **xs, int x) {
+  int j;
+  for (j = 0; j < n; j++) { if (j != x) { mpc_free(i, xs[j]); } }
+  return xs[x];
+}
+ 
+static mpc_val_t *mpcf_input_fst_free(mpc_input_t *i, int n, mpc_val_t **xs) { return mpcf_input_nth_free(i, n, xs, 0); }
+static mpc_val_t *mpcf_input_snd_free(mpc_input_t *i, int n, mpc_val_t **xs) { return mpcf_input_nth_free(i, n, xs, 1); }
+static mpc_val_t *mpcf_input_trd_free(mpc_input_t *i, int n, mpc_val_t **xs) { return mpcf_input_nth_free(i, n, xs, 2); }
 
-typedef struct {
+static mpc_val_t *mpcf_input_strfold(mpc_input_t *i, int n, mpc_val_t **xs) {
+  int j;
+  size_t l = 0;
+  if (n == 0) { return mpc_calloc(i, 1, 1); }
+  for (j = 0; j < n; j++) { l += strlen(xs[j]); }
+  xs[0] = mpc_realloc(i, xs[0], l + 1);
+  for (j = 1; j < n; j++) { strcat(xs[0], xs[j]); mpc_free(i, xs[j]); }
+  return xs[0];
+}
 
-  int parsers_num;
-  int parsers_slots;
-  mpc_parser_t **parsers;
-  int *states;
+static mpc_val_t *mpcf_input_state_ast(mpc_input_t *i, int n, mpc_val_t **xs) {
+  mpc_state_t *s = ((mpc_state_t**)xs)[0];
+  mpc_ast_t *a = ((mpc_ast_t**)xs)[1];
+  a = mpc_ast_state(a, *s);
+  mpc_free(i, s);
+  (void) n;
+  return a;
+}
 
-  int results_num;
-  int results_slots;
+static mpc_val_t *mpc_parse_fold(mpc_input_t *i, mpc_fold_t f, int n, mpc_val_t **xs) {
+  int j;
+  if (f == mpcf_null)      { return mpcf_null(n, xs); }
+  if (f == mpcf_fst)       { return mpcf_fst(n, xs); }
+  if (f == mpcf_snd)       { return mpcf_snd(n, xs); }
+  if (f == mpcf_trd)       { return mpcf_trd(n, xs); }
+  if (f == mpcf_fst_free)  { return mpcf_input_fst_free(i, n, xs); }
+  if (f == mpcf_snd_free)  { return mpcf_input_snd_free(i, n, xs); }
+  if (f == mpcf_trd_free)  { return mpcf_input_trd_free(i, n, xs); }
+  if (f == mpcf_strfold)   { return mpcf_input_strfold(i, n, xs); }
+  if (f == mpcf_state_ast) { return mpcf_input_state_ast(i, n, xs); }
+  for (j = 0; j < n; j++) { xs[j] = mpc_export(i, xs[j]); }
+  return f(j, xs);
+}
+
+static mpc_val_t *mpcf_input_free(mpc_input_t *i, mpc_val_t *x) {
+  mpc_free(i, x);
+  return NULL;
+}
+
+static mpc_val_t *mpcf_input_str_ast(mpc_input_t *i, mpc_val_t *c) {
+  mpc_ast_t *a = mpc_ast_new("", c);
+  mpc_free(i, c);
+  return a;
+}
+
+static mpc_val_t *mpc_parse_apply(mpc_input_t *i, mpc_apply_t f, mpc_val_t *x) {
+  if (f == mpcf_free)     { return mpcf_input_free(i, x); }
+  if (f == mpcf_str_ast)  { return mpcf_input_str_ast(i, x); }
+  return f(mpc_export(i, x));
+}
+
+static mpc_val_t *mpc_parse_apply_to(mpc_input_t *i, mpc_apply_to_t f, mpc_val_t *x, mpc_val_t *d) {
+  return f(mpc_export(i, x), d);
+}
+
+static void mpc_parse_dtor(mpc_input_t *i, mpc_dtor_t d, mpc_val_t *x) {
+  if (d == free) { mpc_free(i, x); return; }
+  d(mpc_export(i, x));
+}
+
+enum {
+  MPC_PARSE_STACK_MIN = 4
+};
+
+#define MPC_SUCCESS(x) r->output = x; return 1
+#define MPC_FAILURE(x) r->error = x; return 0
+#define MPC_PRIMITIVE(x) \
+  if (x) { MPC_SUCCESS(r->output); } \
+  else { MPC_FAILURE(NULL); }
+
+static int mpc_parse_run(mpc_input_t *i, mpc_parser_t *p, mpc_result_t *r, mpc_err_t **e) {
+  
+  int j = 0, k = 0;
+  mpc_result_t results_stk[MPC_PARSE_STACK_MIN];
   mpc_result_t *results;
-  int *returns;
+  int results_slots = MPC_PARSE_STACK_MIN;
   
-  mpc_err_t *err;
-  
-} mpc_stack_t;
+  switch (p->type) {
+      
+    /* Basic Parsers */
 
-static mpc_stack_t *mpc_stack_new(const char *filename) {
-  mpc_stack_t *s = malloc(sizeof(mpc_stack_t));
-  
-  s->parsers_num = 0;
-  s->parsers_slots = 0;
-  s->parsers = NULL;
-  s->states = NULL;
-  
-  s->results_num = 0;
-  s->results_slots = 0;
-  s->results = NULL;
-  s->returns = NULL;
-  
-  s->err = mpc_err_fail(filename, mpc_state_invalid(), "Unknown Error");
-  
-  return s;
-}
-
-static void mpc_stack_err(mpc_stack_t *s, mpc_err_t* e) {
-  mpc_err_t *errs[2];
-  errs[0] = s->err;
-  errs[1] = e;
-  s->err = mpc_err_or(errs, 2);
-}
-
-static int mpc_stack_terminate(mpc_stack_t *s, mpc_result_t *r) {
-  int success = s->returns[0];
-  
-  if (success) {
-    r->output = s->results[0].output;
-    mpc_err_delete(s->err);
-  } else {
-    mpc_stack_err(s, s->results[0].error);
-    r->error = s->err;
-  }
-  
-  free(s->parsers);
-  free(s->states);
-  free(s->results);
-  free(s->returns);
-  free(s);
-  
-  return success;
-}
-
-/* Stack Parser Stuff */
-
-static void mpc_stack_set_state(mpc_stack_t *s, int x) {
-  s->states[s->parsers_num-1] = x;
-}
-
-static void mpc_stack_parsers_reserve_more(mpc_stack_t *s) {
-  if (s->parsers_num > s->parsers_slots) {
-    s->parsers_slots = ceil((s->parsers_slots+1) * 1.5);
-    s->parsers = realloc(s->parsers, sizeof(mpc_parser_t*) * s->parsers_slots);
-    s->states = realloc(s->states, sizeof(int) * s->parsers_slots);
-  }
-}
-
-static void mpc_stack_parsers_reserve_less(mpc_stack_t *s) {
-  if (s->parsers_slots > pow(s->parsers_num+1, 1.5)) {
-    s->parsers_slots = floor((s->parsers_slots-1) * (1.0/1.5));
-    s->parsers = realloc(s->parsers, sizeof(mpc_parser_t*) * s->parsers_slots);
-    s->states = realloc(s->states, sizeof(int) * s->parsers_slots);
-  }
-}
-
-static void mpc_stack_pushp(mpc_stack_t *s, mpc_parser_t *p) {
-  s->parsers_num++;
-  mpc_stack_parsers_reserve_more(s);
-  s->parsers[s->parsers_num-1] = p;
-  s->states[s->parsers_num-1] = 0;
-}
-
-static void mpc_stack_popp(mpc_stack_t *s, mpc_parser_t **p, int *st) {
-  *p = s->parsers[s->parsers_num-1];
-  *st = s->states[s->parsers_num-1];
-  s->parsers_num--;
-  mpc_stack_parsers_reserve_less(s);
-}
-
-static void mpc_stack_peepp(mpc_stack_t *s, mpc_parser_t **p, int *st) {
-  *p = s->parsers[s->parsers_num-1];
-  *st = s->states[s->parsers_num-1];
-}
-
-static int mpc_stack_empty(mpc_stack_t *s) {
-  return s->parsers_num == 0;
-}
-
-/* Stack Result Stuff */
-
-static mpc_result_t mpc_result_err(mpc_err_t *e) {
-  mpc_result_t r;
-  r.error = e;
-  return r;
-}
-
-static mpc_result_t mpc_result_out(mpc_val_t *x) {
-  mpc_result_t r;
-  r.output = x;
-  return r;
-}
-
-static void mpc_stack_results_reserve_more(mpc_stack_t *s) {
-  if (s->results_num > s->results_slots) {
-    s->results_slots = ceil((s->results_slots + 1) * 1.5);
-    s->results = realloc(s->results, sizeof(mpc_result_t) * s->results_slots);
-    s->returns = realloc(s->returns, sizeof(int) * s->results_slots);
-  }
-}
-
-static void mpc_stack_results_reserve_less(mpc_stack_t *s) {
-  if ( s->results_slots > pow(s->results_num+1, 1.5)) {
-    s->results_slots = floor((s->results_slots-1) * (1.0/1.5));
-    s->results = realloc(s->results, sizeof(mpc_result_t) * s->results_slots);
-    s->returns = realloc(s->returns, sizeof(int) * s->results_slots);
-  }
-}
-
-static void mpc_stack_pushr(mpc_stack_t *s, mpc_result_t x, int r) {
-  s->results_num++;
-  mpc_stack_results_reserve_more(s);
-  s->results[s->results_num-1] = x;
-  s->returns[s->results_num-1] = r;
-}
-
-static int mpc_stack_popr(mpc_stack_t *s, mpc_result_t *x) {
-  int r;
-  *x = s->results[s->results_num-1];
-  r = s->returns[s->results_num-1];
-  s->results_num--;
-  mpc_stack_results_reserve_less(s);
-  return r;
-}
-
-static int mpc_stack_peekr(mpc_stack_t *s, mpc_result_t *x) {
-  *x = s->results[s->results_num-1];
-  return s->returns[s->results_num-1];
-}
-
-static void mpc_stack_popr_err(mpc_stack_t *s, int n) {
-  mpc_result_t x;
-  while (n) {
-    mpc_stack_popr(s, &x);
-    mpc_stack_err(s, x.error);
-    n--;
-  }
-}
-
-static void mpc_stack_popr_out(mpc_stack_t *s, int n, mpc_dtor_t *ds) {
-  mpc_result_t x;
-  while (n) {
-    mpc_stack_popr(s, &x);
-    ds[n-1](x.output);
-    n--;
-  }
-}
-
-static void mpc_stack_popr_out_single(mpc_stack_t *s, int n, mpc_dtor_t dx) {
-  mpc_result_t x;
-  while (n) {
-    mpc_stack_popr(s, &x);
-    dx(x.output);
-    n--;
-  }
-}
-
-static void mpc_stack_popr_n(mpc_stack_t *s, int n) {
-  mpc_result_t x;
-  while (n) {
-    mpc_stack_popr(s, &x);
-    n--;
-  }
-}
-
-static mpc_val_t *mpc_stack_merger_out(mpc_stack_t *s, int n, mpc_fold_t f) {
-  mpc_val_t *x = f(n, (mpc_val_t**)(&s->results[s->results_num-n]));
-  mpc_stack_popr_n(s, n);
-  return x;
-}
-
-static mpc_err_t *mpc_stack_merger_err(mpc_stack_t *s, int n) {
-  mpc_err_t *x = mpc_err_or((mpc_err_t**)(&s->results[s->results_num-n]), n);
-  mpc_stack_popr_n(s, n);
-  return x;
-}
-
-/*
-** This is rather pleasant. The core parsing routine
-** is written in about 200 lines of C.
-**
-** I also love the way in which each parsing type
-** concisely matches some construct or pattern.
-**
-** Particularly nice are the `or` and `and`
-** types which have a broken but mirrored structure
-** with return value and error reflected.
-**
-** When this function was written in recursive form
-** it looked pretty nice. But I've since switched
-** it around to an awkward while loop. It was an
-** unfortunate change for code simplicity but it
-** is noble in the name of performance (and 
-** not smashing the stack).
-**
-** But it is now a pretty ugly beast...
-*/
-
-#define MPC_CONTINUE(st, x) mpc_stack_set_state(stk, st); mpc_stack_pushp(stk, x); continue
-#define MPC_SUCCESS(x) mpc_stack_popp(stk, &p, &st); mpc_stack_pushr(stk, mpc_result_out(x), 1); continue
-#define MPC_FAILURE(x) mpc_stack_popp(stk, &p, &st); mpc_stack_pushr(stk, mpc_result_err(x), 0); continue
-#define MPC_PRIMATIVE(x, f) if (f) { MPC_SUCCESS(x); } else { MPC_FAILURE(mpc_err_fail(i->filename, i->state, "Incorrect Input")); }
-
-int mpc_parse_input(mpc_input_t *i, mpc_parser_t *init, mpc_result_t *final) {
-  
-  /* Stack */
-  int st = 0;
-  mpc_parser_t *p = NULL;
-  mpc_stack_t *stk = mpc_stack_new(i->filename);
-  
-  /* Variables */
-  char *s;
-  mpc_result_t r;
-
-  /* Go! */
-  mpc_stack_pushp(stk, init);
-  
-  while (!mpc_stack_empty(stk)) {
+    case MPC_TYPE_ANY:     MPC_PRIMITIVE(mpc_input_any(i, (char**)&r->output));
+    case MPC_TYPE_SINGLE:  MPC_PRIMITIVE(mpc_input_char(i, p->data.single.x, (char**)&r->output));
+    case MPC_TYPE_RANGE:   MPC_PRIMITIVE(mpc_input_range(i, p->data.range.x, p->data.range.y, (char**)&r->output));
+    case MPC_TYPE_ONEOF:   MPC_PRIMITIVE(mpc_input_oneof(i, p->data.string.x, (char**)&r->output));
+    case MPC_TYPE_NONEOF:  MPC_PRIMITIVE(mpc_input_noneof(i, p->data.string.x, (char**)&r->output));
+    case MPC_TYPE_SATISFY: MPC_PRIMITIVE(mpc_input_satisfy(i, p->data.satisfy.f, (char**)&r->output));
+    case MPC_TYPE_STRING:  MPC_PRIMITIVE(mpc_input_string(i, p->data.string.x, (char**)&r->output));
+    case MPC_TYPE_ANCHOR:  MPC_PRIMITIVE(mpc_input_anchor(i, p->data.anchor.f, (char**)&r->output));
     
-    mpc_stack_peepp(stk, &p, &st);
+    /* Other parsers */
     
-    switch (p->type) {
+    case MPC_TYPE_UNDEFINED: MPC_FAILURE(mpc_err_fail(i, "Parser Undefined!"));
+    case MPC_TYPE_PASS:      MPC_SUCCESS(NULL);
+    case MPC_TYPE_FAIL:      MPC_FAILURE(mpc_err_fail(i, p->data.fail.m));
+    case MPC_TYPE_LIFT:      MPC_SUCCESS(p->data.lift.lf());
+    case MPC_TYPE_LIFT_VAL:  MPC_SUCCESS(p->data.lift.x);
+    case MPC_TYPE_STATE:     MPC_SUCCESS(mpc_input_state_copy(i));
+    
+    /* Application Parsers */
+    
+    case MPC_TYPE_APPLY:
+      if (mpc_parse_run(i, p->data.apply.x, r, e)) {
+        MPC_SUCCESS(mpc_parse_apply(i, p->data.apply.f, r->output));
+      } else {
+        MPC_FAILURE(r->output);
+      }
+    
+    case MPC_TYPE_APPLY_TO:
+      if (mpc_parse_run(i, p->data.apply_to.x, r, e)) {
+        MPC_SUCCESS(mpc_parse_apply_to(i, p->data.apply_to.f, r->output, p->data.apply_to.d));
+      } else {
+        MPC_FAILURE(r->error);
+      }
+    
+    case MPC_TYPE_EXPECT:
+      mpc_input_suppress_enable(i);
+      if (mpc_parse_run(i, p->data.expect.x, r, e)) {
+        mpc_input_suppress_disable(i);
+        MPC_SUCCESS(r->output);
+      } else {
+        mpc_input_suppress_disable(i);
+        MPC_FAILURE(mpc_err_new(i, p->data.expect.m));
+      }
+    
+    case MPC_TYPE_PREDICT:
+      mpc_input_backtrack_disable(i);
+      if (mpc_parse_run(i, p->data.predict.x, r, e)) {      
+        mpc_input_backtrack_enable(i);
+        MPC_SUCCESS(r->output);
+      } else {
+        mpc_input_backtrack_enable(i);
+        MPC_FAILURE(r->error);
+      }
+    
+    /* Optional Parsers */
+    
+    /* TODO: Update Not Error Message */
+    
+    case MPC_TYPE_NOT:
+      mpc_input_mark(i);
+      mpc_input_suppress_enable(i);
+      if (mpc_parse_run(i, p->data.not.x, r, e)) {
+        mpc_input_rewind(i);
+        mpc_input_suppress_disable(i);
+        mpc_parse_dtor(i, p->data.not.dx, r->output);
+        MPC_FAILURE(mpc_err_new(i, "opposite"));
+      } else {
+        mpc_input_unmark(i);
+        mpc_input_suppress_disable(i);
+        MPC_SUCCESS(p->data.not.lf());
+      }
+    
+    case MPC_TYPE_MAYBE:
+      if (mpc_parse_run(i, p->data.not.x, r, e)) {
+        MPC_SUCCESS(r->output);
+      } else {
+        *e = mpc_err_merge(i, *e, r->error);
+        MPC_SUCCESS(p->data.not.lf());
+      }
+    
+    /* Repeat Parsers */
+    
+    case MPC_TYPE_MANY:
       
-      /* Basic Parsers */
-
-      case MPC_TYPE_ANY:       MPC_PRIMATIVE(s, mpc_input_any(i, &s));
-      case MPC_TYPE_SINGLE:    MPC_PRIMATIVE(s, mpc_input_char(i, p->data.single.x, &s));
-      case MPC_TYPE_RANGE:     MPC_PRIMATIVE(s, mpc_input_range(i, p->data.range.x, p->data.range.y, &s));
-      case MPC_TYPE_ONEOF:     MPC_PRIMATIVE(s, mpc_input_oneof(i, p->data.string.x, &s));
-      case MPC_TYPE_NONEOF:    MPC_PRIMATIVE(s, mpc_input_noneof(i, p->data.string.x, &s));
-      case MPC_TYPE_SATISFY:   MPC_PRIMATIVE(s, mpc_input_satisfy(i, p->data.satisfy.f, &s));
-      case MPC_TYPE_STRING:    MPC_PRIMATIVE(s, mpc_input_string(i, p->data.string.x, &s));
+      results = results_stk;
       
-      /* Other parsers */
+      while (mpc_parse_run(i, p->data.repeat.x, &results[j], e)) {
+        j++;
+        if (j == MPC_PARSE_STACK_MIN) {
+          results_slots = j + j / 2;
+          results = mpc_malloc(i, sizeof(mpc_result_t) * results_slots);
+          memcpy(results, results_stk, sizeof(mpc_result_t) * MPC_PARSE_STACK_MIN);
+        } else if (j >= results_slots) {
+          results_slots = j + j / 2;
+          results = mpc_realloc(i, results, sizeof(mpc_result_t) * results_slots);
+        }
+      }
       
-      case MPC_TYPE_UNDEFINED: MPC_FAILURE(mpc_err_fail(i->filename, i->state, "Parser Undefined!"));      
-      case MPC_TYPE_PASS:      MPC_SUCCESS(NULL);
-      case MPC_TYPE_FAIL:      MPC_FAILURE(mpc_err_fail(i->filename, i->state, p->data.fail.m));
-      case MPC_TYPE_LIFT:      MPC_SUCCESS(p->data.lift.lf());
-      case MPC_TYPE_LIFT_VAL:  MPC_SUCCESS(p->data.lift.x);
-      case MPC_TYPE_STATE:     MPC_SUCCESS(mpc_state_copy(i->state));
+      *e = mpc_err_merge(i, *e, results[j].error);
+      MPC_SUCCESS(
+        mpc_parse_fold(i, p->data.repeat.f, j, (mpc_val_t**)results);
+        if (j >= MPC_PARSE_STACK_MIN) { mpc_free(i, results); });
+    
+    case MPC_TYPE_MANY1:
       
-      case MPC_TYPE_ANCHOR:
-        if (mpc_input_anchor(i, p->data.anchor.f)) {
-          MPC_SUCCESS(NULL);
+      results = results_stk;
+      
+      while (mpc_parse_run(i, p->data.repeat.x, &results[j], e)) {
+        j++;
+        if (j == MPC_PARSE_STACK_MIN) {
+          results_slots = j + j / 2;
+          results = mpc_malloc(i, sizeof(mpc_result_t) * results_slots);
+          memcpy(results, results_stk, sizeof(mpc_result_t) * MPC_PARSE_STACK_MIN);
+        } else if (j >= results_slots) {
+          results_slots = j + j / 2;
+          results = mpc_realloc(i, results, sizeof(mpc_result_t) * results_slots);
+        }
+      }
+      
+      if (j == 0) {
+        MPC_FAILURE(
+          mpc_err_many1(i, results[j].error);
+          if (j >= MPC_PARSE_STACK_MIN) { mpc_free(i, results); });
+      } else {
+        *e = mpc_err_merge(i, *e, results[j].error);
+        MPC_SUCCESS(
+          mpc_parse_fold(i, p->data.repeat.f, j, (mpc_val_t**)results);
+          if (j >= MPC_PARSE_STACK_MIN) { mpc_free(i, results); });
+      }
+    
+    case MPC_TYPE_COUNT:
+      
+      results = p->data.repeat.n > MPC_PARSE_STACK_MIN
+        ? mpc_malloc(i, sizeof(mpc_result_t) * p->data.repeat.n)
+        : results_stk;
+      
+      while (mpc_parse_run(i, p->data.repeat.x, &results[j], e)) {
+        j++;
+        if (j == p->data.repeat.n) { break; }
+      }
+      
+      if (j == p->data.repeat.n) {
+        MPC_SUCCESS(
+          mpc_parse_fold(i, p->data.repeat.f, j, (mpc_val_t**)results);
+          if (p->data.repeat.n > MPC_PARSE_STACK_MIN) { mpc_free(i, results); });
+      } else {
+        for (k = 0; k < j; k++) {
+          mpc_parse_dtor(i, p->data.repeat.dx, results[k].output);
+        }
+        MPC_FAILURE(
+          mpc_err_count(i, results[j].error, p->data.repeat.n);
+          if (p->data.repeat.n > MPC_PARSE_STACK_MIN) { mpc_free(i, results); });  
+      }
+      
+    /* Combinatory Parsers */
+    
+    case MPC_TYPE_OR:
+      
+      if (p->data.or.n == 0) { MPC_SUCCESS(NULL); }
+      
+      results = p->data.or.n > MPC_PARSE_STACK_MIN
+        ? mpc_malloc(i, sizeof(mpc_result_t) * p->data.or.n)
+        : results_stk;
+      
+      for (j = 0; j < p->data.or.n; j++) {
+        if (mpc_parse_run(i, p->data.or.xs[j], &results[j], e)) {
+          MPC_SUCCESS(results[j].output;
+            if (p->data.or.n > MPC_PARSE_STACK_MIN) { mpc_free(i, results); });
         } else {
-          MPC_FAILURE(mpc_err_new(i->filename, i->state, "anchor", mpc_input_peekc(i)));
-        }
+          *e = mpc_err_merge(i, *e, results[j].error);
+        } 
+      }
       
-      /* Application Parsers */
+      MPC_FAILURE(NULL;
+        if (p->data.or.n > MPC_PARSE_STACK_MIN) { mpc_free(i, results); });
+    
+    case MPC_TYPE_AND:
       
-      case MPC_TYPE_EXPECT:
-        if (st == 0) { MPC_CONTINUE(1, p->data.expect.x); }
-        if (st == 1) {
-          if (mpc_stack_popr(stk, &r)) {
-            MPC_SUCCESS(r.output);
-          } else {
-            mpc_err_delete(r.error); 
-            MPC_FAILURE(mpc_err_new(i->filename, i->state, p->data.expect.m, mpc_input_peekc(i)));
+      if (p->data.and.n == 0) { MPC_SUCCESS(NULL); }
+      
+      results = p->data.or.n > MPC_PARSE_STACK_MIN
+        ? mpc_malloc(i, sizeof(mpc_result_t) * p->data.or.n)
+        : results_stk;
+      
+      mpc_input_mark(i);
+      for (j = 0; j < p->data.and.n; j++) {
+        if (!mpc_parse_run(i, p->data.and.xs[j], &results[j], e)) {
+          mpc_input_rewind(i);
+          for (k = 0; k < j; k++) {
+            mpc_parse_dtor(i, p->data.and.dxs[k], results[k].output);
           }
+          MPC_FAILURE(results[j].error;
+            if (p->data.or.n > MPC_PARSE_STACK_MIN) { mpc_free(i, results); });
         }
+      }
+      mpc_input_unmark(i); 
+      MPC_SUCCESS(
+        mpc_parse_fold(i, p->data.and.f, j, (mpc_val_t**)results);
+        if (p->data.or.n > MPC_PARSE_STACK_MIN) { mpc_free(i, results); });
+    
+    /* End */
+    
+    default:
       
-      case MPC_TYPE_APPLY:
-        if (st == 0) { MPC_CONTINUE(1, p->data.apply.x); }
-        if (st == 1) {
-          if (mpc_stack_popr(stk, &r)) {
-            MPC_SUCCESS(p->data.apply.f(r.output));
-          } else {
-            MPC_FAILURE(r.error);
-          }
-        }
-      
-      case MPC_TYPE_APPLY_TO:
-        if (st == 0) { MPC_CONTINUE(1, p->data.apply_to.x); }
-        if (st == 1) {
-          if (mpc_stack_popr(stk, &r)) {
-            MPC_SUCCESS(p->data.apply_to.f(r.output, p->data.apply_to.d));
-          } else {
-            MPC_FAILURE(r.error);
-          }
-        }
-      
-      case MPC_TYPE_PREDICT:
-        if (st == 0) { mpc_input_backtrack_disable(i); MPC_CONTINUE(1, p->data.predict.x); }
-        if (st == 1) {
-          mpc_input_backtrack_enable(i);
-          mpc_stack_popp(stk, &p, &st);
-          continue;
-        }
-      
-      /* Optional Parsers */
-      
-      /* TODO: Update Not Error Message */
-      
-      case MPC_TYPE_NOT:
-        if (st == 0) { mpc_input_mark(i); MPC_CONTINUE(1, p->data.not.x); }
-        if (st == 1) {
-          if (mpc_stack_popr(stk, &r)) {
-            mpc_input_rewind(i);
-            p->data.not.dx(r.output);
-            MPC_FAILURE(mpc_err_new(i->filename, i->state, "opposite", mpc_input_peekc(i)));
-          } else {
-            mpc_input_unmark(i);
-            mpc_stack_err(stk, r.error);
-            MPC_SUCCESS(p->data.not.lf());
-          }
-        }
-      
-      case MPC_TYPE_MAYBE:
-        if (st == 0) { MPC_CONTINUE(1, p->data.not.x); }
-        if (st == 1) {
-          if (mpc_stack_popr(stk, &r)) {
-            MPC_SUCCESS(r.output);
-          } else {
-            mpc_stack_err(stk, r.error);
-            MPC_SUCCESS(p->data.not.lf());
-          }
-        }
-      
-      /* Repeat Parsers */
-      
-      case MPC_TYPE_MANY:
-        if (st == 0) { MPC_CONTINUE(st+1, p->data.repeat.x); }
-        if (st >  0) {
-          if (mpc_stack_peekr(stk, &r)) {
-            MPC_CONTINUE(st+1, p->data.repeat.x);
-          } else {
-            mpc_stack_popr(stk, &r);
-            mpc_stack_err(stk, r.error);
-            MPC_SUCCESS(mpc_stack_merger_out(stk, st-1, p->data.repeat.f));
-          }
-        }
-      
-      case MPC_TYPE_MANY1:
-        if (st == 0) { MPC_CONTINUE(st+1, p->data.repeat.x); }
-        if (st >  0) {
-          if (mpc_stack_peekr(stk, &r)) {
-            MPC_CONTINUE(st+1, p->data.repeat.x);
-          } else {
-            if (st == 1) {
-              mpc_stack_popr(stk, &r);
-              MPC_FAILURE(mpc_err_many1(r.error));
-            } else {
-              mpc_stack_popr(stk, &r);
-              mpc_stack_err(stk, r.error);
-              MPC_SUCCESS(mpc_stack_merger_out(stk, st-1, p->data.repeat.f));
-            }
-          }
-        }
-      
-      case MPC_TYPE_COUNT:
-        if (st == 0) { mpc_input_mark(i); MPC_CONTINUE(st+1, p->data.repeat.x); }
-        if (st >  0) {
-          if (mpc_stack_peekr(stk, &r)) {
-            MPC_CONTINUE(st+1, p->data.repeat.x);
-          } else {
-            if (st != (p->data.repeat.n+1)) {
-              mpc_stack_popr(stk, &r);
-              mpc_stack_popr_out_single(stk, st-1, p->data.repeat.dx);
-              mpc_input_rewind(i);
-              MPC_FAILURE(mpc_err_count(r.error, p->data.repeat.n));
-            } else {
-              mpc_stack_popr(stk, &r);
-              mpc_stack_err(stk, r.error);
-              mpc_input_unmark(i);
-              MPC_SUCCESS(mpc_stack_merger_out(stk, st-1, p->data.repeat.f));
-            }
-          }
-        }
-        
-      /* Combinatory Parsers */
-      
-      case MPC_TYPE_OR:
-        
-        if (p->data.or.n == 0) { MPC_SUCCESS(NULL); }
-        
-        if (st == 0) { MPC_CONTINUE(st+1, p->data.or.xs[st]); }
-        if (st <= p->data.or.n) {
-          if (mpc_stack_peekr(stk, &r)) {
-            mpc_stack_popr(stk, &r);
-            mpc_stack_popr_err(stk, st-1);
-            MPC_SUCCESS(r.output);
-          }
-          if (st <  p->data.or.n) { MPC_CONTINUE(st+1, p->data.or.xs[st]); }
-          if (st == p->data.or.n) { MPC_FAILURE(mpc_stack_merger_err(stk, p->data.or.n)); }
-        }
-      
-      case MPC_TYPE_AND:
-        
-        if (p->data.or.n == 0) { MPC_SUCCESS(p->data.and.f(0, NULL)); }
-        
-        if (st == 0) { mpc_input_mark(i); MPC_CONTINUE(st+1, p->data.and.xs[st]); }
-        if (st <= p->data.and.n) {
-          if (!mpc_stack_peekr(stk, &r)) {
-            mpc_input_rewind(i);
-            mpc_stack_popr(stk, &r);
-            mpc_stack_popr_out(stk, st-1, p->data.and.dxs);
-            MPC_FAILURE(r.error);
-          }
-          if (st <  p->data.and.n) { MPC_CONTINUE(st+1, p->data.and.xs[st]); }
-          if (st == p->data.and.n) { mpc_input_unmark(i); MPC_SUCCESS(mpc_stack_merger_out(stk, p->data.and.n, p->data.and.f)); }
-        }
-      
-      /* End */
-      
-      default:
-        
-        MPC_FAILURE(mpc_err_fail(i->filename, i->state, "Unknown Parser Type Id!"));
-    }
+      MPC_FAILURE(mpc_err_fail(i, "Unknown Parser Type Id!"));
   }
   
-  return mpc_stack_terminate(stk, final);
+  return 0;
   
 }
 
-#undef MPC_CONTINUE
 #undef MPC_SUCCESS
 #undef MPC_FAILURE
-#undef MPC_PRIMATIVE
+#undef MPC_PRIMITIVE
+
+int mpc_parse_input(mpc_input_t *i, mpc_parser_t *p, mpc_result_t *r) {
+  int x;
+  mpc_err_t *e = mpc_err_fail(i, "Unknown Error");
+  e->state = mpc_state_invalid();
+  x = mpc_parse_run(i, p, r, &e);
+  if (x) {
+    mpc_err_delete_internal(i, e);
+    r->output = mpc_export(i, r->output);
+  } else {
+    r->error = mpc_err_export(i, mpc_err_merge(i, e, r->error));
+  }
+  return x;
+}
 
 int mpc_parse(const char *filename, const char *string, mpc_parser_t *p, mpc_result_t *r) {
   int x;
@@ -1242,7 +1279,7 @@ int mpc_parse_contents(const char *filename, mpc_parser_t *p, mpc_result_t *r) {
   
   if (f == NULL) {
     r->output = NULL;
-    r->error = mpc_err_fail(filename, mpc_state_new(), "Unable to open file!");
+    r->error = mpc_err_file(filename, "Unable to open file!");
     return 0;
   }
   
@@ -1360,6 +1397,81 @@ mpc_parser_t *mpc_new(const char *name) {
   return p;
 }
 
+mpc_parser_t *mpc_copy(mpc_parser_t *a) {
+  int i = 0;
+  mpc_parser_t *p;
+  
+  if (a->retained) { return a; }
+  
+  p = mpc_undefined();
+  p->retained = a->retained;
+  p->type = a->type;
+  p->data = a->data;
+  
+  if (a->name) {
+    p->name = malloc(strlen(a->name)+1);
+    strcpy(p->name, a->name);
+  }
+  
+  switch (a->type) {
+    
+    case MPC_TYPE_FAIL:
+      p->data.fail.m = malloc(strlen(a->data.fail.m)+1);
+      strcpy(p->data.fail.m, a->data.fail.m);
+    break;
+    
+    case MPC_TYPE_ONEOF: 
+    case MPC_TYPE_NONEOF:
+    case MPC_TYPE_STRING:
+      p->data.string.x = malloc(strlen(a->data.string.x)+1);
+      strcpy(p->data.string.x, a->data.string.x);
+      break;
+    
+    case MPC_TYPE_APPLY:    p->data.apply.x    = mpc_copy(a->data.apply.x);    break;
+    case MPC_TYPE_APPLY_TO: p->data.apply_to.x = mpc_copy(a->data.apply_to.x); break;
+    case MPC_TYPE_PREDICT:  p->data.predict.x  = mpc_copy(a->data.predict.x);  break;
+    
+    case MPC_TYPE_MAYBE:
+    case MPC_TYPE_NOT:
+      p->data.not.x = mpc_copy(a->data.not.x);
+      break;
+    
+    case MPC_TYPE_EXPECT:
+      p->data.expect.x = mpc_copy(a->data.expect.x);
+      p->data.expect.m = malloc(strlen(a->data.expect.m)+1);
+      strcpy(p->data.expect.m, a->data.expect.m);
+      break;
+      
+    case MPC_TYPE_MANY:
+    case MPC_TYPE_MANY1:
+    case MPC_TYPE_COUNT:
+      p->data.repeat.x = mpc_copy(a->data.repeat.x);
+      break;
+    
+    case MPC_TYPE_OR:
+      p->data.or.xs = malloc(a->data.or.n * sizeof(mpc_parser_t*));
+      for (i = 0; i < a->data.or.n; i++) {
+        p->data.or.xs[i] = mpc_copy(a->data.or.xs[i]);
+      }
+    break;
+    case MPC_TYPE_AND:
+      p->data.and.xs = malloc(a->data.and.n * sizeof(mpc_parser_t*));
+      for (i = 0; i < a->data.and.n; i++) {
+        p->data.and.xs[i] = mpc_copy(a->data.and.xs[i]);
+      }
+      p->data.and.dxs = malloc((a->data.and.n-1) * sizeof(mpc_dtor_t));
+      for (i = 0; i < a->data.and.n-1; i++) {
+        p->data.and.dxs[i] = a->data.and.dxs[i];
+      }
+    break;
+    
+    default: break;
+  }
+
+  
+  return p;
+}
+
 mpc_parser_t *mpc_undefine(mpc_parser_t *p) {
   mpc_undefine_unretained(p, 1);
   p->type = MPC_TYPE_UNDEFINED;
@@ -1467,7 +1579,7 @@ mpc_parser_t *mpc_anchor(int(*f)(char,char)) {
   mpc_parser_t *p = mpc_undefined();
   p->type = MPC_TYPE_ANCHOR;
   p->data.anchor.f = f;
-  return p;
+  return mpc_expect(p, "anchor");
 }
 
 mpc_parser_t *mpc_state(void) {
@@ -1561,7 +1673,7 @@ mpc_parser_t *mpc_noneof(const char *s) {
   p->type = MPC_TYPE_NONEOF;
   p->data.string.x = malloc(strlen(s) + 1);
   strcpy(p->data.string.x, s);
-  return mpc_expectf(p, "one of '%s'", s);
+  return mpc_expectf(p, "none of '%s'", s);
 
 }
 
@@ -1978,12 +2090,12 @@ static const char *mpc_re_range_escape_char(char c) {
 static mpc_val_t *mpcf_re_range(mpc_val_t *x) {
   
   mpc_parser_t *out;
-  char *range = calloc(1,1);
+  size_t i, j;
+  size_t start, end;
   const char *tmp = NULL;
   const char *s = x;
   int comp = s[0] == '^' ? 1 : 0;
-  size_t start, end;
-  size_t i, j;
+  char *range = calloc(1,1);
   
   if (s[0] == '\0') { free(x); return mpc_fail("Invalid Regex Range Expression"); } 
   if (s[0] == '^' && 
@@ -2014,9 +2126,9 @@ static mpc_val_t *mpcf_re_range(mpc_val_t *x) {
         start = s[i-1]+1;
         end = s[i+1]-1;
         for (j = start; j <= end; j++) {
-          range = realloc(range, strlen(range) + 1 + 1);
+          range = realloc(range, strlen(range) + 1 + 1 + 1);
           range[strlen(range) + 1] = '\0';
-          range[strlen(range) + 0] = j;
+          range[strlen(range) + 0] = (char)j;
         }        
       }
     }
@@ -2082,6 +2194,13 @@ mpc_parser_t *mpc_re(const char *re) {
   
   RegexEnclose = mpc_whole(mpc_predictive(Regex), (mpc_dtor_t)mpc_delete);
   
+  mpc_optimise(RegexEnclose);
+  mpc_optimise(Regex);
+  mpc_optimise(Term);
+  mpc_optimise(Factor);
+  mpc_optimise(Base);
+  mpc_optimise(Range);
+  
   if(!mpc_parse("<mpc_re_compiler>", re, RegexEnclose, &r)) {
     err_msg = mpc_err_string(r.error);
     err_out = mpc_failf("Invalid Regex: %s", err_msg);
@@ -2090,8 +2209,9 @@ mpc_parser_t *mpc_re(const char *re) {
     r.output = err_out;
   }
   
-  mpc_delete(RegexEnclose);
-  mpc_cleanup(5, Regex, Term, Factor, Base, Range);
+  mpc_cleanup(6, RegexEnclose, Regex, Term, Factor, Base, Range);
+  
+  mpc_optimise(r.output);
   
   return r.output;
   
@@ -2129,10 +2249,31 @@ mpc_val_t *mpcf_oct(mpc_val_t *x) {
 }
 
 mpc_val_t *mpcf_float(mpc_val_t *x) {
-  float* y = malloc(sizeof(float));
-  *y = strtod(x, NULL);
+  float *y = malloc(sizeof(float));
+  *y = strtof(x, NULL);
   free(x);
   return y;
+}
+
+mpc_val_t *mpcf_strtriml(mpc_val_t *x) {
+  char *s = x;
+  while (isspace(*s)) {
+    memmove(s, s+1, strlen(s));
+  }
+  return s;
+}
+
+mpc_val_t *mpcf_strtrimr(mpc_val_t *x) {
+  char *s = x;
+  size_t l = strlen(s);
+  while (isspace(s[l-1])) {
+    s[l-1] = '\0'; l--;
+  }
+  return s;
+}
+
+mpc_val_t *mpcf_strtrim(mpc_val_t *x) {
+  return mpcf_strtriml(mpcf_strtrimr(x));
 }
 
 static const char mpc_escape_input_c[]  = {
@@ -2156,9 +2297,9 @@ static mpc_val_t *mpcf_escape_new(mpc_val_t *x, const char *input, const char **
   
   int i;
   int found;
+  char buff[2];
   char *s = x;
   char *y = calloc(1, 1);
-  char buff[2];
   
   while (*s) {
     
@@ -2192,10 +2333,10 @@ static mpc_val_t *mpcf_unescape_new(mpc_val_t *x, const char *input, const char 
   
   int i;
   int found = 0;
+  char buff[2];
   char *s = x;
   char *y = calloc(1, 1);
-  char buff[2];
-
+  
   while (*s) {
     
     i = 0;
@@ -2204,7 +2345,7 @@ static mpc_val_t *mpcf_unescape_new(mpc_val_t *x, const char *input, const char 
     while (output[i]) {
       if ((*(s+0)) == output[i][0] &&
           (*(s+1)) == output[i][1]) {
-        y = realloc(y, strlen(y) + 2);
+        y = realloc(y, strlen(y) + 1 + 1);
         buff[0] = input[i]; buff[1] = '\0';
         strcat(y, buff);
         found = 1;
@@ -2213,9 +2354,9 @@ static mpc_val_t *mpcf_unescape_new(mpc_val_t *x, const char *input, const char 
       }
       i++;
     }
-      
+    
     if (!found) {
-      y = realloc(y, strlen(y) + 2);
+      y = realloc(y, strlen(y) + 1 + 1);
       buff[0] = *s; buff[1] = '\0';
       strcat(y, buff);
     }
@@ -2238,6 +2379,12 @@ mpc_val_t *mpcf_unescape(mpc_val_t *x) {
   mpc_val_t *y = mpcf_unescape_new(x, mpc_escape_input_c, mpc_escape_output_c);
   free(x);
   return y;
+}
+
+mpc_val_t *mpcf_escape_regex(mpc_val_t *x) {
+  mpc_val_t *y = mpcf_escape_new(x, mpc_escape_input_raw_re, mpc_escape_output_raw_re);
+  free(x);
+  return y;  
 }
 
 mpc_val_t *mpcf_unescape_regex(mpc_val_t *x) {
@@ -2288,14 +2435,20 @@ mpc_val_t *mpcf_snd_free(int n, mpc_val_t **xs) { return mpcf_nth_free(n, xs, 1)
 mpc_val_t *mpcf_trd_free(int n, mpc_val_t **xs) { return mpcf_nth_free(n, xs, 2); }
 
 mpc_val_t *mpcf_strfold(int n, mpc_val_t **xs) {
-  char *x = calloc(1, 1);
   int i;
-  for (i = 0; i < n; i++) {
-    x = realloc(x, strlen(x) + strlen(xs[i]) + 1);
-    strcat(x, xs[i]);
-    free(xs[i]);
+  size_t l = 0;
+  
+  if (n == 0) { return calloc(1, 1); }
+  
+  for (i = 0; i < n; i++) { l += strlen(xs[i]); }
+  
+  xs[0] = realloc(xs[0], l + 1);
+  
+  for (i = 1; i < n; i++) {
+    strcat(xs[0], xs[i]); free(xs[i]);
   }
-  return x;
+  
+  return xs[0];
 }
 
 mpc_val_t *mpcf_maths(int n, mpc_val_t **xs) {
@@ -2511,6 +2664,7 @@ void mpc_ast_delete(mpc_ast_t *a) {
   int i;
   
   if (a == NULL) { return; }
+  
   for (i = 0; i < a->children_num; i++) {
     mpc_ast_delete(a->children[i]);
   }
@@ -2609,6 +2763,14 @@ mpc_ast_t *mpc_ast_add_tag(mpc_ast_t *a, const char *t) {
   return a;
 }
 
+mpc_ast_t *mpc_ast_add_root_tag(mpc_ast_t *a, const char *t) {
+  if (a == NULL) { return a; }
+  a->tag = realloc(a->tag, (strlen(t)-1) + strlen(a->tag) + 1);
+  memmove(a->tag + (strlen(t)-1), a->tag, strlen(a->tag)+1);
+  memmove(a->tag, t, (strlen(t)-1));
+  return a;
+}
+
 mpc_ast_t *mpc_ast_tag(mpc_ast_t *a, const char *t) {
   a->tag = realloc(a->tag, strlen(t) + 1);
   strcpy(a->tag, t);
@@ -2624,6 +2786,12 @@ mpc_ast_t *mpc_ast_state(mpc_ast_t *a, mpc_state_t s) {
 static void mpc_ast_print_depth(mpc_ast_t *a, int d, FILE *fp) {
   
   int i;
+  
+  if (a == NULL) {
+    fprintf(fp, "NULL\n");
+    return;
+  }
+  
   for (i = 0; i < d; i++) { fprintf(fp, "  "); }
   
   if (strlen(a->contents)) {
@@ -2649,6 +2817,174 @@ void mpc_ast_print_to(mpc_ast_t *a, FILE *fp) {
   mpc_ast_print_depth(a, 0, fp);
 }
 
+int mpc_ast_get_index(mpc_ast_t *ast, const char *tag) {
+  return mpc_ast_get_index_lb(ast, tag, 0);
+}
+
+int mpc_ast_get_index_lb(mpc_ast_t *ast, const char *tag, int lb) {
+  int i;
+
+  for(i=lb; i<ast->children_num; i++) {
+    if(strcmp(ast->children[i]->tag, tag) == 0) {
+      return i;
+    }
+  }
+
+  return -1;
+}
+
+mpc_ast_t *mpc_ast_get_child(mpc_ast_t *ast, const char *tag) {
+  return mpc_ast_get_child_lb(ast, tag, 0);
+}
+
+mpc_ast_t *mpc_ast_get_child_lb(mpc_ast_t *ast, const char *tag, int lb) {
+  int i;
+
+  for(i=lb; i<ast->children_num; i++) {
+    if(strcmp(ast->children[i]->tag, tag) == 0) {
+      return ast->children[i];
+    }
+  }
+
+  return NULL;
+}
+
+mpc_ast_trav_t *mpc_ast_traverse_start(mpc_ast_t *ast,
+                                       mpc_ast_trav_order_t order)
+{
+  mpc_ast_trav_t *trav, *n_trav;
+  mpc_ast_t *cnode = ast;
+
+  /* Create the traversal structure */
+  trav = malloc(sizeof(mpc_ast_trav_t));
+  trav->curr_node = cnode;
+  trav->parent = NULL;
+  trav->curr_child = 0;
+  trav->order = order;
+
+  /* Get start node */
+  switch(order) {
+    case mpc_ast_trav_order_pre:
+      /* Nothing else is needed for pre order start */
+      break;
+
+    case mpc_ast_trav_order_post:
+      while(cnode->children_num > 0) {
+        cnode = cnode->children[0];
+
+        n_trav = malloc(sizeof(mpc_ast_trav_t));
+        n_trav->curr_node = cnode;
+        n_trav->parent = trav;
+        n_trav->curr_child = 0;
+        n_trav->order = order;
+
+        trav = n_trav;
+      }
+
+      break;
+
+    default:
+      /* Unreachable, but compiler complaints */
+      break;
+  }
+
+  return trav;
+}
+
+mpc_ast_t *mpc_ast_traverse_next(mpc_ast_trav_t **trav) {
+  mpc_ast_trav_t *n_trav, *to_free;
+  mpc_ast_t *ret = NULL;
+  int cchild;
+
+  /* The end of traversal was reached */
+  if(*trav == NULL) return NULL;
+
+  switch((*trav)->order) {
+    case mpc_ast_trav_order_pre:
+      ret = (*trav)->curr_node;
+
+      /* If there aren't any more children, go up */
+      while(*trav != NULL &&
+        (*trav)->curr_child >= (*trav)->curr_node->children_num)
+      {
+        to_free = *trav;
+        *trav = (*trav)->parent;
+        free(to_free);
+      }
+
+      /* If trav is NULL, the end was reached */
+      if(*trav == NULL) {
+        break;
+      }
+
+      /* Go to next child */
+      n_trav = malloc(sizeof(mpc_ast_trav_t));
+
+      cchild = (*trav)->curr_child;
+      n_trav->curr_node = (*trav)->curr_node->children[cchild];
+      n_trav->parent = *trav;
+      n_trav->curr_child = 0;
+      n_trav->order = (*trav)->order;
+
+      (*trav)->curr_child++;
+      *trav = n_trav;
+
+      break;
+
+    case mpc_ast_trav_order_post:
+      ret = (*trav)->curr_node;
+
+      /* Move up tree to the parent If the parent doesn't have any more nodes,
+       * then this is the current node. If it does, move down to its left most
+       * child. Also, free the previous traversal node */
+      to_free = *trav;
+      *trav = (*trav)->parent;
+      free(to_free);
+
+      if(*trav == NULL)
+        break;
+
+      /* Next child */
+      (*trav)->curr_child++;
+
+      /* If there aren't any more children, this is the next node */
+      if((*trav)->curr_child >= (*trav)->curr_node->children_num) {
+        break;
+      }
+
+      /* If there are still more children, find the leftmost child from this
+       * node */
+      while((*trav)->curr_node->children_num > 0) {
+        n_trav = malloc(sizeof(mpc_ast_trav_t));
+
+        cchild = (*trav)->curr_child;
+        n_trav->curr_node = (*trav)->curr_node->children[cchild];
+        n_trav->parent = *trav;
+        n_trav->curr_child = 0;
+        n_trav->order = (*trav)->order;
+
+        *trav = n_trav;
+      }
+
+    default:
+      /* Unreachable, but compiler complaints */
+      break;
+  }
+
+  return ret;
+}
+
+void mpc_ast_traverse_free(mpc_ast_trav_t **trav) {
+  mpc_ast_trav_t *n_trav;
+
+  /* Go through parents until all are free */
+  while(*trav != NULL) {
+      n_trav = (*trav)->parent;
+      free(*trav);
+      *trav = n_trav;
+  }
+}
+
 mpc_val_t *mpcf_fold_ast(int n, mpc_val_t **xs) {
   
   int i, j;
@@ -2666,16 +3002,16 @@ mpc_val_t *mpcf_fold_ast(int n, mpc_val_t **xs) {
     
     if (as[i] == NULL) { continue; }
     
-    if (as[i] && as[i]->children_num > 0) {
-      
+    if        (as[i] && as[i]->children_num == 0) {
+      mpc_ast_add_child(r, as[i]);
+    } else if (as[i] && as[i]->children_num == 1) {
+      mpc_ast_add_child(r, mpc_ast_add_root_tag(as[i]->children[0], as[i]->tag));
+      mpc_ast_delete_no_children(as[i]);
+    } else if (as[i] && as[i]->children_num >= 2) {
       for (j = 0; j < as[i]->children_num; j++) {
         mpc_ast_add_child(r, as[i]->children[j]);
       }
-      
       mpc_ast_delete_no_children(as[i]);
-      
-    } else if (as[i] && as[i]->children_num == 0) {
-      mpc_ast_add_child(r, as[i]);
     }
   
   }
@@ -2696,9 +3032,9 @@ mpc_val_t *mpcf_str_ast(mpc_val_t *c) {
 mpc_val_t *mpcf_state_ast(int n, mpc_val_t **xs) {
   mpc_state_t *s = ((mpc_state_t**)xs)[0];
   mpc_ast_t *a = ((mpc_ast_t**)xs)[1];
+  (void)n;
   a = mpc_ast_state(a, *s);
   free(s);
-  (void) n;
   return a;
 }
 
@@ -2989,6 +3325,12 @@ mpc_parser_t *mpca_grammar_st(const char *grammar, mpca_grammar_st_t *st) {
     mpc_tok_parens(Grammar, mpc_soft_delete)
   ));
   
+  mpc_optimise(GrammarTotal);
+  mpc_optimise(Grammar);
+  mpc_optimise(Factor);
+  mpc_optimise(Term);
+  mpc_optimise(Base);
+  
   if(!mpc_parse("<mpc_grammar_compiler>", grammar, GrammarTotal, &r)) {
     err_msg = mpc_err_string(r.error);
     err_out = mpc_failf("Invalid Grammar: %s", err_msg);
@@ -2998,6 +3340,8 @@ mpc_parser_t *mpca_grammar_st(const char *grammar, mpca_grammar_st_t *st) {
   }
   
   mpc_cleanup(5, GrammarTotal, Grammar, Term, Factor, Base);
+  
+  mpc_optimise(r.output);
   
   return (st->flags & MPCA_LANG_PREDICTIVE) ? mpc_predictive(r.output) : r.output;
   
@@ -3079,12 +3423,14 @@ static mpc_val_t *mpca_stmt_list_apply_to(mpc_val_t *x, void *s) {
     left = mpca_grammar_find_parser(stmt->ident, st);
     if (st->flags & MPCA_LANG_PREDICTIVE) { stmt->grammar = mpc_predictive(stmt->grammar); }
     if (stmt->name) { stmt->grammar = mpc_expect(stmt->grammar, stmt->name); }
+    mpc_optimise(stmt->grammar);
     mpc_define(left, stmt->grammar);
     free(stmt->ident);
     free(stmt->name);
     free(stmt);
     stmts++;
   }
+  
   free(x);
   
   return NULL;
@@ -3141,6 +3487,12 @@ static mpc_err_t *mpca_lang_st(mpc_input_t *i, mpca_grammar_st_t *st) {
     mpc_tok_parens(Grammar, mpc_soft_delete)
   ));
   
+  mpc_optimise(Lang);
+  mpc_optimise(Stmt);
+  mpc_optimise(Grammar);
+  mpc_optimise(Term);
+  mpc_optimise(Factor);
+  mpc_optimise(Base);
   
   if (!mpc_parse_input(i, Lang, &r)) {
     e = r.error;
@@ -3231,7 +3583,8 @@ mpc_err_t *mpca_lang_contents(int flags, const char *filename, ...) {
   FILE *f = fopen(filename, "rb");
   
   if (f == NULL) {
-    return mpc_err_fail(filename, mpc_state_new(), "Unable to open file!");
+    err = mpc_err_file(filename, "Unable to open file!");
+    return err;
   }
   
   va_start(va, filename);
@@ -3252,3 +3605,220 @@ mpc_err_t *mpca_lang_contents(int flags, const char *filename, ...) {
   
   return err;
 }
+
+static int mpc_nodecount_unretained(mpc_parser_t* p, int force) {
+
+  int i, total;
+
+  if (p->retained && !force) { return 0; }
+
+  if (p->type == MPC_TYPE_EXPECT) { return 1 + mpc_nodecount_unretained(p->data.expect.x, 0); }
+
+  if (p->type == MPC_TYPE_APPLY)    { return 1 + mpc_nodecount_unretained(p->data.apply.x, 0); }
+  if (p->type == MPC_TYPE_APPLY_TO) { return 1 + mpc_nodecount_unretained(p->data.apply_to.x, 0); }
+  if (p->type == MPC_TYPE_PREDICT)  { return 1 + mpc_nodecount_unretained(p->data.predict.x, 0); }
+
+  if (p->type == MPC_TYPE_NOT)   { return 1 + mpc_nodecount_unretained(p->data.not.x, 0); }
+  if (p->type == MPC_TYPE_MAYBE) { return 1 + mpc_nodecount_unretained(p->data.not.x, 0); }
+
+  if (p->type == MPC_TYPE_MANY)  { return 1 + mpc_nodecount_unretained(p->data.repeat.x, 0); }
+  if (p->type == MPC_TYPE_MANY1) { return 1 + mpc_nodecount_unretained(p->data.repeat.x, 0); }
+  if (p->type == MPC_TYPE_COUNT) { return 1 + mpc_nodecount_unretained(p->data.repeat.x, 0); }
+
+  if (p->type == MPC_TYPE_OR) { 
+    total = 0;
+    for(i = 0; i < p->data.or.n; i++) {
+      total += mpc_nodecount_unretained(p->data.or.xs[i], 0);
+    }
+    return total;
+  }
+  
+  if (p->type == MPC_TYPE_AND) {
+    total = 0;
+    for(i = 0; i < p->data.and.n; i++) {
+      total += mpc_nodecount_unretained(p->data.and.xs[i], 0);
+    }
+    return total;
+  }
+
+  return 1;
+  
+}
+
+void mpc_stats(mpc_parser_t* p) {
+  printf("Stats\n");
+  printf("=====\n");
+  printf("Node Count: %i\n", mpc_nodecount_unretained(p, 1));
+}
+
+static void mpc_optimise_unretained(mpc_parser_t *p, int force) {
+  
+  int i, n, m;
+  mpc_parser_t *t;
+  
+  if (p->retained && !force) { return; }
+  
+  /* Optimise Subexpressions */
+  
+  if (p->type == MPC_TYPE_EXPECT)   { mpc_optimise_unretained(p->data.expect.x, 0); }
+  if (p->type == MPC_TYPE_APPLY)    { mpc_optimise_unretained(p->data.apply.x, 0); }
+  if (p->type == MPC_TYPE_APPLY_TO) { mpc_optimise_unretained(p->data.apply_to.x, 0); }
+  if (p->type == MPC_TYPE_PREDICT)  { mpc_optimise_unretained(p->data.predict.x, 0); }
+  if (p->type == MPC_TYPE_NOT)      { mpc_optimise_unretained(p->data.not.x, 0); }
+  if (p->type == MPC_TYPE_MAYBE)    { mpc_optimise_unretained(p->data.not.x, 0); }
+  if (p->type == MPC_TYPE_MANY)     { mpc_optimise_unretained(p->data.repeat.x, 0); }
+  if (p->type == MPC_TYPE_MANY1)    { mpc_optimise_unretained(p->data.repeat.x, 0); }
+  if (p->type == MPC_TYPE_COUNT)    { mpc_optimise_unretained(p->data.repeat.x, 0); }
+  
+  if (p->type == MPC_TYPE_OR) { 
+    for(i = 0; i < p->data.or.n; i++) {
+      mpc_optimise_unretained(p->data.or.xs[i], 0);
+    }
+  }
+  
+  if (p->type == MPC_TYPE_AND) {
+    for(i = 0; i < p->data.and.n; i++) {
+      mpc_optimise_unretained(p->data.and.xs[i], 0);
+    }
+  }  
+  
+  /* Perform optimisations */
+  
+  while (1) {
+    
+    /* Merge rhs `or` */
+    if (p->type == MPC_TYPE_OR
+    &&  p->data.or.xs[p->data.or.n-1]->type == MPC_TYPE_OR
+    && !p->data.or.xs[p->data.or.n-1]->retained) {
+      t = p->data.or.xs[p->data.or.n-1];
+      n = p->data.or.n; m = t->data.or.n;
+      p->data.or.n = n + m - 1;
+      p->data.or.xs = realloc(p->data.or.xs, sizeof(mpc_parser_t*) * (n + m -1));
+      memmove(p->data.or.xs + n - 1, t->data.or.xs, m * sizeof(mpc_parser_t*));
+      free(t->data.or.xs); free(t->name); free(t);
+      continue;
+    }
+
+    /* Merge lhs `or` */
+    if (p->type == MPC_TYPE_OR
+    &&  p->data.or.xs[0]->type == MPC_TYPE_OR
+    && !p->data.or.xs[0]->retained) {
+      t = p->data.or.xs[0];
+      n = p->data.or.n; m = t->data.or.n;
+      p->data.or.n = n + m - 1;
+      p->data.or.xs = realloc(p->data.or.xs, sizeof(mpc_parser_t*) * (n + m -1));
+      memmove(p->data.or.xs + m, t->data.or.xs + 1, n * sizeof(mpc_parser_t*));
+      memmove(p->data.or.xs, t->data.or.xs, m * sizeof(mpc_parser_t*));
+      free(t->data.or.xs); free(t->name); free(t);
+      continue;
+    }
+    
+    /* Remove ast `pass` */
+    if (p->type == MPC_TYPE_AND
+    &&  p->data.and.n == 2
+    &&  p->data.and.xs[0]->type == MPC_TYPE_PASS
+    && !p->data.and.xs[0]->retained
+    &&  p->data.and.f == mpcf_fold_ast) {
+      t = p->data.and.xs[1];
+      mpc_delete(p->data.and.xs[0]);
+      free(p->data.and.xs); free(p->data.and.dxs); free(p->name);
+      memcpy(p, t, sizeof(mpc_parser_t));
+      free(t);
+      continue;
+    }
+    
+    /* Merge ast lhs `and` */
+    if (p->type == MPC_TYPE_AND
+    &&  p->data.and.f == mpcf_fold_ast
+    &&  p->data.and.xs[0]->type == MPC_TYPE_AND
+    && !p->data.and.xs[0]->retained
+    &&  p->data.and.xs[0]->data.and.f == mpcf_fold_ast) {
+      t = p->data.and.xs[0];
+      n = p->data.and.n; m = t->data.and.n;
+      p->data.and.n = n + m - 1;
+      p->data.and.xs = realloc(p->data.and.xs, sizeof(mpc_parser_t*) * (n + m - 1));
+      p->data.and.dxs = realloc(p->data.and.dxs, sizeof(mpc_dtor_t) * (n + m - 1 - 1));
+      memmove(p->data.and.xs + m, p->data.and.xs + 1, (n - 1) * sizeof(mpc_parser_t*));
+      memmove(p->data.and.xs, t->data.and.xs, m * sizeof(mpc_parser_t*));
+      for (i = 0; i < p->data.and.n-1; i++) { p->data.and.dxs[i] = (mpc_dtor_t)mpc_ast_delete; }
+      free(t->data.and.xs); free(t->data.and.dxs); free(t->name); free(t); 
+      continue;
+    }
+    
+    /* Merge ast rhs `and` */
+    if (p->type == MPC_TYPE_AND
+    &&  p->data.and.f == mpcf_fold_ast
+    &&  p->data.and.xs[p->data.and.n-1]->type == MPC_TYPE_AND
+    && !p->data.and.xs[p->data.and.n-1]->retained
+    &&  p->data.and.xs[p->data.and.n-1]->data.and.f == mpcf_fold_ast) {
+      t = p->data.and.xs[p->data.and.n-1];
+      n = p->data.and.n; m = t->data.and.n;
+      p->data.and.n = n + m - 1;
+      p->data.and.xs = realloc(p->data.and.xs, sizeof(mpc_parser_t*) * (n + m -1));
+      p->data.and.dxs = realloc(p->data.and.dxs, sizeof(mpc_dtor_t) * (n + m - 1 - 1));
+      memmove(p->data.and.xs + n - 1, t->data.and.xs, m * sizeof(mpc_parser_t*));
+      for (i = 0; i < p->data.and.n-1; i++) { p->data.and.dxs[i] = (mpc_dtor_t)mpc_ast_delete; }
+      free(t->data.and.xs); free(t->data.and.dxs); free(t->name); free(t); 
+      continue;
+    }
+
+    /* Remove re `lift` */
+    if (p->type == MPC_TYPE_AND
+    &&  p->data.and.n == 2
+    &&  p->data.and.xs[0]->type == MPC_TYPE_LIFT
+    &&  p->data.and.xs[0]->data.lift.lf == mpcf_ctor_str
+    && !p->data.and.xs[0]->retained
+    &&  p->data.and.f == mpcf_strfold) {
+      t = p->data.and.xs[1];
+      mpc_delete(p->data.and.xs[0]);
+      free(p->data.and.xs); free(p->data.and.dxs); free(p->name);
+      memcpy(p, t, sizeof(mpc_parser_t));
+      free(t);
+      continue;
+    }
+
+    /* Merge re lhs `and` */
+    if (p->type == MPC_TYPE_AND
+    &&  p->data.and.f == mpcf_strfold
+    &&  p->data.and.xs[0]->type == MPC_TYPE_AND
+    && !p->data.and.xs[0]->retained
+    &&  p->data.and.xs[0]->data.and.f == mpcf_strfold) {
+      t = p->data.and.xs[0];
+      n = p->data.and.n; m = t->data.and.n;
+      p->data.and.n = n + m - 1;
+      p->data.and.xs = realloc(p->data.and.xs, sizeof(mpc_parser_t*) * (n + m - 1));
+      p->data.and.dxs = realloc(p->data.and.dxs, sizeof(mpc_dtor_t) * (n + m - 1 - 1));
+      memmove(p->data.and.xs + m, p->data.and.xs + 1, (n - 1) * sizeof(mpc_parser_t*));
+      memmove(p->data.and.xs, t->data.and.xs, m * sizeof(mpc_parser_t*));
+      for (i = 0; i < p->data.and.n-1; i++) { p->data.and.dxs[i] = free; }
+      free(t->data.and.xs); free(t->data.and.dxs); free(t->name); free(t); 
+      continue;
+    }
+    
+    /* Merge re rhs `and` */
+    if (p->type == MPC_TYPE_AND
+    &&  p->data.and.f == mpcf_strfold
+    &&  p->data.and.xs[p->data.and.n-1]->type == MPC_TYPE_AND
+    && !p->data.and.xs[p->data.and.n-1]->retained
+    &&  p->data.and.xs[p->data.and.n-1]->data.and.f == mpcf_strfold) {
+      t = p->data.and.xs[p->data.and.n-1];
+      n = p->data.and.n; m = t->data.and.n;
+      p->data.and.n = n + m - 1;
+      p->data.and.xs = realloc(p->data.and.xs, sizeof(mpc_parser_t*) * (n + m -1));
+      p->data.and.dxs = realloc(p->data.and.dxs, sizeof(mpc_dtor_t) * (n + m - 1 - 1));
+      memmove(p->data.and.xs + n - 1, t->data.and.xs, m * sizeof(mpc_parser_t*));
+      for (i = 0; i < p->data.and.n-1; i++) { p->data.and.dxs[i] = free; }
+      free(t->data.and.xs); free(t->data.and.dxs); free(t->name); free(t); 
+      continue;
+    }
+    
+    return;
+    
+  }
+  
+}
+
+void mpc_optimise(mpc_parser_t *p) {
+  mpc_optimise_unretained(p, 1);
+}
+

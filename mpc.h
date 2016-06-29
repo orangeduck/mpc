@@ -16,6 +16,7 @@
 #include <string.h>
 #include <math.h>
 #include <errno.h>
+#include <ctype.h>
 
 /*
 ** State Type
@@ -81,6 +82,7 @@ typedef mpc_val_t*(*mpc_fold_t)(int,mpc_val_t**);
 */
 
 mpc_parser_t *mpc_new(const char *name);
+mpc_parser_t *mpc_copy(mpc_parser_t *a);
 mpc_parser_t *mpc_define(mpc_parser_t *p, mpc_parser_t *a);
 mpc_parser_t *mpc_undefine(mpc_parser_t *p);
 
@@ -219,6 +221,9 @@ mpc_val_t *mpcf_int(mpc_val_t *x);
 mpc_val_t *mpcf_hex(mpc_val_t *x);
 mpc_val_t *mpcf_oct(mpc_val_t *x);
 mpc_val_t *mpcf_float(mpc_val_t *x);
+mpc_val_t *mpcf_strtriml(mpc_val_t *x);
+mpc_val_t *mpcf_strtrimr(mpc_val_t *x);
+mpc_val_t *mpcf_strtrim(mpc_val_t *x);
 
 mpc_val_t *mpcf_escape(mpc_val_t *x);
 mpc_val_t *mpcf_escape_regex(mpc_val_t *x);
@@ -265,12 +270,37 @@ mpc_ast_t *mpc_ast_build(int n, const char *tag, ...);
 mpc_ast_t *mpc_ast_add_root(mpc_ast_t *a);
 mpc_ast_t *mpc_ast_add_child(mpc_ast_t *r, mpc_ast_t *a);
 mpc_ast_t *mpc_ast_add_tag(mpc_ast_t *a, const char *t);
+mpc_ast_t *mpc_ast_add_root_tag(mpc_ast_t *a, const char *t);
 mpc_ast_t *mpc_ast_tag(mpc_ast_t *a, const char *t);
 mpc_ast_t *mpc_ast_state(mpc_ast_t *a, mpc_state_t s);
 
 void mpc_ast_delete(mpc_ast_t *a);
 void mpc_ast_print(mpc_ast_t *a);
 void mpc_ast_print_to(mpc_ast_t *a, FILE *fp);
+
+int mpc_ast_get_index(mpc_ast_t *ast, const char *tag);
+int mpc_ast_get_index_lb(mpc_ast_t *ast, const char *tag, int lb);
+mpc_ast_t *mpc_ast_get_child(mpc_ast_t *ast, const char *tag);
+mpc_ast_t *mpc_ast_get_child_lb(mpc_ast_t *ast, const char *tag, int lb);
+
+typedef enum {
+  mpc_ast_trav_order_pre,
+  mpc_ast_trav_order_post
+} mpc_ast_trav_order_t;
+
+typedef struct mpc_ast_trav_t {
+  mpc_ast_t             *curr_node;
+  struct mpc_ast_trav_t *parent;
+  int                    curr_child;
+  mpc_ast_trav_order_t   order;
+} mpc_ast_trav_t;
+
+mpc_ast_trav_t *mpc_ast_traverse_start(mpc_ast_t *ast,
+                                       mpc_ast_trav_order_t order);
+
+mpc_ast_t *mpc_ast_traverse_next(mpc_ast_trav_t **trav);
+
+void mpc_ast_traverse_free(mpc_ast_trav_t **trav);
 
 /*
 ** Warning: This function currently doesn't test for equality of the `state` member!
@@ -311,10 +341,13 @@ mpc_err_t *mpca_lang_pipe(int flags, FILE *f, ...);
 mpc_err_t *mpca_lang_contents(int flags, const char *filename, ...);
 
 /*
-** Debug & Testing
+** Misc
 */
 
+
 void mpc_print(mpc_parser_t *p);
+void mpc_optimise(mpc_parser_t *p);
+void mpc_stats(mpc_parser_t *p);
 
 int mpc_test_pass(mpc_parser_t *p, const char *s, const void *d,
   int(*tester)(const void*, const void*), 

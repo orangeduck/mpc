@@ -1,7 +1,7 @@
 Micro Parser Combinators
 ========================
 
-Version 0.8.5
+Version 0.8.8
 
 
 About
@@ -530,6 +530,16 @@ void mpc_cleanup(int n, ...);
 
 To ease the task of undefining and then deleting parsers `mpc_cleanup` can be used. It takes `n` parsers as input, and undefines them all, before deleting them all.
 
+* * *
+
+```c
+mpc_parser_t *mpc_copy(mpc_parser_t *a);
+```
+
+This function makes a copy of a parser `a`. This can be useful when you want to 
+use a parser as input for some other parsers multiple times without retaining 
+it. 
+
 
 Library Reference
 =================
@@ -555,9 +565,9 @@ Common Parsers
   <tr><td><code>mpc_digits</code></td><td>Matches one or more digit</td></tr>
   <tr><td><code>mpc_hexdigits</code></td><td>Matches one or more hexdigit</td></tr>
   <tr><td><code>mpc_octdigits</code></td><td>Matches one or more octdigit</td></tr>
-  <tr><td><code>mpc_lower</code></td><td>Matches and lower case character</td></tr>
+  <tr><td><code>mpc_lower</code></td><td>Matches any lower case character</td></tr>
   <tr><td><code>mpc_upper</code></td><td>Matches any upper case character</td></tr>
-  <tr><td><code>mpc_alpha</code></td><td>Matches and alphabet character</td></tr>
+  <tr><td><code>mpc_alpha</code></td><td>Matches any alphabet character</td></tr>
   <tr><td><code>mpc_underscore</code></td><td>Matches <code>'_'</code></td></tr>
   <tr><td><code>mpc_alphanum</code></td><td>Matches any alphabet character, underscore or digit</td></tr>
   <tr><td><code>mpc_int</code></td><td>Matches digits and returns an <code>int*</code></td></tr>
@@ -582,22 +592,22 @@ Useful Parsers
     <tr><td><code>mpc_startswith(mpc_parser_t *a);</code></td><td>Matches the start of input followed by <code>a</code></td></tr>
     <tr><td><code>mpc_endswith(mpc_parser_t *a, mpc_dtor_t da);</code></td><td>Matches <code>a</code> followed by the end of input</td></tr>
     <tr><td><code>mpc_whole(mpc_parser_t *a, mpc_dtor_t da);</code></td><td>Matches the start of input, <code>a</code>, and the end of input</td></tr>  
-    <tr><td><code>mpc_stripl(mpc_parser_t *a);</code></td><td>Matches <code>a</code> striping any whitespace to the left</td></tr>
-    <tr><td><code>mpc_stripr(mpc_parser_t *a);</code></td><td>Matches <code>a</code> striping any whitespace to the right</td></tr>
-    <tr><td><code>mpc_strip(mpc_parser_t *a);</code></td><td>Matches <code>a</code> striping any surrounding whitespace</td></tr>
-    <tr><td><code>mpc_tok(mpc_parser_t *a);</code></td><td>Matches <code>a</code> and strips any trailing whitespace</td></tr>
-    <tr><td><code>mpc_sym(const char *s);</code></td><td>Matches string <code>s</code> and strips any trailing whitespace</td></tr>
-    <tr><td><code>mpc_total(mpc_parser_t *a, mpc_dtor_t da);</code></td><td>Matches the whitespace stripped <code>a</code>, enclosed in the start and end of input</td></tr>
+    <tr><td><code>mpc_stripl(mpc_parser_t *a);</code></td><td>Matches <code>a</code> first consuming any whitespace to the left</td></tr>
+    <tr><td><code>mpc_stripr(mpc_parser_t *a);</code></td><td>Matches <code>a</code> then consumes any whitespace to the right</td></tr>
+    <tr><td><code>mpc_strip(mpc_parser_t *a);</code></td><td>Matches <code>a</code> consuming any surrounding whitespace</td></tr>
+    <tr><td><code>mpc_tok(mpc_parser_t *a);</code></td><td>Matches <code>a</code> and consumes any trailing whitespace</td></tr>
+    <tr><td><code>mpc_sym(const char *s);</code></td><td>Matches string <code>s</code> and consumes any trailing whitespace</td></tr>
+    <tr><td><code>mpc_total(mpc_parser_t *a, mpc_dtor_t da);</code></td><td>Matches the whitespace consumed <code>a</code>, enclosed in the start and end of input</td></tr>
     <tr><td><code>mpc_between(mpc_parser_t *a, mpc_dtor_t ad, <br /> const char *o, const char *c);</code></td><td> Matches <code>a</code> between strings <code>o</code> and <code>c</code></td></tr>
     <tr><td><code>mpc_parens(mpc_parser_t *a, mpc_dtor_t ad);</code></td><td>Matches <code>a</code> between <code>"("</code> and <code>")"</code></td></tr>
     <tr><td><code>mpc_braces(mpc_parser_t *a, mpc_dtor_t ad);</code></td><td>Matches <code>a</code> between <code>"<"</code> and <code>">"</code></td></tr>
     <tr><td><code>mpc_brackets(mpc_parser_t *a, mpc_dtor_t ad);</code></td><td>Matches <code>a</code> between <code>"{"</code> and <code>"}"</code></td></tr>
     <tr><td><code>mpc_squares(mpc_parser_t *a, mpc_dtor_t ad);</code></td><td>Matches <code>a</code> between <code>"["</code> and <code>"]"</code></td></tr>
     <tr><td><code>mpc_tok_between(mpc_parser_t *a, mpc_dtor_t ad, <br /> const char *o, const char *c);</code></td><td>Matches <code>a</code> between <code>o</code> and <code>c</code>, where <code>o</code> and <code>c</code> have their trailing whitespace striped.</td></tr>
-    <tr><td><code>mpc_tok_parens(mpc_parser_t *a, mpc_dtor_t ad);</code></td><td>Matches <code>a</code> between trailing whitespace stripped <code>"("</code> and <code>")"</code></td></tr>
-    <tr><td><code>mpc_tok_braces(mpc_parser_t *a, mpc_dtor_t ad);</code></td><td>Matches <code>a</code> between trailing whitespace stripped <code>"<"</code> and <code>">"</code></td></tr>
-    <tr><td><code>mpc_tok_brackets(mpc_parser_t *a, mpc_dtor_t ad);</code></td><td>Matches <code>a</code> between trailing whitespace stripped <code>"{"</code> and <code>"}"</code></td></tr>
-    <tr><td><code>mpc_tok_squares(mpc_parser_t *a, mpc_dtor_t ad);</code></td><td>Matches <code>a</code> between trailing whitespace stripped <code>"["</code> and <code>"]"</code></td></tr>
+    <tr><td><code>mpc_tok_parens(mpc_parser_t *a, mpc_dtor_t ad);</code></td><td>Matches <code>a</code> between trailing whitespace consumed <code>"("</code> and <code>")"</code></td></tr>
+    <tr><td><code>mpc_tok_braces(mpc_parser_t *a, mpc_dtor_t ad);</code></td><td>Matches <code>a</code> between trailing whitespace consumed <code>"<"</code> and <code>">"</code></td></tr>
+    <tr><td><code>mpc_tok_brackets(mpc_parser_t *a, mpc_dtor_t ad);</code></td><td>Matches <code>a</code> between trailing whitespace consumed <code>"{"</code> and <code>"}"</code></td></tr>
+    <tr><td><code>mpc_tok_squares(mpc_parser_t *a, mpc_dtor_t ad);</code></td><td>Matches <code>a</code> between trailing whitespace consumed <code>"["</code> and <code>"]"</code></td></tr>
 
 </table>
 
@@ -623,7 +633,9 @@ Apply Functions
   <tr><td><code>mpc_val_t *mpcf_unescape_regex(mpc_val_t *x);</code></td><td>Converts a regex <code>x</code> to an unescaped version</td></tr>
   <tr><td><code>mpc_val_t *mpcf_unescape_string_raw(mpc_val_t *x);</code></td><td>Converts a raw string <code>x</code> to an unescaped version</td></tr>
   <tr><td><code>mpc_val_t *mpcf_unescape_char_raw(mpc_val_t *x);</code></td><td>Converts a raw character <code>x</code> to an unescaped version</td></tr>
-
+  <tr><td><code>mpc_val_t *mpcf_strtriml(mpc_val_t *x);</code></td><td>Trims whitespace from the left of string <code>x</code></td></tr>
+  <tr><td><code>mpc_val_t *mpcf_strtrimr(mpc_val_t *x);</code></td><td>Trims whitespace from the right of string <code>x</code></td></tr>
+  <tr><td><code>mpc_val_t *mpcf_strtrim(mpc_val_t *x);</code></td><td>Trims whitespace from either side of string <code>x</code></td></tr>
 </table>
 
 
@@ -684,14 +696,14 @@ mpc_parser_t *Maths  = mpc_new("maths");
 
 mpc_define(Expr, mpc_or(2, 
   mpc_and(3, fold_maths,
-    Factor, mpc_oneof("*/"), Factor,
+    Factor, mpc_oneof("+-"), Factor,
     free, free),
   Factor
 ));
 
 mpc_define(Factor, mpc_or(2, 
   mpc_and(3, fold_maths,
-    Term, mpc_oneof("+-"), Term,
+    Term, mpc_oneof("*/"), Term,
     free, free),
   Term
 ));
@@ -783,6 +795,35 @@ _mpc_ provides some automatic generation of error messages. These can be enhance
 ```
 <test>:0:3: error: expected one or more of 'a' or 'd' at 'k'
 ```
+
+Misc
+====
+
+Here are some other misc functions that mpc provides. These functions are susceptible to change between versions so use them with some care.
+
+* * *
+
+```c
+void mpc_print(mpc_parser_t *p);
+```
+
+Prints out a parser in some weird format. This is generally used for debugging so don't expect to be able to understand the output right away without looking at the source code a little bit.
+
+* * *
+
+```c
+void mpc_stats(mpc_parser_t *p);
+```
+
+Prints out some basic stats about a parser. Again used for debugging and optimisation.
+
+* * *
+
+```c
+void mpc_optimise(mpc_parser_t *p);
+```
+
+Performs some basic optimisations on a parser to reduce it's size and increase its running speed.
 
 
 Limitations & FAQ

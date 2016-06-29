@@ -2,7 +2,9 @@
 *.exe
 *.dSYM
 test
-doge
-lispy
-maths
-smallc
+examples/doge
+examples/lispy
+examples/maths
+examples/smallc
+examples/foobar
+examples/tree_traversal
