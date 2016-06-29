@@ -142,14 +142,19 @@ static mpc_input_t *mpc_input_new_nstring(const char *filename, const char *stri
   i->buffer = NULL;
   i->file = NULL;
   
+  i->suppress = 0;
   i->backtrack = 1;
   i->marks_num = 0;
-  i->marks = NULL;
-  i->lasts = NULL;
-
+  i->marks_slots = MPC_INPUT_MARKS_MIN;
+  i->marks = malloc(sizeof(mpc_state_t) * i->marks_slots);
+  i->lasts = malloc(sizeof(char) * i->marks_slots);
   i->last = '\0';
   
+  i->mem_index = 0;
+  memset(i->mem_full, 0, sizeof(char) * MPC_INPUT_MEM_NUM);
+  
   return i;
+
 }
 
 static mpc_input_t *mpc_input_new_pipe(const char *filename, FILE *pipe) {
