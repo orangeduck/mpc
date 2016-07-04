@@ -139,6 +139,7 @@ static mpc_input_t *mpc_input_new_nstring(const char *filename, const char *stri
   
   i->string = malloc(length + 1);
   strncpy(i->string, string, length);
+  i->string[length] = '\0';
   i->buffer = NULL;
   i->file = NULL;
   
