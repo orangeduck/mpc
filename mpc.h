@@ -10,6 +10,10 @@
 #ifndef mpc_h
 #define mpc_h
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -358,6 +362,8 @@ int mpc_test_fail(mpc_parser_t *p, const char *s, const void *d,
   mpc_dtor_t destructor,
   void(*printer)(const void*));
 
-
+#ifdef __cplusplus
+}
+#endif
 
 #endif
