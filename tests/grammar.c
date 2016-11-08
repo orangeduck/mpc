@@ -256,8 +256,9 @@ void test_qscript(void) {
 
 void test_missingrule(void) {
   
+  int result;
   mpc_err_t *err;
-
+  mpc_result_t r;
   mpc_parser_t *Parser = mpc_new("parser");
   
   err = mpca_lang(MPCA_LANG_DEFAULT,
@@ -266,13 +267,13 @@ void test_missingrule(void) {
   
   PT_ASSERT(err == NULL);
   
-  mpc_result_t r;
-  int result = mpc_parse("<stdin>", "test", Parser, &r);
-    
+  result = mpc_parse("<stdin>", "test", Parser, &r);
+  
   PT_ASSERT(result == 0);
   PT_ASSERT(r.error != NULL);
   PT_ASSERT(strcmp(r.error->failure, "Unknown Parser 'missing'!") == 0);
   
+  mpc_err_delete(r.error);
   mpc_cleanup(1, Parser);
 
 }
