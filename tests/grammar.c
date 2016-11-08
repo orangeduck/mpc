@@ -1,5 +1,7 @@
 #include "ptest.h"
 #include "../mpc.h"
+#include <stdio.h>
+#include <stdlib.h>
 
 void test_grammar(void) {
 
@@ -254,6 +256,30 @@ void test_qscript(void) {
   
 }
 
+void test_missingrule(void) {
+  
+  mpc_ast_t *t0;
+  mpc_err_t *err;
+
+  mpc_parser_t *Parser = mpc_new("parser");
+  
+  err = mpca_lang(MPCA_LANG_DEFAULT,
+    "parser        : /^/ (<missing>)* /$/ ;\n",
+    Parser, NULL);
+  
+  PT_ASSERT(err == NULL);
+  
+  mpc_result_t r;
+  int result = mpc_parse("<stdin>", "test", Parser, &r);
+    
+  PT_ASSERT(result == 0);
+  PT_ASSERT(r.error != NULL);
+  PT_ASSERT(strcmp(r.error->failure, "Unknown Parser 'missing'!") == 0);
+  
+  mpc_cleanup(1, Parser);
+
+}
+
 void suite_grammar(void) {
   pt_add_test(test_grammar, "Test Grammar", "Suite Grammar");
   pt_add_test(test_language, "Test Language", "Suite Grammar");
@@ -261,4 +287,5 @@ void suite_grammar(void) {
   pt_add_test(test_doge, "Test Doge", "Suite Grammar");
   pt_add_test(test_partial, "Test Partial", "Suite Grammar");
   pt_add_test(test_qscript, "Test QScript", "Suite Grammar");
+  pt_add_test(test_missingrule, "Test Missing Rule", "Suite Grammar");
 }
