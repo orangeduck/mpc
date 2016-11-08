@@ -1,7 +1,5 @@
 #include "ptest.h"
 #include "../mpc.h"
-#include <stdio.h>
-#include <stdlib.h>
 
 void test_grammar(void) {
 
@@ -258,7 +256,6 @@ void test_qscript(void) {
 
 void test_missingrule(void) {
   
-  mpc_ast_t *t0;
   mpc_err_t *err;
 
   mpc_parser_t *Parser = mpc_new("parser");
