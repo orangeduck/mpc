@@ -3264,7 +3264,7 @@ static mpc_parser_t *mpca_grammar_find_parser(char *x, mpca_grammar_st_t *st) {
       st->parsers = realloc(st->parsers, sizeof(mpc_parser_t*) * st->parsers_num);
       st->parsers[st->parsers_num-1] = p;
       
-      if (p == NULL) { return mpc_failf("Unknown Parser '%s'!", x); }
+      if (p == NULL || p->name == NULL) { return mpc_failf("Unknown Parser '%s'!", x); }
       if (p->name && strcmp(p->name, x) == 0) { return p; }
       
     }
