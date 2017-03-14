@@ -2256,7 +2256,7 @@ mpc_val_t *mpcf_oct(mpc_val_t *x) {
 
 mpc_val_t *mpcf_float(mpc_val_t *x) {
   float *y = malloc(sizeof(float));
-  *y = strtof(x, NULL);
+  *y = strtod(x, NULL);
   free(x);
   return y;
 }
