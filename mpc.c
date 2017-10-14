@@ -920,10 +920,10 @@ typedef union {
 } mpc_pdata_t;
 
 struct mpc_parser_t {
-  char retained;
   char *name;
-  char type;
   mpc_pdata_t data;
+  char type;
+  char retained;
 };
 
 static mpc_val_t *mpcf_input_nth_free(mpc_input_t *i, int n, mpc_val_t **xs, int x) {
@@ -2021,11 +2021,15 @@ static mpc_val_t *mpcf_re_repeat(int n, mpc_val_t **xs) {
   int num;
   (void) n;
   if (xs[1] == NULL) { return xs[0]; }
-  if (strcmp(xs[1], "*") == 0) { free(xs[1]); return mpc_many(mpcf_strfold, xs[0]); }
-  if (strcmp(xs[1], "+") == 0) { free(xs[1]); return mpc_many1(mpcf_strfold, xs[0]); }
-  if (strcmp(xs[1], "?") == 0) { free(xs[1]); return mpc_maybe_lift(xs[0], mpcf_ctor_str); }
-  num = *(int*)xs[1];
-  free(xs[1]);
+  switch(((char*)xs[1])[0])
+  {
+    case '*': { free(xs[1]); return mpc_many(mpcf_strfold, xs[0]); }; break;
+    case '+': { free(xs[1]); return mpc_many1(mpcf_strfold, xs[0]); }; break;
+    case '?': { free(xs[1]); return mpc_maybe_lift(xs[0], mpcf_ctor_str); }; break;
+    default:
+      num = *(int*)xs[1];
+      free(xs[1]);
+  }
   
   return mpc_count(num, mpcf_strfold, xs[0], free);
 }
@@ -2461,11 +2465,15 @@ mpc_val_t *mpcf_maths(int n, mpc_val_t **xs) {
   int **vs = (int**)xs;
   (void) n;
   
-  if (strcmp(xs[1], "*") == 0) { *vs[0] *= *vs[2]; }
-  if (strcmp(xs[1], "/") == 0) { *vs[0] /= *vs[2]; }
-  if (strcmp(xs[1], "%") == 0) { *vs[0] %= *vs[2]; }
-  if (strcmp(xs[1], "+") == 0) { *vs[0] += *vs[2]; }
-  if (strcmp(xs[1], "-") == 0) { *vs[0] -= *vs[2]; }
+  switch(((char*)xs[1])[0])
+  {
+    case '*': { *vs[0] *= *vs[2]; }; break;
+    case '/': { *vs[0] /= *vs[2]; }; break;
+    case '%': { *vs[0] %= *vs[2]; }; break;
+    case '+': { *vs[0] += *vs[2]; }; break;
+    case '-': { *vs[0] -= *vs[2]; }; break;
+    default: break;
+  }
   
   free(xs[1]); free(xs[2]);
   
@@ -3183,13 +3191,17 @@ static mpc_val_t *mpcaf_grammar_and(int n, mpc_val_t **xs) {
 static mpc_val_t *mpcaf_grammar_repeat(int n, mpc_val_t **xs) { 
   int num;
   (void) n;
-  if (xs[1] == NULL) { return xs[0]; }  
-  if (strcmp(xs[1], "*") == 0) { free(xs[1]); return mpca_many(xs[0]); }
-  if (strcmp(xs[1], "+") == 0) { free(xs[1]); return mpca_many1(xs[0]); }
-  if (strcmp(xs[1], "?") == 0) { free(xs[1]); return mpca_maybe(xs[0]); }
-  if (strcmp(xs[1], "!") == 0) { free(xs[1]); return mpca_not(xs[0]); }
-  num = *((int*)xs[1]);
-  free(xs[1]);
+  if (xs[1] == NULL) { return xs[0]; }
+  switch(((char*)xs[1])[0])
+  {
+    case '*': { free(xs[1]); return mpca_many(xs[0]); }; break;
+    case '+': { free(xs[1]); return mpca_many1(xs[0]); }; break;
+    case '?': { free(xs[1]); return mpca_maybe(xs[0]); }; break;
+    case '!': { free(xs[1]); return mpca_not(xs[0]); }; break;
+    default:
+      num = *((int*)xs[1]);
+      free(xs[1]);
+  }
   return mpca_count(num, xs[0]);
 }
 
