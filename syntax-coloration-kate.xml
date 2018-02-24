@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE language SYSTEM "language.dtd">
+
+<!--
+	Syntax coloration file for Kate based text editors
+	To install it, you would have to put this file in /usr/share/katepart/syntax/mpc.xml or something like that.
+-->
+
+<language name="MPC"
+		  author="Jimy Byerley (jimy.byerley@gmail.com)"
+          version="0.1"
+		  style="python"
+		  casesensitive="true"
+          extensions="*.mpc"
+          mimetype="text/rail"
+		  
+		  section="Markup"
+		  kateversion="2.4"
+          priority="2">
+
+	<highlighting>
+		
+		<contexts>
+			
+			<!-- start context: definition of a parser -->
+			<context attribute="Parser Def" lineEndContext="#stay" name="parser def">
+				<DetectChar attribute="Parser Def" context="normal" char=":"/>
+			</context>
+			
+			<!-- search in "Normal" context -->
+			<context attribute="Normal" lineEndContext="#stay" name="normal">
+				<DetectSpaces/>
+				<DetectChar attribute="Parser Use" context="parser use" char="&lt;" />
+				<DetectChar attribute="String" context="string" char="&quot;" />
+				<DetectChar attribute="Char" context="char" char="'" />
+				<DetectChar attribute="Regex" context="regex" char="/" />
+				<DetectChar attribute="Normal" context="parser def" char=";" />
+<!-- 				<AnyChar attribute="Symbol" context="#stay" String="|&#59?+"/> -->
+				
+			</context>
+			
+			<context attribute="Parser Use" lineEndContext="#stay" name="parser use">
+				<DetectChar attribute="Parser Use" context="#pop" char="&gt;"/>
+			</context>
+			
+			<context attribute="Regex" lineEndContext="#stay" name="regex">
+				<DetectChar attribute="Regex" context="#pop" char="/"/>
+			</context>
+			
+			<context attribute="String" lineEndContext="#stay" name="string">
+				<DetectChar attribute="String" context="#pop" char="&quot;"/>
+			</context>
+			<context attribute="Char" lineEndContext="#stay" name="char">
+				<DetectChar attribute="Char" context="#pop" char="'"/>
+			</context>
+			
+		</contexts>
+		
+		<itemDatas>
+			<itemData name="Normal"  		defStyleNum="dsNormal"		spellChecking="false"/>
+			<itemData name="Parser Use"  	defStyleNum="dsDataType"	spellChecking="false"/>
+			<itemData name="Parser Def"    	defStyleNum="dsExtension"	spellChecking="false"/>
+			<itemData name="Char"			defStyleNum="dsChar"		spellChecking="false"/>
+			<itemData name="String"			defStyleNum="dsString"		spellChecking="false"/>
+			<itemData name="Regex"			defStyleNum="dsFunction"	spellChecking="false"/>
+		</itemDatas>
+	</highlighting>
+	
+	
+	<general>
+		<!--  no comments in MPC
+		<comments>
+			<comment name="singleLine"	start="//" />
+			<comment name="multiLine"	start="/*"	end="*/" />
+		</comments>
+		-->
+		<keywords casesensitive="1"	additionalDeliminator="'&quot;" />
+	</general>
+</language>
