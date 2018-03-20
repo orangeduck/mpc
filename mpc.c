@@ -3644,7 +3644,7 @@ static int mpc_nodecount_unretained(mpc_parser_t* p, int force) {
   if (p->type == MPC_TYPE_COUNT) { return 1 + mpc_nodecount_unretained(p->data.repeat.x, 0); }
 
   if (p->type == MPC_TYPE_OR) { 
-    total = 0;
+    total = 1;
     for(i = 0; i < p->data.or.n; i++) {
       total += mpc_nodecount_unretained(p->data.or.xs[i], 0);
     }
@@ -3652,7 +3652,7 @@ static int mpc_nodecount_unretained(mpc_parser_t* p, int force) {
   }
   
   if (p->type == MPC_TYPE_AND) {
-    total = 0;
+    total = 1;
     for(i = 0; i < p->data.and.n; i++) {
       total += mpc_nodecount_unretained(p->data.and.xs[i], 0);
     }
