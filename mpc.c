@@ -3725,7 +3725,7 @@ static void mpc_optimise_unretained(mpc_parser_t *p, int force) {
       n = p->data.or.n; m = t->data.or.n;
       p->data.or.n = n + m - 1;
       p->data.or.xs = realloc(p->data.or.xs, sizeof(mpc_parser_t*) * (n + m -1));
-      memmove(p->data.or.xs + m, t->data.or.xs + 1, n * sizeof(mpc_parser_t*));
+      memmove(p->data.or.xs + m, p->data.or.xs + 1, (n - 1) * sizeof(mpc_parser_t*));
       memmove(p->data.or.xs, t->data.or.xs, m * sizeof(mpc_parser_t*));
       free(t->data.or.xs); free(t->name); free(t);
       continue;
