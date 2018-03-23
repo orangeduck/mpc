@@ -81,6 +81,9 @@ typedef mpc_val_t*(*mpc_apply_t)(mpc_val_t*);
 typedef mpc_val_t*(*mpc_apply_to_t)(mpc_val_t*,void*);
 typedef mpc_val_t*(*mpc_fold_t)(int,mpc_val_t**);
 
+typedef int(*mpc_check_t)(mpc_val_t**);
+typedef int(*mpc_check_with_t)(mpc_val_t**,void*);
+
 /*
 ** Building a Parser
 */
@@ -125,6 +128,8 @@ mpc_parser_t *mpc_expect(mpc_parser_t *a, const char *e);
 mpc_parser_t *mpc_expectf(mpc_parser_t *a, const char *fmt, ...);
 mpc_parser_t *mpc_apply(mpc_parser_t *a, mpc_apply_t f);
 mpc_parser_t *mpc_apply_to(mpc_parser_t *a, mpc_apply_to_t f, void *x);
+mpc_parser_t *mpc_check(mpc_parser_t *a, mpc_check_t f, const char *e);
+mpc_parser_t *mpc_check_with(mpc_parser_t *a, mpc_check_with_t f, void *x, const char *e);
 
 mpc_parser_t *mpc_not(mpc_parser_t *a, mpc_dtor_t da);
 mpc_parser_t *mpc_not_lift(mpc_parser_t *a, mpc_dtor_t da, mpc_ctor_t lf);
