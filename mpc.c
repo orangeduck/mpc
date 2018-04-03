@@ -1790,6 +1790,38 @@ mpc_parser_t *mpc_check_with(mpc_parser_t *a, mpc_check_with_t f, void *x, const
   return p;
 }
 
+mpc_parser_t *mpc_checkf(mpc_parser_t *a, mpc_check_t f, const char *fmt, ...) {
+  va_list        va;
+  char          *buffer;
+  mpc_parser_t  *p;
+
+  va_start(va, fmt);
+  buffer = malloc(2048);
+  vsprintf(buffer, fmt, va);
+  va_end(va);
+
+  p = mpc_check (a, f, buffer);
+  free (buffer);
+
+  return p;
+}
+
+mpc_parser_t *mpc_check_withf(mpc_parser_t *a, mpc_check_with_t f, void *x, const char *fmt, ...) {
+  va_list        va;
+  char          *buffer;
+  mpc_parser_t  *p;
+
+  va_start(va, fmt);
+  buffer = malloc(2048);
+  vsprintf(buffer, fmt, va);
+  va_end(va);
+
+  p = mpc_check_with (a, f, x, buffer);
+  free (buffer);
+
+  return p;
+}
+
 mpc_parser_t *mpc_predictive(mpc_parser_t *a) {
   mpc_parser_t *p = mpc_undefined();
   p->type = MPC_TYPE_PREDICT;

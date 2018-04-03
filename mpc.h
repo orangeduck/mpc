@@ -130,6 +130,8 @@ mpc_parser_t *mpc_apply(mpc_parser_t *a, mpc_apply_t f);
 mpc_parser_t *mpc_apply_to(mpc_parser_t *a, mpc_apply_to_t f, void *x);
 mpc_parser_t *mpc_check(mpc_parser_t *a, mpc_check_t f, const char *e);
 mpc_parser_t *mpc_check_with(mpc_parser_t *a, mpc_check_with_t f, void *x, const char *e);
+mpc_parser_t *mpc_checkf(mpc_parser_t *a, mpc_check_t f, const char *fmt, ...);
+mpc_parser_t *mpc_check_withf(mpc_parser_t *a, mpc_check_with_t f, void *x, const char *fmt, ...);
 
 mpc_parser_t *mpc_not(mpc_parser_t *a, mpc_dtor_t da);
 mpc_parser_t *mpc_not_lift(mpc_parser_t *a, mpc_dtor_t da, mpc_ctor_t lf);

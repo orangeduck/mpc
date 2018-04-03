@@ -314,6 +314,8 @@ Returns a parser that applies function `f` (optionality taking extra input `x`) 
 ```c
 mpc_parser_t *mpc_check(mpc_parser_t *a, mpc_check_t f, const char *e);
 mpc_parser_t *mpc_check_with(mpc_parser_t *a, mpc_check_with_t f, void *x, const char *e);
+mpc_parser_t *mpc_checkf(mpc_parser_t *a, mpc_check_t f, const char *fmt, ...);
+mpc_parser_t *mpc_check_withf(mpc_parser_t *a, mpc_check_with_t f, void *x, const char *fmt, ...);
 ```
 
 Returns a parser that applies function `f` (optionally taking extra input `x`) to the result of parser `a`. If `f` returns non-zero, then the parser succeeds and returns the value of `a` (possibly modified by `f`). If `f` returns zero, then the parser fails with message `e`.
