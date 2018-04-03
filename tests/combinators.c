@@ -82,6 +82,8 @@ void test_check_withf(void) {
 }
 
 void suite_combinators(void) {
-  pt_add_test(test_check,      "Test Check",      "Suite Combinators");
-  pt_add_test(test_check_with, "Test Check with", "Suite Combinators");
+  pt_add_test(test_check,       "Test Check",        "Suite Combinators");
+  pt_add_test(test_check_with,  "Test Check with",   "Suite Combinators");
+  pt_add_test(test_checkf,      "Test Check F",      "Suite Combinators");
+  pt_add_test(test_check_withf, "Test Check with F", "Suite Combinators");
 }
