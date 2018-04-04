@@ -855,34 +855,37 @@ static mpc_err_t *mpc_err_merge(mpc_input_t *i, mpc_err_t *x, mpc_err_t *y) {
 */
 
 enum {
-  MPC_TYPE_UNDEFINED = 0,
-  MPC_TYPE_PASS      = 1,
-  MPC_TYPE_FAIL      = 2,
-  MPC_TYPE_LIFT      = 3,
-  MPC_TYPE_LIFT_VAL  = 4,
-  MPC_TYPE_EXPECT    = 5,
-  MPC_TYPE_ANCHOR    = 6,
-  MPC_TYPE_STATE     = 7,
-  
-  MPC_TYPE_ANY       = 8,
-  MPC_TYPE_SINGLE    = 9,
-  MPC_TYPE_ONEOF     = 10,
-  MPC_TYPE_NONEOF    = 11,
-  MPC_TYPE_RANGE     = 12,
-  MPC_TYPE_SATISFY   = 13,
-  MPC_TYPE_STRING    = 14,
-  
-  MPC_TYPE_APPLY     = 15,
-  MPC_TYPE_APPLY_TO  = 16,
-  MPC_TYPE_PREDICT   = 17,
-  MPC_TYPE_NOT       = 18,
-  MPC_TYPE_MAYBE     = 19,
-  MPC_TYPE_MANY      = 20,
-  MPC_TYPE_MANY1     = 21,
-  MPC_TYPE_COUNT     = 22,
-  
-  MPC_TYPE_OR        = 23,
-  MPC_TYPE_AND       = 24
+  MPC_TYPE_UNDEFINED  = 0,
+  MPC_TYPE_PASS       = 1,
+  MPC_TYPE_FAIL       = 2,
+  MPC_TYPE_LIFT       = 3,
+  MPC_TYPE_LIFT_VAL   = 4,
+  MPC_TYPE_EXPECT     = 5,
+  MPC_TYPE_ANCHOR     = 6,
+  MPC_TYPE_STATE      = 7,
+
+  MPC_TYPE_ANY        = 8,
+  MPC_TYPE_SINGLE     = 9,
+  MPC_TYPE_ONEOF      = 10,
+  MPC_TYPE_NONEOF     = 11,
+  MPC_TYPE_RANGE      = 12,
+  MPC_TYPE_SATISFY    = 13,
+  MPC_TYPE_STRING     = 14,
+
+  MPC_TYPE_APPLY      = 15,
+  MPC_TYPE_APPLY_TO   = 16,
+  MPC_TYPE_PREDICT    = 17,
+  MPC_TYPE_NOT        = 18,
+  MPC_TYPE_MAYBE      = 19,
+  MPC_TYPE_MANY       = 20,
+  MPC_TYPE_MANY1      = 21,
+  MPC_TYPE_COUNT      = 22,
+
+  MPC_TYPE_OR         = 23,
+  MPC_TYPE_AND        = 24,
+
+  MPC_TYPE_CHECK      = 25,
+  MPC_TYPE_CHECK_WITH = 26,
 };
 
 typedef struct { char *m; } mpc_pdata_fail_t;
@@ -895,6 +898,8 @@ typedef struct { int(*f)(char); } mpc_pdata_satisfy_t;
 typedef struct { char *x; } mpc_pdata_string_t;
 typedef struct { mpc_parser_t *x; mpc_apply_t f; } mpc_pdata_apply_t;
 typedef struct { mpc_parser_t *x; mpc_apply_to_t f; void *d; } mpc_pdata_apply_to_t;
+typedef struct { mpc_parser_t *x; mpc_check_t f; char *e; } mpc_pdata_check_t;
+typedef struct { mpc_parser_t *x; mpc_check_with_t f; void *d; char *e; } mpc_pdata_check_with_t;
 typedef struct { mpc_parser_t *x; } mpc_pdata_predict_t;
 typedef struct { mpc_parser_t *x; mpc_dtor_t dx; mpc_ctor_t lf; } mpc_pdata_not_t;
 typedef struct { int n; mpc_fold_t f; mpc_parser_t *x; mpc_dtor_t dx; } mpc_pdata_repeat_t;
@@ -912,6 +917,8 @@ typedef union {
   mpc_pdata_string_t string;
   mpc_pdata_apply_t apply;
   mpc_pdata_apply_to_t apply_to;
+  mpc_pdata_check_t check;
+  mpc_pdata_check_with_t check_with;
   mpc_pdata_predict_t predict;
   mpc_pdata_not_t not;
   mpc_pdata_repeat_t repeat;
@@ -1050,7 +1057,29 @@ static int mpc_parse_run(mpc_input_t *i, mpc_parser_t *p, mpc_result_t *r, mpc_e
       } else {
         MPC_FAILURE(r->error);
       }
-    
+
+    case MPC_TYPE_CHECK:
+      if (mpc_parse_run(i, p->data.check.x, r, e)) {
+        if (p->data.check.f(&r->output)) {
+          MPC_SUCCESS(r->output);
+        } else {
+          MPC_FAILURE(mpc_err_fail(i, p->data.check.e));
+        }
+      } else {
+        MPC_FAILURE(r->error);
+      }
+
+    case MPC_TYPE_CHECK_WITH:
+      if (mpc_parse_run(i, p->data.check_with.x, r, e)) {
+        if (p->data.check_with.f(&r->output, p->data.check_with.d)) {
+          MPC_SUCCESS(r->output);
+        } else {
+          MPC_FAILURE(mpc_err_fail(i, p->data.check_with.e));
+        }
+      } else {
+        MPC_FAILURE(r->error);
+      }
+
     case MPC_TYPE_EXPECT:
       mpc_input_suppress_enable(i);
       if (mpc_parse_run(i, p->data.expect.x, r, e)) {
@@ -1358,6 +1387,16 @@ static void mpc_undefine_unretained(mpc_parser_t *p, int force) {
     case MPC_TYPE_OR:  mpc_undefine_or(p);  break;
     case MPC_TYPE_AND: mpc_undefine_and(p); break;
     
+    case MPC_TYPE_CHECK:
+      mpc_undefine_unretained(p->data.check.x, 0);
+      free(p->data.check.e);
+      break;
+
+    case MPC_TYPE_CHECK_WITH:
+      mpc_undefine_unretained(p->data.check_with.x, 0);
+      free(p->data.check_with.e);
+      break;
+
     default: break;
   }
   
@@ -1471,6 +1510,17 @@ mpc_parser_t *mpc_copy(mpc_parser_t *a) {
       }
     break;
     
+    case MPC_TYPE_CHECK:
+      p->data.check.x      = mpc_copy(a->data.check.x);
+      p->data.check.e      = malloc(strlen(a->data.check.e)+1);
+      strcpy(p->data.check.e, a->data.check.e);
+      break;
+    case MPC_TYPE_CHECK_WITH:
+      p->data.check_with.x = mpc_copy(a->data.check_with.x);
+      p->data.check_with.e = malloc(strlen(a->data.check_with.e)+1);
+      strcpy(p->data.check_with.e, a->data.check_with.e);
+      break;
+
     default: break;
   }
 
@@ -1716,6 +1766,59 @@ mpc_parser_t *mpc_apply_to(mpc_parser_t *a, mpc_apply_to_t f, void *x) {
   p->data.apply_to.x = a;
   p->data.apply_to.f = f;
   p->data.apply_to.d = x;
+  return p;
+}
+
+mpc_parser_t *mpc_check(mpc_parser_t *a, mpc_check_t f, const char *e) {
+  mpc_parser_t  *p = mpc_undefined();
+  p->type          = MPC_TYPE_CHECK;
+  p->data.check.x  = a;
+  p->data.check.f  = f;
+  p->data.check.e  = malloc(strlen(e) + 1);
+  strcpy(p->data.check.e, e);
+  return p;
+}
+
+mpc_parser_t *mpc_check_with(mpc_parser_t *a, mpc_check_with_t f, void *x, const char *e) {
+  mpc_parser_t  *p     = mpc_undefined();
+  p->type              = MPC_TYPE_CHECK_WITH;
+  p->data.check_with.x = a;
+  p->data.check_with.f = f;
+  p->data.check_with.d = x;
+  p->data.check_with.e = malloc(strlen(e) + 1);
+  strcpy(p->data.check_with.e, e);
+  return p;
+}
+
+mpc_parser_t *mpc_checkf(mpc_parser_t *a, mpc_check_t f, const char *fmt, ...) {
+  va_list        va;
+  char          *buffer;
+  mpc_parser_t  *p;
+
+  va_start(va, fmt);
+  buffer = malloc(2048);
+  vsprintf(buffer, fmt, va);
+  va_end(va);
+
+  p = mpc_check (a, f, buffer);
+  free (buffer);
+
+  return p;
+}
+
+mpc_parser_t *mpc_check_withf(mpc_parser_t *a, mpc_check_with_t f, void *x, const char *fmt, ...) {
+  va_list        va;
+  char          *buffer;
+  mpc_parser_t  *p;
+
+  va_start(va, fmt);
+  buffer = malloc(2048);
+  vsprintf(buffer, fmt, va);
+  va_end(va);
+
+  p = mpc_check_with (a, f, x, buffer);
+  free (buffer);
+
   return p;
 }
 
@@ -2595,7 +2698,16 @@ static void mpc_print_unretained(mpc_parser_t *p, int force) {
     mpc_print_unretained(p->data.and.xs[p->data.and.n-1], 0);
     printf(")");
   }
-  
+
+  if (p->type == MPC_TYPE_CHECK) {
+    mpc_print_unretained(p->data.check.x, 0);
+    printf("->?");
+  }
+  if (p->type == MPC_TYPE_CHECK_WITH) {
+    mpc_print_unretained(p->data.check_with.x, 0);
+    printf("->?");
+  }
+
 }
 
 void mpc_print(mpc_parser_t *p) {
@@ -3636,6 +3748,9 @@ static int mpc_nodecount_unretained(mpc_parser_t* p, int force) {
   if (p->type == MPC_TYPE_APPLY_TO) { return 1 + mpc_nodecount_unretained(p->data.apply_to.x, 0); }
   if (p->type == MPC_TYPE_PREDICT)  { return 1 + mpc_nodecount_unretained(p->data.predict.x, 0); }
 
+  if (p->type == MPC_TYPE_CHECK)    { return 1 + mpc_nodecount_unretained(p->data.check.x, 0); }
+  if (p->type == MPC_TYPE_CHECK_WITH) { return 1 + mpc_nodecount_unretained(p->data.check_with.x, 0); }
+
   if (p->type == MPC_TYPE_NOT)   { return 1 + mpc_nodecount_unretained(p->data.not.x, 0); }
   if (p->type == MPC_TYPE_MAYBE) { return 1 + mpc_nodecount_unretained(p->data.not.x, 0); }
 
@@ -3678,15 +3793,17 @@ static void mpc_optimise_unretained(mpc_parser_t *p, int force) {
   
   /* Optimise Subexpressions */
   
-  if (p->type == MPC_TYPE_EXPECT)   { mpc_optimise_unretained(p->data.expect.x, 0); }
-  if (p->type == MPC_TYPE_APPLY)    { mpc_optimise_unretained(p->data.apply.x, 0); }
-  if (p->type == MPC_TYPE_APPLY_TO) { mpc_optimise_unretained(p->data.apply_to.x, 0); }
-  if (p->type == MPC_TYPE_PREDICT)  { mpc_optimise_unretained(p->data.predict.x, 0); }
-  if (p->type == MPC_TYPE_NOT)      { mpc_optimise_unretained(p->data.not.x, 0); }
-  if (p->type == MPC_TYPE_MAYBE)    { mpc_optimise_unretained(p->data.not.x, 0); }
-  if (p->type == MPC_TYPE_MANY)     { mpc_optimise_unretained(p->data.repeat.x, 0); }
-  if (p->type == MPC_TYPE_MANY1)    { mpc_optimise_unretained(p->data.repeat.x, 0); }
-  if (p->type == MPC_TYPE_COUNT)    { mpc_optimise_unretained(p->data.repeat.x, 0); }
+  if (p->type == MPC_TYPE_EXPECT)     { mpc_optimise_unretained(p->data.expect.x, 0); }
+  if (p->type == MPC_TYPE_APPLY)      { mpc_optimise_unretained(p->data.apply.x, 0); }
+  if (p->type == MPC_TYPE_APPLY_TO)   { mpc_optimise_unretained(p->data.apply_to.x, 0); }
+  if (p->type == MPC_TYPE_CHECK)      { mpc_optimise_unretained(p->data.check.x, 0); }
+  if (p->type == MPC_TYPE_CHECK_WITH) { mpc_optimise_unretained(p->data.check_with.x, 0); }
+  if (p->type == MPC_TYPE_PREDICT)    { mpc_optimise_unretained(p->data.predict.x, 0); }
+  if (p->type == MPC_TYPE_NOT)        { mpc_optimise_unretained(p->data.not.x, 0); }
+  if (p->type == MPC_TYPE_MAYBE)      { mpc_optimise_unretained(p->data.not.x, 0); }
+  if (p->type == MPC_TYPE_MANY)       { mpc_optimise_unretained(p->data.repeat.x, 0); }
+  if (p->type == MPC_TYPE_MANY1)      { mpc_optimise_unretained(p->data.repeat.x, 0); }
+  if (p->type == MPC_TYPE_COUNT)      { mpc_optimise_unretained(p->data.repeat.x, 0); }
   
   if (p->type == MPC_TYPE_OR) { 
     for(i = 0; i < p->data.or.n; i++) {

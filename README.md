@@ -312,6 +312,17 @@ Returns a parser that applies function `f` (optionality taking extra input `x`) 
 * * *
 
 ```c
+mpc_parser_t *mpc_check(mpc_parser_t *a, mpc_check_t f, const char *e);
+mpc_parser_t *mpc_check_with(mpc_parser_t *a, mpc_check_with_t f, void *x, const char *e);
+mpc_parser_t *mpc_checkf(mpc_parser_t *a, mpc_check_t f, const char *fmt, ...);
+mpc_parser_t *mpc_check_withf(mpc_parser_t *a, mpc_check_with_t f, void *x, const char *fmt, ...);
+```
+
+Returns a parser that applies function `f` (optionally taking extra input `x`) to the result of parser `a`. If `f` returns non-zero, then the parser succeeds and returns the value of `a` (possibly modified by `f`). If `f` returns zero, then the parser fails with message `e`.
+
+* * *
+
+```c
 mpc_parser_t *mpc_not(mpc_parser_t *a, mpc_dtor_t da);
 mpc_parser_t *mpc_not_lift(mpc_parser_t *a, mpc_dtor_t da, mpc_ctor_t lf);
 ```
@@ -407,6 +418,15 @@ typedef mpc_val_t*(*mpc_apply_to_t)(mpc_val_t*,void*);
 ```
 
 This takes in some pointer to data and outputs some new or modified pointer to data, ensuring to free the input data if it is no longer used. The `apply_to` variation takes in an extra pointer to some data such as global state.
+
+* * *
+
+```c
+typedef int(*mpc_check_t)(mpc_val_t**);
+typedef int(*mpc_check_with_t)(mpc_val_t**,void*);
+```
+
+This takes in some pointer to data and outputs 0 if parsing should stop with an error. Additionally, this may change or free the input data. The `check_with` variation takes in an extra pointer to some data such as global state.
 
 * * *
 
