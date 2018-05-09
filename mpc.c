@@ -2210,9 +2210,9 @@ static mpc_val_t *mpcf_re_range(mpc_val_t *x) {
   int comp = s[0] == '^' ? 1 : 0;
   char *range = calloc(1,1);
   
-  if (s[0] == '\0') { free(x); return mpc_fail("Invalid Regex Range Expression"); } 
+  if (s[0] == '\0') { free(range); free(x); return mpc_fail("Invalid Regex Range Expression"); } 
   if (s[0] == '^' && 
-      s[1] == '\0') { free(x); return mpc_fail("Invalid Regex Range Expression"); }
+      s[1] == '\0') { free(range); free(x); return mpc_fail("Invalid Regex Range Expression"); }
   
   for (i = comp; i < strlen(s); i++){
     
