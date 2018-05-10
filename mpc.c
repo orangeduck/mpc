@@ -885,7 +885,7 @@ enum {
   MPC_TYPE_AND        = 24,
 
   MPC_TYPE_CHECK      = 25,
-  MPC_TYPE_CHECK_WITH = 26,
+  MPC_TYPE_CHECK_WITH = 26
 };
 
 typedef struct { char *m; } mpc_pdata_fail_t;

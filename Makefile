@@ -1,6 +1,6 @@
 
 CC = gcc
-STND=-std=c99
+STND=-ansi
 CFLAGS = $(STND) -pedantic -O3 -g -Wall -Werror -Wextra -Wformat=2 -Wshadow \
   -Wno-long-long -Wno-overlength-strings -Wno-format-nonliteral -Wcast-align \
   -Wwrite-strings -Wstrict-prototypes -Wold-style-definition -Wredundant-decls \
