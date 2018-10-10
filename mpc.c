@@ -3957,3 +3957,99 @@ void mpc_optimise(mpc_parser_t *p) {
   mpc_optimise_unretained(p, 1);
 }
 
+// lexer
+
+struct mpc_lexer_t {
+	char * name;
+	mpc_parser_t * parser;
+	MPC_LEX_ACTION(action);
+	int count;
+};
+
+mpc_lexer_t *mpc_lexer_undefined(void) {
+  mpc_lexer_t *l = calloc(1, sizeof(mpc_lexer_t));
+  l->name = NULL;
+  l->count = 1;
+  return l;
+}
+
+mpc_lexer_t *mpc_lexer_new(const char *name) {
+  mpc_lexer_t *l = mpc_lexer_undefined();
+  l->name = realloc(l->name, strlen(name) + 1);
+  strcpy(l->name, name);
+  return l;
+}
+
+void mpc_lexer_add(mpc_lexer_t ** l, mpc_parser_t * p, MPC_LEX_ACTION(action)) {
+	if (!p->name) {
+		return;
+	}
+	
+	mpc_lexer_t * lexer;
+	
+	if (!l) {
+		lexer = mpc_lexer_undefined();
+	} else lexer = *l;
+	
+	if (lexer->count != 1 || lexer->parser) {
+		mpc_lexer_t * lexertmp = realloc(lexer, sizeof(mpc_lexer_t)*(lexer->count+1));
+		if (lexertmp != NULL) lexer = lexertmp;
+		lexer->count++;
+		*l = lexer;
+	}
+		
+	lexer[lexer->count-1].parser = p;
+	
+	if (action) lexer[lexer->count-1].action = action;
+}
+
+void mpc_lexer_print(mpc_lexer_t * l) {
+	if (!l) {
+		puts("lexer is not defined");
+		return;
+	}
+	for (int i = 0; i < l->count; i++) {
+		printf("%s: parser: %s\n", l->name?l->name:"Undefined", l[i].parser?l[i].parser->name?l[i].parser->name:"Undefined":"Undefined");
+	}
+}
+
+void mpc_lexer_free(mpc_lexer_t * l) {
+	if (!l) {
+		return;
+	}
+	if (l->name) free(l->name);
+	for (int i = 0; i < l->count; i++) {
+		l[i].parser = NULL;
+		l[i].action = NULL;
+	}
+	l->count = 0;
+	free(l);
+}
+
+mpc_err_t *mpc_lexer(char * input, mpc_lexer_t * list, mpc_result_t * result) {
+	while(strcmp(input,"")!=0) {
+		for (int i = 0; i < list->count; i++) {
+			if (mpc_parse("lexer", input, list[i].parser, result)) {
+				if (strcmp(result->output,"") != 0) {
+					int len = strlen(result->output);
+					input+=len;
+					if (list[i].action) list[i].action(result);
+				}
+			}
+		}
+	}
+}
+
+// a simple line lexer
+
+mpc_lexer_t * mpcl_line(MPC_LEX_ACTION(EOL_ACTION), MPC_LEX_ACTION(LINE_ACTION)) {
+	mpc_parser_t * EOL = mpc_new("EOL");
+	mpc_define(EOL, mpc_or(2, mpc_newline(), mpc_eoi));
+	mpc_parser_t * Line = mpc_new("Line");
+	mpc_define(Line, mpc_re("[^\n]*"));
+	
+	mpc_lexer_t * lexer = mpc_lexer_new("lexer");
+	mpc_lexer_add(&lexer, EOL, EOL_ACTION);
+	mpc_lexer_add(&lexer, Line, LINE_ACTION);
+	return lexer;
+}

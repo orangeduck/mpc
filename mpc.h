@@ -370,6 +370,26 @@ int mpc_test_fail(mpc_parser_t *p, const char *s, const void *d,
   mpc_dtor_t destructor,
   void(*printer)(const void*));
 
+// lexer
+
+// macro for defining a function pointer used by the lexer
+#define MPC_LEX_ACTION(name) int(* name)(mpc_result_t*)
+
+// macro for defining a function for use by the lexer
+#define mpc_lexer_action(x) int x(mpc_result_t * x)
+
+struct mpc_lexer_t;
+typedef struct mpc_lexer_t mpc_lexer_t;
+mpc_lexer_t *mpc_lexer_undefined(void);
+mpc_lexer_t *mpc_lexer_new(const char *name);
+void mpc_lexer_add(mpc_lexer_t ** l, mpc_parser_t * p, MPC_LEX_ACTION(action));
+void mpc_lexer_print(mpc_lexer_t * l);
+void mpc_lexer_free(mpc_lexer_t * l);
+mpc_err_t *mpc_lexer(char * input, mpc_lexer_t * list, mpc_result_t * result);
+
+// lexers
+mpc_lexer_t * mpcl_line(MPC_LEX_ACTION(EOL_ACTION), MPC_LEX_ACTION(LINE_ACTION));
+
 #ifdef __cplusplus
 }
 #endif
