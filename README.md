@@ -1197,6 +1197,61 @@ lexing End Of Line: '
 lexing Line: 'eg'
 ```
 
+Self Modifying Lexer
+===================
+
+as stated earlier, the lexer allows an action to modify itself during run-time via the self structure, lets use this to dynamically parse "ab", starting with just lexing for 'a', and changing the parser to parse for 'b' instead of 'a' once 'a' has been parsed
+
+```
+char globalch = 0;
+
+mpc_lexer_action(outCH) {
+	printf("lexing Line: '%s'\n", (char *) outCH->output);
+	if (globalch != 'b') {
+		puts("changing globalch to 'b'");
+		globalch = 'b';
+		mpc_define(self->parser, mpc_char(globalch));
+	}
+	return 0;
+}
+
+int main(int argc, char **argv) {
+	// lets attempt to lex something that will change
+	
+	globalch = 'a';
+	
+	mpc_result_t r;
+	
+	mpc_parser_t * Line = mpc_new("Line");
+	mpc_define(Line, mpc_char(globalch));
+		
+	mpc_lexer_t * lexer = mpc_lexer_new("lexer");
+	mpc_lexer_add(&lexer, Line, outCH);
+
+	mpc_lexer("ab", lexer, &r);
+	mpc_lexer_free(lexer);
+	
+	return 0;
+	
+}
+```
+
+if we where to run this, it would output
+
+```
+lexing Line: 'a'
+changing globalch to 'b'
+lexing Line: 'b'
+```
+
+the code is mostly the same with the only difference being
+
+```
+mpc_define(self->parser, mpc_char(globalch));
+```
+what this does is redefines `lexer[0].parser` (since it only contains one parser we can evaluate `self` to `lexer[0]`) as the parser returned by `mpc_char(globalch)`, except this time, `globalch` has changed from `'a'` to `'b'` thus `lexer[0].parser` now contains a parser that parses `'b'` instead of `'a'`, and thus when `lexer[0].parser` gets parsed by `mpc_parse` again, it will parse `b` instead
+
+
 Limitations & FAQ
 =================
 
