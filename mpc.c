@@ -2167,7 +2167,7 @@ static mpc_val_t *mpcf_re_escape(mpc_val_t *x) {
   /* Regex Special Characters */
   if (s[0] == '.') { free(s); return mpc_any(); }
   if (s[0] == '^') { free(s); return mpc_and(2, mpcf_snd, mpc_soi(), mpc_lift(mpcf_ctor_str), free); }
-  if (s[0] == '$') { free(s); return mpc_and(2, mpcf_snd, mpc_eoi(), mpc_lift(mpcf_ctor_str), free); }
+  if (s[0] == '$') { free(s); return mpc_and(2, mpcf_snd, mpc_or(2, mpc_eoi(), mpc_newline()), mpc_lift(mpcf_ctor_str), free); }
   
   /* Regex Escape */
   if (s[0] == '\\') {
