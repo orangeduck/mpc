@@ -4033,7 +4033,8 @@ mpc_err_t *mpc_lexer(char * input, mpc_lexer_t * list, mpc_result_t * result) {
 				if (strcmp(result->output,"") != 0) {
 					int len = strlen(result->output);
 					input+=len;
-					if (list[i].action) list[i].action(result);
+					// &list[i] is the address of the structure at index i of the array list
+					if (list[i].action) list[i].action(&list[i], result);
 				}
 			}
 		}
@@ -4047,6 +4048,18 @@ mpc_lexer_t * mpcl_line(MPC_LEX_ACTION(EOL_ACTION), MPC_LEX_ACTION(LINE_ACTION))
 	mpc_define(EOL, mpc_or(2, mpc_newline(), mpc_eoi));
 	mpc_parser_t * Line = mpc_new("Line");
 	mpc_define(Line, mpc_re("[^\n]*"));
+	
+	mpc_lexer_t * lexer = mpc_lexer_new("lexer");
+	mpc_lexer_add(&lexer, EOL, EOL_ACTION);
+	mpc_lexer_add(&lexer, Line, LINE_ACTION);
+	return lexer;
+}
+
+mpc_lexer_t * mpcl_shline(MPC_LEX_ACTION(EOL_ACTION), MPC_LEX_ACTION(LINE_ACTION)) {
+	mpc_parser_t * EOL = mpc_new("EOL");
+	mpc_define(EOL, mpc_or(3, mpc_char(';'), mpc_newline(), mpc_eoi));
+	mpc_parser_t * Line = mpc_new("Line");
+	mpc_define(Line, mpc_re(".[^;\n]*"));
 	
 	mpc_lexer_t * lexer = mpc_lexer_new("lexer");
 	mpc_lexer_add(&lexer, EOL, EOL_ACTION);

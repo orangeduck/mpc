@@ -852,7 +852,15 @@ Lexer
 
 the built in lexer was created (by mgood7123) to aid in tokenising input
 
-due to how grammer is specified it can be difficult to get what you want in specific cases, for example, you want to do one thing while also doing another, without sacrificing one or the other due to overlapping rules and definitions, but the grammar you have just doesnt want to cooperate with you, which is why i made this minimal lexer, which will parse the input, and do certain functions depending on what it is configured to do,
+the reason for this is to make parsing easier and more simple, and to avoid cases where parser AST grammer may conflict with rules or statements leading to the input being parsed incorectly sometimes in a way that is unavoidable regardless of how you re order the statements and rules
+
+the lexer itself is actually just a wrapper for mpc_parse that parses the input against multiple user defined parsers, reducing some of the complexity of manually implementing there own lexer, in which they may or may not know how to do correctly, not to say that my method of implementation is not correct as there are always better implementations out there
+
+the reason it uses mpc_parse internally and does not just return its own mpc_parser_t is due to how it needs to work, for it to be able to lex it needs to be able to parse, tokenise, and do something with its tokens, in which tokenisation is difficult if it only returns a mpc_parser_t as a user will likely not know that they would need to recursively call mpc_parse, nor may or may not know how to correctly advance the input so it does not infinitely parse the exact same input without advancing the input itself
+
+plus the lexer would be an internal function and not a third party function such as a bison lexer, in which having it internal increases its portability as you dont need any extra third party lexing libraries
+
+due to how grammer is specified it can be difficult to get what you want in specific cases, for example, you want to do one thing while also doing another, without sacrificing one or the other due to overlapping rules and definitions, but the grammar you have just doesnt want to cooperate with you
 
 Here is how one would use the lexer to parse a line, delimited by '\n', and output what it has obtained:
 
@@ -946,7 +954,7 @@ how would you decide which node you are meant to start from, and which combinati
 
 ### Provides callbacks to lexer parsers
 
-the lexer provides callbacks to lexer parsers, in which one can use to parse specific tokens based on the combination of parsers used and what order they are specified in. This way each token can theoretically be assigned a different parser, making more or less just as powerful as the parser itself, for example, you could have one parser for when the lexer tokenizes X, and another entirely different parser for when it tokenizes Z
+the lexer provides callbacks to lexer parsers, or parser actions, in which one can use to parse specific tokens based on the combination of parsers used and what order they are specified in. This way each token can theoretically be assigned a different parser, making more or less just as powerful as the parser itself, for example, you could have one parser for when the lexer tokenizes X, and another entirely different parser for when it tokenizes Z
 
 or the callback can be used for something entirely different, it could for example, start lexing files based on what it has already lexed, or it could just abort when it lexes a specific token, or it could execute a system command and grab its output, the callback can do whatever you want it to do, providing a large deal of flexibility as it does not need to be limited to just parsing or lexing
 
@@ -973,7 +981,7 @@ then it is assigned some parsers:
 ```
 mpc_lexer_add(&lexer, EOL, outEOL);
 ```
-first it is binded to an End Of Line parser, and is registered the function outEOL (this CAN be NULL to specify no function should be binded), if it suceeds it executes its binded function if any, and consumes the input it has managed to match, then moves on to the next parser, if there are no other parsers then it checks itself again, this CAN lead to infinite loops if no available parsers can match a input, this can be solved by adding a parser that can match that input, so that input gets consumed and other parsers can then continue their work
+first it is binded to an End Of Line parser, and is registered the function outEOL as a parser action, in which the action to be preformed when parsing is successful (this CAN be NULL to specify no function should be binded), if it suceeds it executes its binded function if any, and consumes the input it has managed to match, then moves on to the next parser, if there are no other parsers then it checks itself again, this CAN lead to infinite loops if no available parsers can match a input, this can be solved by adding a parser that can match that input, so that input gets consumed and other parsers can then continue their work
 
 ```
 mpc_lexer_add(&lexer, Line, outLINE);
@@ -984,6 +992,27 @@ then it binds a second parser, Line, and a function, outLINE, this will be check
 mpc_lexer_print(lexer);
 ```
 finally it prints the specified lexer, and the parsers that have been binded to that lexer
+
+### able to redefine itself at runtime allowing for dynamic parsing
+
+the lexer is able to redefine any of its elements during runtime
+
+this allows the changing of:
+* its own name
+* its associated parser
+* its associated action
+* its internal count
+* and any other members in `mpc_lexer_t`
+
+this enables the ability to dynamically tokenise input by self modifying,
+
+for example, you can parse multiple tokens with a single parser when the input would be otherwise unknown at runtime or in some cases unpredictable, by simply redefining its parser
+
+or you could switch the action associated with a parser, normally dependant on a condition in the action itself, or at random
+
+self modification can be done via the self pointer in the current action
+
+for example, redefining a parser is as simple as putting `mpc_define(self->parser, new_parser);` in a parser's action
 
 with these differences aside it is easy to create and use lexers, now back to the internals:
 
@@ -1008,16 +1037,18 @@ notice that action is a `macro`, these macros have hardcoded internal parameter 
 currently two macros are provided:
 * * *
 ```
-#define MPC_LEX_ACTION(name) int(* name)(mpc_result_t*)
+#define MPC_LEX_ACTION(name) int(* name)(mpc_lexer_t*, mpc_result_t*)
 ```
-this is a macro for defining a function pointer used by the lexer, it takes a function pointer name, allowing it to be differenciated from duplicate function pointers, and expects a function consisting of a single argument of `mpc_result_t` and a function return value of `int`
+this is a macro for defining a function pointer used by the lexer, it takes a function pointer name, allowing it to be differenciated from duplicate function pointers, and expects a function consisting of two arguments, a lexer of type `mpc_lexer_t` and a result of type `mpc_result_t` and a function return value of `int`
 
 * * * 
 
 ```
-#define mpc_lexer_action(x) int x(mpc_result_t * x)
+#define mpc_lexer_action(x) int x(mpc_lexer_t * self, mpc_result_t * x)
 ```
-this is a macro for defining a function for use by the lexer, as with `MPC_LEX_ACTION`, it specifies a function that takes a singe argument of `mpc_result_t` and a function return value of `int`, but the name of the function and the name of the parameter is defined to the same name, to avoid possible name conflicts when dealing with hardcoded names
+this is a macro for defining a function for use by the lexer, as with `MPC_LEX_ACTION`, it specifies a function that takes two arguments, a lexer of type `mpc_lexer_t` and a result of type `mpc_result_t` and a function return value of `int`, but the name of the function and the name of the parameter is defined to the same name, to avoid possible name conflicts when dealing with hardcoded names
+
+the first argument will always point to the current lexer index
 
 the variable `count` is used internally to keep track of assigned parsers and should not be modified by the user under normal cases unless developing a new function
 
@@ -1056,7 +1087,8 @@ mpc_err_t *mpc_lexer(char * input, mpc_lexer_t * list, mpc_result_t * result) {
 				if (strcmp(result->output,"") != 0) {
 					int len = strlen(result->output);
 					input+=len;
-					if (list[i].action) list[i].action(result);
+					// &list[i] is the address of the structure at index i of the array list
+					if (list[i].action) list[i].action(&list[i], result);
 				}
 			}
 		}
@@ -1093,22 +1125,30 @@ we check if our matched string is not empty
 consuming input if it matches
 
 ```
-					if (list[i].action) list[i].action(result);
+					// &list[i] is the address of the structure at index i of the array list
+					if (list[i].action) list[i].action(&list[i], result);
 				}
 			}
 ```
-and check if a function is associated with the current parser, and if so execute it with the result as its argument, then we repeat the entire process again until all input has been consumed
+and check if a function is associated with the current parser, and if so execute it with two arguments, the first argument is the address of the index of the current list itself, and the second is the result of the parser, then we repeat the entire process again until all input has been consumed
 
 Basic Lexers
 ============
 
-at the moment only one pre-built lexer is provided:
+at the moment two pre-built lexers are provided:
 
 ```
 mpc_lexer_t * mpcl_line(MPC_LEX_ACTION(EOL_ACTION), MPC_LEX_ACTION(LINE_ACTION));
 ```
 
-this returns a lexer that will lex lines of input, ending in a `\n` or end of input, normally `NULL`
+this returns a lexer that will lex lines of input, ending in a `\n`, or end of input, normally `NULL`
+
+```
+mpc_lexer_t * mpcl_shline(MPC_LEX_ACTION(EOL_ACTION), MPC_LEX_ACTION(LINE_ACTION));
+```
+
+this returns a lexer that will lex lines of input, ending in a `;`, `\n`, or end of input, normally `NULL`, designed for lexing shell code, commands can also end in ;, at the moment quoting is not supported so lexing `hello "world!;";` will lex `hello "world!` and `"`, whitespaces are supported
+
 
 using this we can then modify our example to use the pre-built lexer:
 
