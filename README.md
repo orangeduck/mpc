@@ -1147,7 +1147,7 @@ this returns a lexer that will lex lines of input, ending in a `\n`, or end of i
 mpc_lexer_t * mpcl_shline(MPC_LEX_ACTION(EOL_ACTION), MPC_LEX_ACTION(LINE_ACTION));
 ```
 
-this returns a lexer that will lex lines of input, ending in a `;`, `\n`, or end of input, normally `NULL`, designed for lexing shell code, commands can also end in ;, at the moment quoting is not supported so lexing `hello "world!;";` will lex `hello "world!` and `"`, whitespaces are supported
+this returns a lexer that will lex lines of input, ending in a `;`, `\n`, or end of input, normally `NULL`, designed for lexing shell code, commands can also end in `;`, at the moment quoting is not supported so lexing `hello "world!;";` will lex `hello "world!` and `"`, whitespaces are supported
 
 
 using this we can then modify our example to use the pre-built lexer:
