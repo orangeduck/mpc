@@ -991,7 +991,7 @@ then it binds a second parser, Line, and a function, outLINE, this will be check
 ```
 mpc_lexer_print(lexer);
 ```
-finally it prints the specified lexer, and the parsers that have been binded to that lexer
+finally it prints the specified lexer, and the parsers that have been binded to that lexer along with there assiciated action, `(nil)` means no action is associated
 
 ### able to redefine itself at runtime allowing for dynamic parsing
 
