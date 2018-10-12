@@ -1002,6 +1002,7 @@ this allows the changing of:
 * its associated parser
 * its associated action
 * its internal count
+* modifying parts of other NAMED lexers via the global lexer pool, we will talks more about this later
 * and any other members in `mpc_lexer_t`
 
 this enables the ability to dynamically tokenise input by self modifying,
@@ -1200,7 +1201,9 @@ lexing Line: 'eg'
 Self Modifying Lexer
 ===================
 
-as stated earlier, the lexer allows an action to modify itself during run-time via the self structure, lets use this to dynamically parse "ab", starting with just lexing for 'a', and changing the parser to parse for 'b' instead of 'a' once 'a' has been parsed
+as stated earlier, the lexer allows an action to modify itself during run-time via two structures: the local `self` structure, and the global/local `mpc_lexer_pool` structure
+
+lets use the `self` structure to dynamically parse "ab", starting with just lexing for 'a', and changing the parser to parse for 'b' instead of 'a' once 'a' has been parsed
 
 ```
 char globalch = 0;
@@ -1244,12 +1247,36 @@ changing globalch to 'b'
 lexing Line: 'b'
 ```
 
-the code is mostly the same with the only difference being
+the code is mostly the same as the previous example with the only difference being
 
 ```
 mpc_define(self->parser, mpc_char(globalch));
 ```
 what this does is redefines `lexer[0].parser` (since it only contains one parser we can evaluate `self` to `lexer[0]`) as the parser returned by `mpc_char(globalch)`, except this time, `globalch` has changed from `'a'` to `'b'` thus `lexer[0].parser` now contains a parser that parses `'b'` instead of `'a'`, and thus when `lexer[0].parser` gets parsed by `mpc_parse` again, it will parse `b` instead
+
+global lexer pool
+=================
+
+when ever a named lexer is created it will get added to this the `mpc_lexer_pool->lexer` array, and `mpc_lexer_t` contains a pointer to this pool accessable via the exact same name, and is thus self recursive
+
+this allows for lexers to access and modify other lexers including themselves
+
+for example:
+```
+self->mpc_lexer_pool->lexer[0][0]->self->mpc_lexer_pool->lexer[0][0]->name
+```
+where `lexer[0][0][0]` specifies the first parser index ([0][0]`[0]`) of the first lexer (`[0]`[0][0]), and [0]`[0]`[0] (the middle `[0]`) specifies a constant address of the lexers, where reallocation does not change this address itself
+
+for example, `mpc_lexer_pool->lexer[0][0][0].parser->name: EOL`, and `mpc_lexer_pool->lexer[0][0]->parser->name` specifies the name of the first parser of the first lexer
+
+`mpc_lexer_pool` itself is a global variable in which the member `mpc_lexer_pool` from the struct `mpc_lexer_t` points to
+
+```
+mpc_lexer_find("lexer", "line");
+```
+this will search the lexer pool `mpc_lexer_pool` for a lexer named `lexer`, and all `lexer`'s indexes for a binded parser named `line` inside the lexer named `lexer`, returns NULL if not found otherwise returns the lexer's index that contains the parser as `mpc_lexer_t *` thus `mpc_lexer_find("lexer", "line")->parser->name` will result in lexer `lexer`'s index that contains a binded parser with the name `line`
+
+
 
 
 Limitations & FAQ
