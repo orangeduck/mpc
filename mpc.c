@@ -3301,7 +3301,6 @@ static mpc_val_t *mpcaf_grammar_and(int n, mpc_val_t **xs) {
 }
 
 static mpc_val_t *mpcaf_grammar_repeat(int n, mpc_val_t **xs) { 
-	PASSED
   int num;
   (void) n;
   if (xs[1] == NULL) { return xs[0]; }
