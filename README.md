@@ -28,6 +28,7 @@ Features
 * Automatic Error Message Generation
 * Regular Expression Parser Generator
 * Language/Grammar Parser Generator
+* Minimal Lexer
 
 
 Alternatives
@@ -844,6 +845,438 @@ void mpc_optimise(mpc_parser_t *p);
 ```
 
 Performs some basic optimisations on a parser to reduce it's size and increase its running speed.
+
+
+Lexer
+=====
+
+the built in lexer was created (by mgood7123) to aid in tokenising input
+
+the reason for this is to make parsing easier and more simple, and to avoid cases where parser AST grammer may conflict with rules or statements leading to the input being parsed incorectly sometimes in a way that is unavoidable regardless of how you re order the statements and rules
+
+the lexer itself is actually just a wrapper for mpc_parse that parses the input against multiple user defined parsers, reducing some of the complexity of manually implementing there own lexer, in which they may or may not know how to do correctly, not to say that my method of implementation is not correct as there are always better implementations out there
+
+the reason it uses mpc_parse internally and does not just return its own mpc_parser_t is due to how it needs to work, for it to be able to lex it needs to be able to parse, tokenise, and do something with its tokens, in which tokenisation is difficult if it only returns a mpc_parser_t as a user will likely not know that they would need to recursively call mpc_parse, nor may or may not know how to correctly advance the input so it does not infinitely parse the exact same input without advancing the input itself
+
+plus the lexer would be an internal function and not a third party function such as a bison lexer, in which having it internal increases its portability as you dont need any extra third party lexing libraries
+
+due to how grammer is specified it can be difficult to get what you want in specific cases, for example, you want to do one thing while also doing another, without sacrificing one or the other due to overlapping rules and definitions, but the grammar you have just doesnt want to cooperate with you
+
+Here is how one would use the lexer to parse a line, delimited by '\n', and output what it has obtained:
+
+```
+mpc_lexer_action(outEOL) {
+	printf("lexing End Of Line: '%s'\n", (char *) outEOL->output);
+	return 0;
+}
+
+mpc_lexer_action(outLINE) {
+	printf("lexing Line: '%s'\n", (char *) outLINE->output);
+	return 0;
+}
+
+int main(int argc, char **argv) {
+	char * st = input;
+	
+	mpc_parser_t * EOL = mpc_new("EOL");
+	mpc_parser_t * Line = mpc_new("Line");
+
+	mpc_define(EOL, mpc_or(2, mpc_newline(), mpc_eoi));
+	mpc_define(Line, mpc_re("[^\n]*"));
+	
+	mpc_lexer_t * lexer = mpc_lexer_new("lexer");
+	
+	mpc_lexer_add(&lexer, EOL, outEOL);
+	mpc_lexer_add(&lexer, Line, outLINE);
+	
+	mpc_result_t r;
+	mpc_lexer(st, lexer, &r);
+	mpc_lexer_free(lexer);
+	return 0;
+	
+}
+```
+
+if you where to set `input` to the string `"abcHVwufvyuevuy3y436782\n\n\nrehre\nrew\n-ql.;qa\neg"`,  the printed output would look like this.
+
+```
+lexing Line: 'abcHVwufvyuevuy3y436782'
+lexing End Of Line: '
+'
+lexing End Of Line: '
+'
+lexing End Of Line: '
+'
+lexing Line: 'rehre'
+lexing End Of Line: '
+'
+lexing Line: 'rew'
+lexing End Of Line: '
+'
+lexing Line: '-ql.;qa'
+lexing End Of Line: '
+'
+lexing Line: 'eg'
+```
+
+Inner Workings of the lexer
+---------------------------
+
+The lexer is designed loosely around the AST and the Parser but differs in a few ways:
+
+### No Abstract Syntax Tree
+
+the lexer cannot accept an Abstract Syntax Tree for various reasons such as outputting and complexity, or rather lack of knowledge of how one would output a constructed AST in a way such that each match is outputted from the root of its matching tag recursively and thus would be very complex as input would be caotic and unclear, however this does not mean it will never support an AST, it is just discouraged due to its complexity
+
+consider the following AST print:
+
+```
+parsing  a[b[0]]  
+> 
+  Command|> 
+    Space|char:1:1 ' '
+    Expression|Array|> 
+      Alpha|regex:1:2 'a'
+      Index|> 
+        char:1:3 '['
+        Array|> 
+          Alpha|regex:1:4 'b'
+          Index|> 
+            char:1:5 '['
+            Digit|regex:1:6 '0'
+            char:1:7 ']'
+        char:1:8 ']'
+```
+
+pretty confusing right?
+
+how would you decide which node you are meant to start from, and which combinations you are ment to output, you could output the following: `Char`, `Digit`, `Index`, `Array`, `Expression`, or `Command`. it would eventually turn into and merge into parsing as opposed to lexing and just turn into a duplication of the parser itself
+
+### Provides callbacks to lexer parsers
+
+the lexer provides callbacks to lexer parsers, or parser actions, in which one can use to parse specific tokens based on the combination of parsers used and what order they are specified in. This way each token can theoretically be assigned a different parser, making more or less just as powerful as the parser itself, for example, you could have one parser for when the lexer tokenizes X, and another entirely different parser for when it tokenizes Z
+
+or the callback can be used for something entirely different, it could for example, start lexing files based on what it has already lexed, or it could just abort when it lexes a specific token, or it could execute a system command and grab its output, the callback can do whatever you want it to do, providing a large deal of flexibility as it does not need to be limited to just parsing or lexing
+
+### recursively adds upon itself
+
+the lexer is designed so it can be created in a simple additive way, in that you stack up parsers similar to building an `if (...) {...} else if (...) {...}` loop, except it doesnt quite work like that
+
+consider the following definition of a lexer with two parsers
+```
+	mpc_lexer_t * lexer = mpc_lexer_new("lexer");
+	
+	mpc_lexer_add(&lexer, EOL, outEOL);
+	mpc_lexer_add(&lexer, Line, outLINE);
+	mpc_lexer_print(lexer);
+```
+
+
+```
+mpc_lexer_t * lexer = mpc_lexer_new("lexer");
+```
+a lexer is first created with `mpc_lexer_new` and assigned a name
+then it is assigned some parsers:
+
+```
+mpc_lexer_add(&lexer, EOL, outEOL);
+```
+first it is binded to an End Of Line parser, and is registered the function outEOL as a parser action, in which the action to be preformed when parsing is successful (this CAN be NULL to specify no function should be binded), if it suceeds it executes its binded function if any, and consumes the input it has managed to match, then moves on to the next parser, if there are no other parsers then it checks itself again, this CAN lead to infinite loops if no available parsers can match a input, this can be solved by adding a parser that can match that input, so that input gets consumed and other parsers can then continue their work
+
+```
+mpc_lexer_add(&lexer, Line, outLINE);
+```
+then it binds a second parser, Line, and a function, outLINE, this will be checked AFTER the parser EOL has been checked, it follows the same samantics as described above
+
+```
+mpc_lexer_print(lexer);
+```
+finally it prints the specified lexer, and the parsers that have been binded to that lexer along with there assiciated action, `(nil)` means no action is associated
+
+### able to redefine itself at runtime allowing for dynamic parsing
+
+the lexer is able to redefine any of its elements during runtime
+
+this allows the changing of:
+* its own name
+* its associated parser
+* its associated action
+* its internal count
+* modifying parts of other NAMED lexers via the global lexer pool, we will talks more about this later
+* and any other members in `mpc_lexer_t`
+
+this enables the ability to dynamically tokenise input by self modifying,
+
+for example, you can parse multiple tokens with a single parser when the input would be otherwise unknown at runtime or in some cases unpredictable, by simply redefining its parser
+
+or you could switch the action associated with a parser, normally dependant on a condition in the action itself, or at random
+
+self modification can be done via the self pointer in the current action
+
+for example, redefining a parser is as simple as putting `mpc_define(self->parser, new_parser);` in a parser's action
+
+with these differences aside it is easy to create and use lexers, now back to the internals:
+
+### the lexer structure
+
+the structure of a lexer `mpc_lexer_t` is fairly simple.
+```
+struct mpc_lexer_t {
+	char * name;
+	mpc_parser_t * parser;
+	MPC_LEX_ACTION(action);
+	int count;
+};
+
+typedef struct mpc_lexer_t mpc_lexer_t;
+
+```
+here it can be named, assigned a parser, assigned an action, and a counter for maintaining internals.
+
+notice that action is a `macro`, these macros have hardcoded internal parameter types and thus cannot be left to the user to know what type is expected, the paramater is used internally by the lexer as a callback for the result of any matching parser expression
+
+currently two macros are provided:
+* * *
+```
+#define MPC_LEX_ACTION(name) int(* name)(mpc_lexer_t*, mpc_result_t*)
+```
+this is a macro for defining a function pointer used by the lexer, it takes a function pointer name, allowing it to be differenciated from duplicate function pointers, and expects a function consisting of two arguments, a lexer of type `mpc_lexer_t` and a result of type `mpc_result_t` and a function return value of `int`
+
+* * * 
+
+```
+#define mpc_lexer_action(x) int x(mpc_lexer_t * self, mpc_result_t * x)
+```
+this is a macro for defining a function for use by the lexer, as with `MPC_LEX_ACTION`, it specifies a function that takes two arguments, a lexer of type `mpc_lexer_t` and a result of type `mpc_result_t` and a function return value of `int`, but the name of the function and the name of the parameter is defined to the same name, to avoid possible name conflicts when dealing with hardcoded names
+
+the first argument will always point to the current lexer index
+
+the variable `count` is used internally to keep track of assigned parsers and should not be modified by the user under normal cases unless developing a new function
+
+### lexer functions
+
+```
+mpc_lexer_t *mpc_lexer_undefined(void);
+mpc_lexer_t *mpc_lexer_new(const char *name);
+```
+these functions, create a new lexer, this lexer is allocated and must be freed, `mpc_lexer_undefined` creates an unnamed lexer, and `mpc_lexer_new` creates a named lexer
+
+```
+void mpc_lexer_add(mpc_lexer_t ** l, mpc_parser_t * p, MPC_LEX_ACTION(action));
+```
+as described in the section _recursively adds upon itself_, this binds a parser, then binds a function to it
+
+```
+void mpc_lexer_print(mpc_lexer_t * l);
+```
+this prints a given lexer, and any parsers associated with it
+
+```
+void mpc_lexer_free(mpc_lexer_t * l);
+```
+this frees an allocated lexer
+
+```
+mpc_err_t *mpc_lexer(char * input, mpc_lexer_t * list, mpc_result_t * result);
+```
+this is where the magic happens, once we have built up a lexer we then run it against some input, how this is done is just above simple:
+```
+mpc_err_t *mpc_lexer(char * input, mpc_lexer_t * list, mpc_result_t * result) {
+	while(strcmp(input,"")!=0) {
+		for (int i = 0; i < list->count; i++) {
+			if (mpc_parse("lexer", input, list[i].parser, result)) {
+				if (strcmp(result->output,"") != 0) {
+					int len = strlen(result->output);
+					input+=len;
+					// &list[i] is the address of the structure at index i of the array list
+					if (list[i].action) list[i].action(&list[i], result);
+				}
+			}
+		}
+	}
+}
+```
+
+here is a beakdown of the function and what it does:
+
+```
+	while(strcmp(input,"")!=0) {
+```
+first we run a while loop, checking if the input is empty
+
+```
+		for (int i = 0; i < list->count; i++) {
+```
+then while the input is not empty, we loop through our list of binded parsers
+
+```
+			if (mpc_parse("lexer", input, list[i].parser, result)) {
+```
+during the looping, parse the current parser
+
+```
+				if (strcmp(result->output,"") != 0) {
+```
+we check if our matched string is not empty
+
+```
+					int len = strlen(result->output);
+					input+=len;
+```
+consuming input if it matches
+
+```
+					// &list[i] is the address of the structure at index i of the array list
+					if (list[i].action) list[i].action(&list[i], result);
+				}
+			}
+```
+and check if a function is associated with the current parser, and if so execute it with two arguments, the first argument is the address of the index of the current list itself, and the second is the result of the parser, then we repeat the entire process again until all input has been consumed
+
+Basic Lexers
+============
+
+at the moment two pre-built lexers are provided:
+
+```
+mpc_lexer_t * mpcl_line(MPC_LEX_ACTION(EOL_ACTION), MPC_LEX_ACTION(LINE_ACTION));
+```
+
+this returns a lexer that will lex lines of input, ending in a `\n`, or end of input, normally `NULL`
+
+```
+mpc_lexer_t * mpcl_shline(MPC_LEX_ACTION(EOL_ACTION), MPC_LEX_ACTION(LINE_ACTION));
+```
+
+this returns a lexer that will lex lines of input, ending in a `;`, `\n`, or end of input, normally `NULL`, designed for lexing shell code, commands can also end in `;`, at the moment quoting is not supported so lexing `hello "world!;";` will lex `hello "world!` and `"`, whitespaces are supported
+
+
+using this we can then modify our example to use the pre-built lexer:
+
+```
+mpc_lexer_action(outEOL) {
+	printf("lexing End Of Line: '%s'\n", (char *) outEOL->output);
+	return 0;
+}
+
+mpc_lexer_action(outLINE) {
+	printf("lexing Line: '%s'\n", (char *) outLINE->output);
+	return 0;
+}
+
+int main(int argc, char **argv) {
+	char * st = "abcHVwufvyuevuy3y436782\n\n\nrehre\nrew\n-ql.;qa\neg";
+		
+	mpc_lexer_t * lexer = mpcl_line(outEOL, outLINE);
+	
+	mpc_result_t r;
+	mpc_lexer(st, lexer, &r);
+	mpc_lexer_free(lexer);
+	return 0;
+}
+```
+
+which outputs exactly the same as out manually built lexer:
+
+```
+lexing Line: 'abcHVwufvyuevuy3y436782'
+lexing End Of Line: '
+'
+lexing End Of Line: '
+'
+lexing End Of Line: '
+'
+lexing Line: 'rehre'
+lexing End Of Line: '
+'
+lexing Line: 'rew'
+lexing End Of Line: '
+'
+lexing Line: '-ql.;qa'
+lexing End Of Line: '
+'
+lexing Line: 'eg'
+```
+
+Self Modifying Lexer
+===================
+
+as stated earlier, the lexer allows an action to modify itself during run-time via two structures: the local `self` structure, and the global/local `mpc_lexer_pool` structure
+
+lets use the `self` structure to dynamically parse "ab", starting with just lexing for 'a', and changing the parser to parse for 'b' instead of 'a' once 'a' has been parsed
+
+```
+char globalch = 0;
+
+mpc_lexer_action(outCH) {
+	printf("lexing Line: '%s'\n", (char *) outCH->output);
+	if (globalch != 'b') {
+		puts("changing globalch to 'b'");
+		globalch = 'b';
+		mpc_define(self->parser, mpc_char(globalch));
+	}
+	return 0;
+}
+
+int main(int argc, char **argv) {
+	// lets attempt to lex something that will change
+	
+	globalch = 'a';
+	
+	mpc_result_t r;
+	
+	mpc_parser_t * Line = mpc_new("Line");
+	mpc_define(Line, mpc_char(globalch));
+		
+	mpc_lexer_t * lexer = mpc_lexer_new("lexer");
+	mpc_lexer_add(&lexer, Line, outCH);
+
+	mpc_lexer("ab", lexer, &r);
+	mpc_lexer_free(lexer);
+	
+	return 0;
+	
+}
+```
+
+if we where to run this, it would output
+
+```
+lexing Line: 'a'
+changing globalch to 'b'
+lexing Line: 'b'
+```
+
+the code is mostly the same as the previous example with the only difference being
+
+```
+mpc_define(self->parser, mpc_char(globalch));
+```
+what this does is redefines `lexer[0].parser` (since it only contains one parser we can evaluate `self` to `lexer[0]`) as the parser returned by `mpc_char(globalch)`, except this time, `globalch` has changed from `'a'` to `'b'` thus `lexer[0].parser` now contains a parser that parses `'b'` instead of `'a'`, and thus when `lexer[0].parser` gets parsed by `mpc_parse` again, it will parse `b` instead
+
+global lexer pool
+=================
+
+when ever a named lexer is created it will get added to this the `mpc_lexer_pool->lexer` array, and `mpc_lexer_t` contains a pointer to this pool accessable via the exact same name, and is thus self recursive
+
+this allows for lexers to access and modify other lexers including themselves
+
+for example:
+```
+self->mpc_lexer_pool->lexer[0][0]->self->mpc_lexer_pool->lexer[0][0]->name
+```
+where `lexer[0][0][0]` specifies the first parser index ([0][0]`[0]`) of the first lexer (`[0]`[0][0]), and [0]`[0]`[0] (the middle `[0]`) specifies a constant address of the lexers, where reallocation does not change this address itself
+
+for example, `mpc_lexer_pool->lexer[0][0][0].parser->name: EOL`, and `mpc_lexer_pool->lexer[0][0]->parser->name` specifies the name of the first parser of the first lexer
+
+`mpc_lexer_pool` itself is a global variable in which the member `mpc_lexer_pool` from the struct `mpc_lexer_t` points to
+
+```
+mpc_lexer_find("lexer", "line");
+```
+this will search the lexer pool `mpc_lexer_pool` for a lexer named `lexer`, and all `lexer`'s indexes for a binded parser named `line` inside the lexer named `lexer`, returns NULL if not found otherwise returns the lexer's index that contains the parser as `mpc_lexer_t *` thus `mpc_lexer_find("lexer", "line")->parser->name` will result in lexer `lexer`'s index that contains a binded parser with the name `line`
+
+
 
 
 Limitations & FAQ
