@@ -185,6 +185,17 @@ void test_reader(void) {
 
 }
 
+void test_eoi(void) {
+  
+  mpc_parser_t* Line = mpc_re("[^\\n]*$");
+  
+  PT_ASSERT(mpc_test_pass(Line, "blah", "blah", streq, free, strprint));
+  PT_ASSERT(mpc_test_pass(Line, "blah\n", "blah\n", streq, free, strprint));
+  
+  mpc_delete(Line);
+  
+}
+
 void suite_core(void) {
   pt_add_test(test_ident,  "Test Ident",  "Suite Core");
   pt_add_test(test_maths,  "Test Maths",  "Suite Core");
@@ -192,4 +203,5 @@ void suite_core(void) {
   pt_add_test(test_repeat, "Test Repeat", "Suite Core");
   pt_add_test(test_copy,   "Test Copy",   "Suite Core");
   pt_add_test(test_reader, "Test Reader", "Suite Core");
+  pt_add_test(test_eoi,    "Test EOI",    "Suite Core");
 }

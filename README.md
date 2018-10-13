@@ -684,9 +684,9 @@ Case Study - Maths Language
 Combinator Approach
 -------------------
 
-Passing around all these function pointers might seem clumsy, but having parsers be type-generic is important as it lets users define their own ouput types for parsers. For example we could design our own syntax tree type to use. We can also use this method to do some specific house-keeping or data processing in the parsing phase.
+Passing around all these function pointers might seem clumsy, but having parsers be type-generic is important as it lets users define their own output types for parsers. For example we could design our own syntax tree type to use. We can also use this method to do some specific house-keeping or data processing in the parsing phase.
 
-As an example of this power, we can specify a simple maths grammar, that ouputs `int *`, and computes the result of the expression as it goes along.
+As an example of this power, we can specify a simple maths grammar, that outputs `int *`, and computes the result of the expression as it goes along.
 
 We start with a fold function that will fold two `int *` into a new `int *` based on some `char *` operator.
 
@@ -807,6 +807,64 @@ mpc_err_t *mpca_lang_contents(int flags, const char *filename, ...);
 
 This opens and reads in the contents of the file given by `filename` and passes it to `mpca_lang`.
 
+Case Study - Line Reader
+========================
+
+Another common task we might be interested in doing is parsing a file line by line and doing something on each line we encounter. For this we can setup something like the following:
+
+First, we can build a regular expression which parses a single line: `mpc_re("[^\\n]*(\\n|$)")`, next we can add a callback function using `mpc_apply` which gets called every time a line is parsed successfully `mpc_apply(mpc_re("[^\\n]*(\\n|$)"), read_line)`. Finally we can surround all of this in `mpc_many` to parse zero or more lines. The final thing might look something like this:
+
+```c
+static void* read_line(void* line) {
+  printf("Reading Line: %s", (char*)line);
+  return line;
+}
+
+int main(int argc, char **argv) {
+
+  const char *input = 
+    "abcHVwufvyuevuy3y436782\n"
+    "\n"
+    "\n"
+    "rehre\n"
+    "rew\n"
+    "-ql.;qa\n"
+    "eg";
+		
+  mpc_parser_t* Line = mpc_many(
+    mpcf_strfold, 
+    mpc_apply(mpc_re("[^\\n]*(\\n|$)"), read_line));
+  
+  mpc_result_t r;
+
+  mpc_parse("input", input, Line, &r);
+  printf("\nParsed String: %s", (char*)r.output);
+  free(r.output);
+  
+  mpc_delete(Line);
+  
+  return 0;
+}
+```
+
+This program will produce an output something like this:
+
+```
+Reading Line: abcHVwufvyuevuy3y436782
+Reading Line:
+Reading Line:
+Reading Line: rehre
+Reading Line: rew
+Reading Line: -ql.;qa
+Reading Line: eg
+Parsed String: abcHVwufvyuevuy3y436782
+
+
+rehre
+rew
+-ql.;qa
+eg
+```
 
 Error Reporting
 ===============
