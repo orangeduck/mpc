@@ -481,7 +481,7 @@ mpc_delete(ident);
 
 Notice that previous parsers are used as input to new parsers we construct from the combinators. Note that only the final parser `ident` must be deleted. When we input a parser into a combinator we should consider it to be part of the output of that combinator.
 
-Because of this we shouldn't create a parser and input it into multiple places, or it will be doubly feed.
+Because of this we shouldn't create a parser and input it into multiple places, or it will be doubly freed.
 
 
 Regex Method
