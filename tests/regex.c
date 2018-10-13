@@ -120,10 +120,23 @@ void test_regex_lisp_comment(void) {
   
 }
 
+void test_regex_newline(void) {
+  
+  mpc_parser_t *re0 = mpc_re("[a-z]*");
+
+  PT_ASSERT(regex_test_pass(re0, "hi", "hi"));
+  PT_ASSERT(regex_test_pass(re0, "hi\nk", "hi"));
+  PT_ASSERT(regex_test_fail(re0, "hi\nk", "hi\nk"));
+  
+  mpc_delete(re0);
+  
+}
+
 void suite_regex(void) {
   pt_add_test(test_regex_basic, "Test Regex Basic", "Suite Regex");
   pt_add_test(test_regex_range, "Test Regex Range", "Suite Regex");
   pt_add_test(test_regex_string, "Test Regex String", "Suite Regex");
   pt_add_test(test_regex_lisp_comment, "Test Regex Lisp Comment", "Suite Regex");
   pt_add_test(test_regex_boundary, "Test Regex Boundary", "Suite Regex");
+  pt_add_test(test_regex_newline, "Test Regex Newline", "Suite Regex");
 }

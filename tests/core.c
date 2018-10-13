@@ -152,10 +152,44 @@ void test_copy(void) {
   
 }
 
+static int line_count = 0;
+
+static void* read_line(void* line) {
+  line_count++;
+  return line;
+}
+
+void test_reader(void) {
+
+  mpc_parser_t* Line = mpc_many(
+    mpcf_strfold, 
+    mpc_apply(mpc_re("[^\\n]*(\\n|$)"), read_line));
+  
+  line_count = 0;
+
+  PT_ASSERT(mpc_test_pass(Line, 
+    "hello\nworld\n\nthis\nis\ndan", 
+    "hello\nworld\n\nthis\nis\ndan", streq, free, strprint));
+  
+  PT_ASSERT(line_count == 6);
+  
+  line_count = 0;
+  
+  PT_ASSERT(mpc_test_pass(Line, 
+    "abcHVwufvyuevuy3y436782\n\n\nrehre\nrew\n-ql.;qa\neg", 
+    "abcHVwufvyuevuy3y436782\n\n\nrehre\nrew\n-ql.;qa\neg", streq, free, strprint));
+  
+  PT_ASSERT(line_count == 7);
+
+  mpc_delete(Line);
+
+}
+
 void suite_core(void) {
   pt_add_test(test_ident,  "Test Ident",  "Suite Core");
   pt_add_test(test_maths,  "Test Maths",  "Suite Core");
   pt_add_test(test_strip,  "Test Strip",  "Suite Core");
   pt_add_test(test_repeat, "Test Repeat", "Suite Core");
   pt_add_test(test_copy,   "Test Copy",   "Suite Core");
+  pt_add_test(test_reader, "Test Reader", "Suite Core");
 }

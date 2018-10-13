@@ -9,6 +9,7 @@ static mpc_state_t mpc_state_invalid(void) {
   s.pos = -1;
   s.row = -1;
   s.col = -1;
+  s.term = 0;
   return s;
 }
 
@@ -17,6 +18,7 @@ static mpc_state_t mpc_state_new(void) {
   s.pos = 0;
   s.row = 0;
   s.col = 0;
+  s.term = 0;
   return s;
 }
 
@@ -536,6 +538,23 @@ static int mpc_input_anchor(mpc_input_t* i, int(*f)(char,char), char **o) {
   return f(i->last, mpc_input_peekc(i));
 }
 
+static int mpc_input_soi(mpc_input_t* i, char **o) {
+  *o = NULL;
+  return i->last == '\0';
+}
+
+static int mpc_input_eoi(mpc_input_t* i, char **o) {
+  *o = NULL;
+  if (i->state.term) {
+    return 0;
+  } else if (mpc_input_terminated(i)) {
+    i->state.term = 1;
+    return 1;
+  } else {
+    return 0;
+  }
+}
+
 static mpc_state_t *mpc_input_state_copy(mpc_input_t *i) {
   mpc_state_t *r = mpc_malloc(i, sizeof(mpc_state_t));
   memcpy(r, &i->state, sizeof(mpc_state_t));
@@ -885,7 +904,10 @@ enum {
   MPC_TYPE_AND        = 24,
 
   MPC_TYPE_CHECK      = 25,
-  MPC_TYPE_CHECK_WITH = 26
+  MPC_TYPE_CHECK_WITH = 26,
+  
+  MPC_TYPE_SOI        = 27,
+  MPC_TYPE_EOI        = 28
 };
 
 typedef struct { char *m; } mpc_pdata_fail_t;
@@ -1032,6 +1054,8 @@ static int mpc_parse_run(mpc_input_t *i, mpc_parser_t *p, mpc_result_t *r, mpc_e
     case MPC_TYPE_SATISFY: MPC_PRIMITIVE(mpc_input_satisfy(i, p->data.satisfy.f, (char**)&r->output));
     case MPC_TYPE_STRING:  MPC_PRIMITIVE(mpc_input_string(i, p->data.string.x, (char**)&r->output));
     case MPC_TYPE_ANCHOR:  MPC_PRIMITIVE(mpc_input_anchor(i, p->data.anchor.f, (char**)&r->output));
+    case MPC_TYPE_SOI:     MPC_PRIMITIVE(mpc_input_soi(i, (char**)&r->output));
+    case MPC_TYPE_EOI:     MPC_PRIMITIVE(mpc_input_eoi(i, (char**)&r->output));
     
     /* Other parsers */
     
@@ -1145,6 +1169,7 @@ static int mpc_parse_run(mpc_input_t *i, mpc_parser_t *p, mpc_result_t *r, mpc_e
       }
       
       *e = mpc_err_merge(i, *e, results[j].error);
+      
       MPC_SUCCESS(
         mpc_parse_fold(i, p->data.repeat.f, j, (mpc_val_t**)results);
         if (j >= MPC_PARSE_STACK_MIN) { mpc_free(i, results); });
@@ -1170,7 +1195,9 @@ static int mpc_parse_run(mpc_input_t *i, mpc_parser_t *p, mpc_result_t *r, mpc_e
           mpc_err_many1(i, results[j].error);
           if (j >= MPC_PARSE_STACK_MIN) { mpc_free(i, results); });
       } else {
+        
         *e = mpc_err_merge(i, *e, results[j].error);
+        
         MPC_SUCCESS(
           mpc_parse_fold(i, p->data.repeat.f, j, (mpc_val_t**)results);
           if (j >= MPC_PARSE_STACK_MIN) { mpc_free(i, results); });
@@ -1929,11 +1956,17 @@ mpc_parser_t *mpc_and(int n, mpc_fold_t f, ...) {
 ** Common Parsers
 */
 
-static int mpc_soi_anchor(char prev, char next) { (void) next; return (prev == '\0'); }
-static int mpc_eoi_anchor(char prev, char next) { (void) prev; return (next == '\0'); }
+mpc_parser_t *mpc_soi(void) {
+  mpc_parser_t *p = mpc_undefined();
+  p->type = MPC_TYPE_SOI;
+  return mpc_expect(p, "start of input");
+}
 
-mpc_parser_t *mpc_soi(void) { return mpc_expect(mpc_anchor(mpc_soi_anchor), "start of input"); }
-mpc_parser_t *mpc_eoi(void) { return mpc_expect(mpc_anchor(mpc_eoi_anchor), "end of input"); }
+mpc_parser_t *mpc_eoi(void) {
+  mpc_parser_t *p = mpc_undefined();
+  p->type = MPC_TYPE_EOI;
+  return mpc_expect(p, "end of input");
+}
 
 static int mpc_boundary_anchor(char prev, char next) {
   const char* word = "abcdefghijklmnopqrstuvwxyz"
@@ -2546,6 +2579,14 @@ static mpc_val_t *mpcf_nth_free(int n, mpc_val_t **xs, int x) {
 mpc_val_t *mpcf_fst_free(int n, mpc_val_t **xs) { return mpcf_nth_free(n, xs, 0); }
 mpc_val_t *mpcf_snd_free(int n, mpc_val_t **xs) { return mpcf_nth_free(n, xs, 1); }
 mpc_val_t *mpcf_trd_free(int n, mpc_val_t **xs) { return mpcf_nth_free(n, xs, 2); }
+
+mpc_val_t *mpcf_freefold(int n, mpc_val_t **xs) {
+  int i;
+  for (i = 0; i < n; i++) {
+    free(xs[i]);
+  }
+  return NULL;
+}
 
 mpc_val_t *mpcf_strfold(int n, mpc_val_t **xs) {
   int i;
