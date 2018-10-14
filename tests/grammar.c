@@ -162,7 +162,9 @@ void test_partial(void) {
     (int(*)(const void*,const void*))mpc_ast_eq, 
     (mpc_dtor_t)mpc_ast_delete, 
     (void(*)(const void*))mpc_ast_print));
-  
+    
+  mpc_ast_delete(t0);
+
   mpc_cleanup(5, Line, Number, QuotedString, LinePragma, Parser);
 
 }
@@ -248,6 +250,8 @@ void test_qscript(void) {
     (mpc_dtor_t)mpc_ast_delete,
     (void(*)(const void*))mpc_ast_print));
   
+  mpc_ast_delete(t0);
+
   mpc_cleanup(18, Qscript, Comment, Resource, Rtype, Rname, InnerBlock,
   Statement, Function, Parameter, Literal, Block, Seperator, Qstring,
   SimpleStr, ComplexStr, Number, Float, Int);
@@ -278,6 +282,61 @@ void test_missingrule(void) {
 
 }
 
+void test_regex_mode(void) {
+  
+  mpc_parser_t *Line0, *Line1, *Line2, *Line3;
+  mpc_ast_t *t0, *t1, *t2, *t3, *t4;
+  
+  Line0 = mpc_new("line0");
+  Line1 = mpc_new("line1");
+  Line2 = mpc_new("line2");
+  Line3 = mpc_new("line3");
+  
+  mpca_lang(MPCA_LANG_DEFAULT, " line0 : /.*/; ", Line0);
+  mpca_lang(MPCA_LANG_DEFAULT, " line1 : /.*/s; ", Line1);
+  mpca_lang(MPCA_LANG_DEFAULT, " line2 : /(^[a-z]*$)*/; ", Line2);
+  mpca_lang(MPCA_LANG_DEFAULT, " line3 : /(^[a-z]*$)*/m; ", Line3);
+  
+  t0 = mpc_ast_new("regex", "blah");
+  t1 = mpc_ast_new("regex", "blah\nblah");
+  t2 = mpc_ast_new("regex", "");
+  t3 = mpc_ast_new("regex", "blah");
+  t4 = mpc_ast_new("regex", "blah\nblah");
+  
+  PT_ASSERT(mpc_test_pass(Line0, "blah\nblah", t0,
+    (int(*)(const void*,const void*))mpc_ast_eq,
+    (mpc_dtor_t)mpc_ast_delete,
+    (void(*)(const void*))mpc_ast_print));
+  
+  PT_ASSERT(mpc_test_pass(Line1, "blah\nblah", t1,
+    (int(*)(const void*,const void*))mpc_ast_eq,
+    (mpc_dtor_t)mpc_ast_delete,
+    (void(*)(const void*))mpc_ast_print));
+  
+  PT_ASSERT(mpc_test_pass(Line2, "blah\nblah", t2,
+    (int(*)(const void*,const void*))mpc_ast_eq,
+    (mpc_dtor_t)mpc_ast_delete,
+    (void(*)(const void*))mpc_ast_print));
+
+  PT_ASSERT(mpc_test_pass(Line2, "blah", t3,
+    (int(*)(const void*,const void*))mpc_ast_eq,
+    (mpc_dtor_t)mpc_ast_delete,
+    (void(*)(const void*))mpc_ast_print));
+    
+  PT_ASSERT(mpc_test_pass(Line3, "blah\nblah", t4,
+    (int(*)(const void*,const void*))mpc_ast_eq,
+    (mpc_dtor_t)mpc_ast_delete,
+    (void(*)(const void*))mpc_ast_print));
+  
+  mpc_ast_delete(t0);
+  mpc_ast_delete(t1);
+  mpc_ast_delete(t2);
+  mpc_ast_delete(t3);
+  mpc_ast_delete(t4);
+  
+  mpc_cleanup(4, Line0, Line1, Line2, Line3);
+}
+
 void suite_grammar(void) {
   pt_add_test(test_grammar, "Test Grammar", "Suite Grammar");
   pt_add_test(test_language, "Test Language", "Suite Grammar");
@@ -286,4 +345,5 @@ void suite_grammar(void) {
   pt_add_test(test_partial, "Test Partial", "Suite Grammar");
   pt_add_test(test_qscript, "Test QScript", "Suite Grammar");
   pt_add_test(test_missingrule, "Test Missing Rule", "Suite Grammar");
+  pt_add_test(test_regex_mode, "Test Regex Mode", "Suite Grammar");
 }

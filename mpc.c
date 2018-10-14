@@ -1979,7 +1979,13 @@ static int mpc_boundary_anchor(char prev, char next) {
   return 0;
 }
 
-mpc_parser_t *mpc_boundary(void) { return mpc_expect(mpc_anchor(mpc_boundary_anchor), "boundary"); }
+static int mpc_boundary_newline_anchor(char prev, char next) {
+  (void)next;
+  return prev == '\n'; 
+}
+
+mpc_parser_t *mpc_boundary(void) { return mpc_expect(mpc_anchor(mpc_boundary_anchor), "word boundary"); }
+mpc_parser_t *mpc_boundary_newline(void) { return mpc_expect(mpc_anchor(mpc_boundary_newline_anchor), "start of newline"); }
 
 mpc_parser_t *mpc_whitespace(void) { return mpc_expect(mpc_oneof(" \f\n\r\t\v"), "whitespace"); }
 mpc_parser_t *mpc_whitespaces(void) { return mpc_expect(mpc_many(mpcf_strfold, mpc_whitespace()), "spaces"); }
@@ -2192,19 +2198,44 @@ static mpc_parser_t *mpc_re_escape_char(char c) {
   }
 }
 
-static mpc_val_t *mpcf_re_escape(mpc_val_t *x) {
+static mpc_val_t *mpcf_re_escape(mpc_val_t *x, void* data) {
   
+  int mode = *((int*)data);
   char *s = x;
   mpc_parser_t *p;
   
-  /* Regex Special Characters */
-  if (s[0] == '.') { free(s); return mpc_any(); }
-  if (s[0] == '^') { free(s); return mpc_and(2, mpcf_snd, mpc_soi(), mpc_lift(mpcf_ctor_str), free); }
+  /* Any Character */
+  if (s[0] == '.') {
+    free(s);
+    if (mode & MPC_RE_DOTALL) {
+      return mpc_any();      
+    } else {
+      return mpc_expect(mpc_noneof("\n"), "any character except a newline");
+    }
+  }
+  
+  /* Start of Input */
+  if (s[0] == '^') {
+    free(s);
+    if (mode & MPC_RE_MULTILINE) {
+      return mpc_and(2, mpcf_snd, mpc_or(2, mpc_soi(), mpc_boundary_newline()), mpc_lift(mpcf_ctor_str), free);
+    } else {
+      return mpc_and(2, mpcf_snd, mpc_soi(), mpc_lift(mpcf_ctor_str), free);
+    }
+  }
+  
+  /* End of Input */
   if (s[0] == '$') {
     free(s); 
-    return mpc_or(2, 
-      mpc_and(2, mpcf_fst, mpc_newline(), mpc_eoi(), free), 
-      mpc_and(2, mpcf_snd, mpc_eoi(), mpc_lift(mpcf_ctor_str), free));
+    if (mode & MPC_RE_MULTILINE) {
+      return mpc_or(2, 
+        mpc_newline(), 
+        mpc_and(2, mpcf_snd, mpc_eoi(), mpc_lift(mpcf_ctor_str), free)); 
+    } else {
+      return mpc_or(2, 
+        mpc_and(2, mpcf_fst, mpc_newline(), mpc_eoi(), free), 
+        mpc_and(2, mpcf_snd, mpc_eoi(), mpc_lift(mpcf_ctor_str), free));      
+    }
   }
   
   /* Regex Escape */
@@ -2302,6 +2333,10 @@ static mpc_val_t *mpcf_re_range(mpc_val_t *x) {
 }
 
 mpc_parser_t *mpc_re(const char *re) {
+  return mpc_re_mode(re, MPC_RE_DEFAULT);
+}
+
+mpc_parser_t *mpc_re_mode(const char *re, int mode) {
   
   char *err_msg;
   mpc_parser_t *err_out;
@@ -2334,8 +2369,8 @@ mpc_parser_t *mpc_re(const char *re) {
   mpc_define(Base, mpc_or(4,
     mpc_parens(Regex, (mpc_dtor_t)mpc_delete),
     mpc_squares(Range, (mpc_dtor_t)mpc_delete),
-    mpc_apply(mpc_escape(), mpcf_re_escape),
-    mpc_apply(mpc_noneof(")|"), mpcf_re_escape)
+    mpc_apply_to(mpc_escape(), mpcf_re_escape, &mode),
+    mpc_apply_to(mpc_noneof(")|"), mpcf_re_escape, &mode)
   ));
   
   mpc_define(Range, mpc_apply(
@@ -3320,7 +3355,7 @@ mpc_parser_t *mpca_total(mpc_parser_t *a) { return mpc_total(a, (mpc_dtor_t)mpc_
 **      <base> : "<" (<digits> | <ident>) ">"
 **             | <string_lit>
 **             | <char_lit>
-**             | <regex_lit>
+**             | <regex_lit> <regex_mode>
 **             | "(" <grammar> ")"
 */
 
@@ -3379,11 +3414,21 @@ static mpc_val_t *mpcaf_grammar_char(mpc_val_t *x, void *s) {
   return mpca_state(mpca_tag(mpc_apply(p, mpcf_str_ast), "char"));
 }
 
-static mpc_val_t *mpcaf_grammar_regex(mpc_val_t *x, void *s) {
-  mpca_grammar_st_t *st = s;
-  char *y = mpcf_unescape_regex(x);
-  mpc_parser_t *p = (st->flags & MPCA_LANG_WHITESPACE_SENSITIVE) ? mpc_re(y) : mpc_tok(mpc_re(y));
+static mpc_val_t *mpcaf_fold_regex(int n, mpc_val_t **xs) {
+  char *y = xs[0];
+  char *m = xs[1];
+  mpca_grammar_st_t *st = xs[2];
+  mpc_parser_t *p;
+  int mode = MPC_RE_DEFAULT;
+  
+  (void)n;
+  if (strchr(m, 'm')) { mode |= MPC_RE_MULTILINE; }
+  if (strchr(m, 's')) { mode |= MPC_RE_DOTALL; }
+  y = mpcf_unescape_regex(y);
+  p = (st->flags & MPCA_LANG_WHITESPACE_SENSITIVE) ? mpc_re_mode(y, mode) : mpc_tok(mpc_re_mode(y, mode));
   free(y);
+  free(m);
+  
   return mpca_state(mpca_tag(mpc_apply(p, mpcf_str_ast), "regex"));
 }
 
@@ -3496,7 +3541,7 @@ mpc_parser_t *mpca_grammar_st(const char *grammar, mpca_grammar_st_t *st) {
   mpc_define(Base, mpc_or(5,
     mpc_apply_to(mpc_tok(mpc_string_lit()), mpcaf_grammar_string, st),
     mpc_apply_to(mpc_tok(mpc_char_lit()),   mpcaf_grammar_char, st),
-    mpc_apply_to(mpc_tok(mpc_regex_lit()),  mpcaf_grammar_regex, st),
+    mpc_tok(mpc_and(3, mpcaf_fold_regex, mpc_regex_lit(), mpc_many(mpcf_strfold, mpc_oneof("ms")), mpc_lift_val(st), free, free)),
     mpc_apply_to(mpc_tok_braces(mpc_or(2, mpc_digits(), mpc_ident()), free), mpcaf_grammar_id, st),
     mpc_tok_parens(Grammar, mpc_soft_delete)
   ));
@@ -3658,7 +3703,7 @@ static mpc_err_t *mpca_lang_st(mpc_input_t *i, mpca_grammar_st_t *st) {
   mpc_define(Base, mpc_or(5,
     mpc_apply_to(mpc_tok(mpc_string_lit()), mpcaf_grammar_string, st),
     mpc_apply_to(mpc_tok(mpc_char_lit()),   mpcaf_grammar_char, st),
-    mpc_apply_to(mpc_tok(mpc_regex_lit()),  mpcaf_grammar_regex, st),
+    mpc_tok(mpc_and(3, mpcaf_fold_regex, mpc_regex_lit(), mpc_many(mpcf_strfold, mpc_oneof("ms")), mpc_lift_val(st), free, free)),
     mpc_apply_to(mpc_tok_braces(mpc_or(2, mpc_digits(), mpc_ident()), free), mpcaf_grammar_id, st),
     mpc_tok_parens(Grammar, mpc_soft_delete)
   ));

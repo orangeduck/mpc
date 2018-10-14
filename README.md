@@ -560,6 +560,20 @@ This function makes a copy of a parser `a`. This can be useful when you want to
 use a parser as input for some other parsers multiple times without retaining 
 it. 
 
+* * *
+
+```c
+mpc_parser_t *mpc_re(const char *re);
+mpc_parser_t *mpc_re_mode(const char *re, int mode);
+```
+
+This function takes as input the regular expression `re` and builds a parser 
+for it. With the `mpc_re_mode` function optional mode flags can also be given. 
+Available flags are `MPC_RE_MULTILINE` / `MPC_RE_M` where the start of input 
+character `^` also matches the beginning of new lines and the end of input `$` 
+character also matches new lines, and `MPC_RE_DOTALL` / `MPC_RE_S` where the 
+any character token `.` also matches newlines (by default it doesn't).
+
 
 Library Reference
 =================
@@ -573,6 +587,7 @@ Common Parsers
   <tr><td><code>mpc_soi</code></td><td>Matches only the start of input, returns <code>NULL</code></td></tr>
   <tr><td><code>mpc_eoi</code></td><td>Matches only the end of input, returns <code>NULL</code></td></tr>
   <tr><td><code>mpc_boundary</code></td><td>Matches only the boundary between words, returns <code>NULL</code></td></tr>
+  <tr><td><code>mpc_boundary_newline</code></td><td>Matches the start of a new line, returns <code>NULL</code></td></tr>
   <tr><td><code>mpc_whitespace</code></td><td>Matches any whitespace character <code>" \f\n\r\t\v"</code></td></tr>
   <tr><td><code>mpc_whitespaces</code></td><td>Matches zero or more whitespace characters</td></tr>
   <tr><td><code>mpc_blank</code></td><td>Matches whitespaces and frees the result, returns <code>NULL</code></td></tr>
@@ -807,64 +822,63 @@ mpc_err_t *mpca_lang_contents(int flags, const char *filename, ...);
 
 This opens and reads in the contents of the file given by `filename` and passes it to `mpca_lang`.
 
-Case Study - Line Reader
-========================
+Case Study - Tokenizer
+======================
 
-Another common task we might be interested in doing is parsing a file line by line and doing something on each line we encounter. For this we can setup something like the following:
+Another common task we might be interested in doing is tokenizing some block of 
+text (splitting the text into individual elements) and performing some function
+on each one of these elements as it is read. We can do this with `mpc` too.
 
-First, we can build a regular expression which parses a single line: `mpc_re("[^\\n]*(\\n|$)")`, next we can add a callback function using `mpc_apply` which gets called every time a line is parsed successfully `mpc_apply(mpc_re("[^\\n]*(\\n|$)"), read_line)`. Finally we can surround all of this in `mpc_many` to parse zero or more lines. The final thing might look something like this:
+First, we can build a regular expression which parses an individual token. For 
+example if our tokens are identifiers, integers, commas, periods and colons we 
+could build something like this `mpc_re("\\s*([a-zA-Z_]+|[0-9]+|,|\\.|:)")`. 
+Next we can strip any whitespace, and add a callback function using `mpc_apply` 
+which gets called every time this regex is parsed successfully 
+`mpc_apply(mpc_strip(mpc_re("\\s*([a-zA-Z_]+|[0-9]+|,|\\.|:)")), print_token)`. 
+Finally we can surround all of this in `mpc_many` to parse it zero or more 
+times. The final code might look something like this:
 
 ```c
-static void* read_line(void* line) {
-  printf("Reading Line: %s", (char*)line);
-  return line;
+static mpc_val_t *print_token(mpc_val_t *x) {
+  printf("Token: '%s'\n", (char*)x);
+  return x;
 }
 
 int main(int argc, char **argv) {
 
-  const char *input = 
-    "abcHVwufvyuevuy3y436782\n"
-    "\n"
-    "\n"
-    "rehre\n"
-    "rew\n"
-    "-ql.;qa\n"
-    "eg";
-		
-  mpc_parser_t* Line = mpc_many(
-    mpcf_strfold, 
-    mpc_apply(mpc_re("[^\\n]*(\\n|$)"), read_line));
+  const char *input = "  hello 4352 ,  \n foo.bar   \n\n  test:ing   ";
+  
+  mpc_parser_t* Tokens = mpc_many(
+    mpcf_all_free, 
+    mpc_apply(mpc_strip(mpc_re("\\s*([a-zA-Z_]+|[0-9]+|,|\\.|:)")), print_token));
   
   mpc_result_t r;
-
-  mpc_parse("input", input, Line, &r);
-  printf("\nParsed String: %s", (char*)r.output);
-  free(r.output);
+  mpc_parse("input", input, Tokens, &r);
   
-  mpc_delete(Line);
+  mpc_delete(Tokens);
   
   return 0;
 }
 ```
 
-This program will produce an output something like this:
+Running this program will produce an output something like this:
 
 ```
-Reading Line: abcHVwufvyuevuy3y436782
-Reading Line:
-Reading Line:
-Reading Line: rehre
-Reading Line: rew
-Reading Line: -ql.;qa
-Reading Line: eg
-Parsed String: abcHVwufvyuevuy3y436782
-
-
-rehre
-rew
--ql.;qa
-eg
+Token: 'hello'
+Token: '4352'
+Token: ','
+Token: 'foo'
+Token: '.'
+Token: 'bar'
+Token: 'test'
+Token: ':'
+Token: 'ing'
 ```
+
+By extending the regex we can easily extend this to parse many more types of 
+tokens and quickly and easily build a tokenizer for whatever language we are
+interested in.
+
 
 Error Reporting
 ===============

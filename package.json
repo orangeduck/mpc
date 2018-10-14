@@ -1,6 +1,6 @@
 {
   "name": "mpc",
-  "version": "0.8.8",
+  "version": "0.9.8",
   "repo": "orangeduck/mpc",
   "description": "A Parser Combinator library for C",
   "keywords": ["parser", "combinator", "library", "c", "mpc"],

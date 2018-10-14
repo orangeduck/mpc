@@ -154,7 +154,7 @@ void test_copy(void) {
 
 static int line_count = 0;
 
-static void* read_line(void* line) {
+static mpc_val_t* read_line(mpc_val_t* line) {
   line_count++;
   return line;
 }
@@ -185,6 +185,32 @@ void test_reader(void) {
 
 }
 
+static int token_count = 0;
+
+static mpc_val_t *print_token(mpc_val_t *x) {
+  printf("Token: '%s'\n", (char*)x);
+  token_count++;
+  return x;
+}
+
+void test_tokens(void) {
+  
+  mpc_parser_t* Tokens = mpc_many(
+    mpcf_strfold, 
+    mpc_apply(mpc_strip(mpc_re("\\s*([a-zA-Z_]+|[0-9]+|,|\\.|:)")), print_token));
+  
+  token_count = 0;
+
+  PT_ASSERT(mpc_test_pass(Tokens, 
+    "  hello 4352 ,  \n foo.bar   \n\n  test:ing   ", 
+    "hello4352,foo.bartest:ing", streq, free, strprint));
+  
+  PT_ASSERT(token_count == 9);
+
+  mpc_delete(Tokens);
+  
+}
+
 void test_eoi(void) {
   
   mpc_parser_t* Line = mpc_re("[^\\n]*$");
@@ -203,5 +229,6 @@ void suite_core(void) {
   pt_add_test(test_repeat, "Test Repeat", "Suite Core");
   pt_add_test(test_copy,   "Test Copy",   "Suite Core");
   pt_add_test(test_reader, "Test Reader", "Suite Core");
+  pt_add_test(test_tokens, "Test Tokens", "Suite Core");
   pt_add_test(test_eoi,    "Test EOI",    "Suite Core");
 }
