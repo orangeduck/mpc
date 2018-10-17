@@ -10,7 +10,7 @@ static int check_is(mpc_val_t** x, void* t) {
 }
 
 void test_check(void) {
-  int           success;
+  int success;
   mpc_result_t  r;
   mpc_parser_t* p = mpc_check(mpc_or(2, mpc_char('a'), mpc_char('b')), check_is_a, "Expected 'a'");
 
@@ -28,9 +28,9 @@ void test_check(void) {
 }
 
 void test_check_with(void) {
-  int           success;
+  int success;
   mpc_result_t  r;
-  mpc_parser_t* p = mpc_check_with(mpc_or(2, mpc_char('a'), mpc_char('b')), check_is, "a", "Expected 'a'");
+  mpc_parser_t* p = mpc_check_with(mpc_or(2, mpc_char('a'), mpc_char('b')), check_is, (void*)"a", "Expected 'a'");
 
   success = mpc_parse("test", "a", p, &r);
   PT_ASSERT(success);
@@ -46,7 +46,7 @@ void test_check_with(void) {
 }
 
 void test_checkf(void) {
-  int           success;
+  int success;
   mpc_result_t  r;
   mpc_parser_t* p = mpc_checkf(mpc_or(2, mpc_char('a'), mpc_char('b')), check_is_a, "Expected '%s'", "a");
 
@@ -64,9 +64,9 @@ void test_checkf(void) {
 }
 
 void test_check_withf(void) {
-  int           success;
+  int success;
   mpc_result_t  r;
-  mpc_parser_t* p = mpc_check_withf(mpc_or(2, mpc_char('a'), mpc_char('b')), check_is, "a", "Expected '%s'", "a");
+  mpc_parser_t* p = mpc_check_withf(mpc_or(2, mpc_char('a'), mpc_char('b')), check_is, (void*)"a", "Expected '%s'", "a");
 
   success = mpc_parse("test", "a", p, &r);
   PT_ASSERT(success);

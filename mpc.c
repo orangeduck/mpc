@@ -9,6 +9,7 @@ static mpc_state_t mpc_state_invalid(void) {
   s.pos = -1;
   s.row = -1;
   s.col = -1;
+  s.term = 0;
   return s;
 }
 
@@ -17,6 +18,7 @@ static mpc_state_t mpc_state_new(void) {
   s.pos = 0;
   s.row = 0;
   s.col = 0;
+  s.term = 0;
   return s;
 }
 
@@ -536,6 +538,23 @@ static int mpc_input_anchor(mpc_input_t* i, int(*f)(char,char), char **o) {
   return f(i->last, mpc_input_peekc(i));
 }
 
+static int mpc_input_soi(mpc_input_t* i, char **o) {
+  *o = NULL;
+  return i->last == '\0';
+}
+
+static int mpc_input_eoi(mpc_input_t* i, char **o) {
+  *o = NULL;
+  if (i->state.term) {
+    return 0;
+  } else if (mpc_input_terminated(i)) {
+    i->state.term = 1;
+    return 1;
+  } else {
+    return 0;
+  }
+}
+
 static mpc_state_t *mpc_input_state_copy(mpc_input_t *i) {
   mpc_state_t *r = mpc_malloc(i, sizeof(mpc_state_t));
   memcpy(r, &i->state, sizeof(mpc_state_t));
@@ -885,7 +904,10 @@ enum {
   MPC_TYPE_AND        = 24,
 
   MPC_TYPE_CHECK      = 25,
-  MPC_TYPE_CHECK_WITH = 26
+  MPC_TYPE_CHECK_WITH = 26,
+  
+  MPC_TYPE_SOI        = 27,
+  MPC_TYPE_EOI        = 28
 };
 
 typedef struct { char *m; } mpc_pdata_fail_t;
@@ -1032,6 +1054,8 @@ static int mpc_parse_run(mpc_input_t *i, mpc_parser_t *p, mpc_result_t *r, mpc_e
     case MPC_TYPE_SATISFY: MPC_PRIMITIVE(mpc_input_satisfy(i, p->data.satisfy.f, (char**)&r->output));
     case MPC_TYPE_STRING:  MPC_PRIMITIVE(mpc_input_string(i, p->data.string.x, (char**)&r->output));
     case MPC_TYPE_ANCHOR:  MPC_PRIMITIVE(mpc_input_anchor(i, p->data.anchor.f, (char**)&r->output));
+    case MPC_TYPE_SOI:     MPC_PRIMITIVE(mpc_input_soi(i, (char**)&r->output));
+    case MPC_TYPE_EOI:     MPC_PRIMITIVE(mpc_input_eoi(i, (char**)&r->output));
     
     /* Other parsers */
     
@@ -1145,6 +1169,7 @@ static int mpc_parse_run(mpc_input_t *i, mpc_parser_t *p, mpc_result_t *r, mpc_e
       }
       
       *e = mpc_err_merge(i, *e, results[j].error);
+      
       MPC_SUCCESS(
         mpc_parse_fold(i, p->data.repeat.f, j, (mpc_val_t**)results);
         if (j >= MPC_PARSE_STACK_MIN) { mpc_free(i, results); });
@@ -1170,7 +1195,9 @@ static int mpc_parse_run(mpc_input_t *i, mpc_parser_t *p, mpc_result_t *r, mpc_e
           mpc_err_many1(i, results[j].error);
           if (j >= MPC_PARSE_STACK_MIN) { mpc_free(i, results); });
       } else {
+        
         *e = mpc_err_merge(i, *e, results[j].error);
+        
         MPC_SUCCESS(
           mpc_parse_fold(i, p->data.repeat.f, j, (mpc_val_t**)results);
           if (j >= MPC_PARSE_STACK_MIN) { mpc_free(i, results); });
@@ -1929,11 +1956,17 @@ mpc_parser_t *mpc_and(int n, mpc_fold_t f, ...) {
 ** Common Parsers
 */
 
-static int mpc_soi_anchor(char prev, char next) { (void) next; return (prev == '\0'); }
-static int mpc_eoi_anchor(char prev, char next) { (void) prev; return (next == '\0'); }
+mpc_parser_t *mpc_soi(void) {
+  mpc_parser_t *p = mpc_undefined();
+  p->type = MPC_TYPE_SOI;
+  return mpc_expect(p, "start of input");
+}
 
-mpc_parser_t *mpc_soi(void) { return mpc_expect(mpc_anchor(mpc_soi_anchor), "start of input"); }
-mpc_parser_t *mpc_eoi(void) { return mpc_expect(mpc_anchor(mpc_eoi_anchor), "end of input"); }
+mpc_parser_t *mpc_eoi(void) {
+  mpc_parser_t *p = mpc_undefined();
+  p->type = MPC_TYPE_EOI;
+  return mpc_expect(p, "end of input");
+}
 
 static int mpc_boundary_anchor(char prev, char next) {
   const char* word = "abcdefghijklmnopqrstuvwxyz"
@@ -1946,7 +1979,13 @@ static int mpc_boundary_anchor(char prev, char next) {
   return 0;
 }
 
-mpc_parser_t *mpc_boundary(void) { return mpc_expect(mpc_anchor(mpc_boundary_anchor), "boundary"); }
+static int mpc_boundary_newline_anchor(char prev, char next) {
+  (void)next;
+  return prev == '\n'; 
+}
+
+mpc_parser_t *mpc_boundary(void) { return mpc_expect(mpc_anchor(mpc_boundary_anchor), "word boundary"); }
+mpc_parser_t *mpc_boundary_newline(void) { return mpc_expect(mpc_anchor(mpc_boundary_newline_anchor), "start of newline"); }
 
 mpc_parser_t *mpc_whitespace(void) { return mpc_expect(mpc_oneof(" \f\n\r\t\v"), "whitespace"); }
 mpc_parser_t *mpc_whitespaces(void) { return mpc_expect(mpc_many(mpcf_strfold, mpc_whitespace()), "spaces"); }
@@ -2159,15 +2198,45 @@ static mpc_parser_t *mpc_re_escape_char(char c) {
   }
 }
 
-static mpc_val_t *mpcf_re_escape(mpc_val_t *x) {
+static mpc_val_t *mpcf_re_escape(mpc_val_t *x, void* data) {
   
+  int mode = *((int*)data);
   char *s = x;
   mpc_parser_t *p;
   
-  /* Regex Special Characters */
-  if (s[0] == '.') { free(s); return mpc_any(); }
-  if (s[0] == '^') { free(s); return mpc_and(2, mpcf_snd, mpc_soi(), mpc_lift(mpcf_ctor_str), free); }
-  if (s[0] == '$') { free(s); return mpc_and(2, mpcf_snd, mpc_or(2, mpc_eoi(), mpc_newline()), mpc_lift(mpcf_ctor_str), free); }
+  /* Any Character */
+  if (s[0] == '.') {
+    free(s);
+    if (mode & MPC_RE_DOTALL) {
+      return mpc_any();      
+    } else {
+      return mpc_expect(mpc_noneof("\n"), "any character except a newline");
+    }
+  }
+  
+  /* Start of Input */
+  if (s[0] == '^') {
+    free(s);
+    if (mode & MPC_RE_MULTILINE) {
+      return mpc_and(2, mpcf_snd, mpc_or(2, mpc_soi(), mpc_boundary_newline()), mpc_lift(mpcf_ctor_str), free);
+    } else {
+      return mpc_and(2, mpcf_snd, mpc_soi(), mpc_lift(mpcf_ctor_str), free);
+    }
+  }
+  
+  /* End of Input */
+  if (s[0] == '$') {
+    free(s); 
+    if (mode & MPC_RE_MULTILINE) {
+      return mpc_or(2, 
+        mpc_newline(), 
+        mpc_and(2, mpcf_snd, mpc_eoi(), mpc_lift(mpcf_ctor_str), free)); 
+    } else {
+      return mpc_or(2, 
+        mpc_and(2, mpcf_fst, mpc_newline(), mpc_eoi(), free), 
+        mpc_and(2, mpcf_snd, mpc_eoi(), mpc_lift(mpcf_ctor_str), free));      
+    }
+  }
   
   /* Regex Escape */
   if (s[0] == '\\') {
@@ -2264,6 +2333,10 @@ static mpc_val_t *mpcf_re_range(mpc_val_t *x) {
 }
 
 mpc_parser_t *mpc_re(const char *re) {
+  return mpc_re_mode(re, MPC_RE_DEFAULT);
+}
+
+mpc_parser_t *mpc_re_mode(const char *re, int mode) {
   
   char *err_msg;
   mpc_parser_t *err_out;
@@ -2296,8 +2369,8 @@ mpc_parser_t *mpc_re(const char *re) {
   mpc_define(Base, mpc_or(4,
     mpc_parens(Regex, (mpc_dtor_t)mpc_delete),
     mpc_squares(Range, (mpc_dtor_t)mpc_delete),
-    mpc_apply(mpc_escape(), mpcf_re_escape),
-    mpc_apply(mpc_noneof(")|"), mpcf_re_escape)
+    mpc_apply_to(mpc_escape(), mpcf_re_escape, &mode),
+    mpc_apply_to(mpc_noneof(")|"), mpcf_re_escape, &mode)
   ));
   
   mpc_define(Range, mpc_apply(
@@ -2546,6 +2619,14 @@ static mpc_val_t *mpcf_nth_free(int n, mpc_val_t **xs, int x) {
 mpc_val_t *mpcf_fst_free(int n, mpc_val_t **xs) { return mpcf_nth_free(n, xs, 0); }
 mpc_val_t *mpcf_snd_free(int n, mpc_val_t **xs) { return mpcf_nth_free(n, xs, 1); }
 mpc_val_t *mpcf_trd_free(int n, mpc_val_t **xs) { return mpcf_nth_free(n, xs, 2); }
+
+mpc_val_t *mpcf_freefold(int n, mpc_val_t **xs) {
+  int i;
+  for (i = 0; i < n; i++) {
+    free(xs[i]);
+  }
+  return NULL;
+}
 
 mpc_val_t *mpcf_strfold(int n, mpc_val_t **xs) {
   int i;
@@ -3274,7 +3355,7 @@ mpc_parser_t *mpca_total(mpc_parser_t *a) { return mpc_total(a, (mpc_dtor_t)mpc_
 **      <base> : "<" (<digits> | <ident>) ">"
 **             | <string_lit>
 **             | <char_lit>
-**             | <regex_lit>
+**             | <regex_lit> <regex_mode>
 **             | "(" <grammar> ")"
 */
 
@@ -3333,11 +3414,21 @@ static mpc_val_t *mpcaf_grammar_char(mpc_val_t *x, void *s) {
   return mpca_state(mpca_tag(mpc_apply(p, mpcf_str_ast), "char"));
 }
 
-static mpc_val_t *mpcaf_grammar_regex(mpc_val_t *x, void *s) {
-  mpca_grammar_st_t *st = s;
-  char *y = mpcf_unescape_regex(x);
-  mpc_parser_t *p = (st->flags & MPCA_LANG_WHITESPACE_SENSITIVE) ? mpc_re(y) : mpc_tok(mpc_re(y));
+static mpc_val_t *mpcaf_fold_regex(int n, mpc_val_t **xs) {
+  char *y = xs[0];
+  char *m = xs[1];
+  mpca_grammar_st_t *st = xs[2];
+  mpc_parser_t *p;
+  int mode = MPC_RE_DEFAULT;
+  
+  (void)n;
+  if (strchr(m, 'm')) { mode |= MPC_RE_MULTILINE; }
+  if (strchr(m, 's')) { mode |= MPC_RE_DOTALL; }
+  y = mpcf_unescape_regex(y);
+  p = (st->flags & MPCA_LANG_WHITESPACE_SENSITIVE) ? mpc_re_mode(y, mode) : mpc_tok(mpc_re_mode(y, mode));
   free(y);
+  free(m);
+  
   return mpca_state(mpca_tag(mpc_apply(p, mpcf_str_ast), "regex"));
 }
 
@@ -3450,7 +3541,7 @@ mpc_parser_t *mpca_grammar_st(const char *grammar, mpca_grammar_st_t *st) {
   mpc_define(Base, mpc_or(5,
     mpc_apply_to(mpc_tok(mpc_string_lit()), mpcaf_grammar_string, st),
     mpc_apply_to(mpc_tok(mpc_char_lit()),   mpcaf_grammar_char, st),
-    mpc_apply_to(mpc_tok(mpc_regex_lit()),  mpcaf_grammar_regex, st),
+    mpc_tok(mpc_and(3, mpcaf_fold_regex, mpc_regex_lit(), mpc_many(mpcf_strfold, mpc_oneof("ms")), mpc_lift_val(st), free, free)),
     mpc_apply_to(mpc_tok_braces(mpc_or(2, mpc_digits(), mpc_ident()), free), mpcaf_grammar_id, st),
     mpc_tok_parens(Grammar, mpc_soft_delete)
   ));
@@ -3612,7 +3703,7 @@ static mpc_err_t *mpca_lang_st(mpc_input_t *i, mpca_grammar_st_t *st) {
   mpc_define(Base, mpc_or(5,
     mpc_apply_to(mpc_tok(mpc_string_lit()), mpcaf_grammar_string, st),
     mpc_apply_to(mpc_tok(mpc_char_lit()),   mpcaf_grammar_char, st),
-    mpc_apply_to(mpc_tok(mpc_regex_lit()),  mpcaf_grammar_regex, st),
+    mpc_tok(mpc_and(3, mpcaf_fold_regex, mpc_regex_lit(), mpc_many(mpcf_strfold, mpc_oneof("ms")), mpc_lift_val(st), free, free)),
     mpc_apply_to(mpc_tok_braces(mpc_or(2, mpc_digits(), mpc_ident()), free), mpcaf_grammar_id, st),
     mpc_tok_parens(Grammar, mpc_soft_delete)
   ));
@@ -3957,243 +4048,4 @@ void mpc_optimise(mpc_parser_t *p) {
   mpc_optimise_unretained(p, 1);
 }
 
-// lexer
-
-// global lexer pool
-
-void mpc_lexer_pool_undefined(void) {
-  mpc_lexer_pool = calloc(1, sizeof(struct mpc_lexer_pool_t));
-  mpc_lexer_pool->lexer = calloc(1, sizeof(mpc_lexer_t));
-  mpc_lexer_pool->count = 1;
-}
-
-void mpc_lexer_pool_add(mpc_lexer_t *** l) {
-	
-	if (!mpc_lexer_pool) {
-		mpc_lexer_pool_undefined();
-	}
-	
-	if (mpc_lexer_pool->count != 1 || *mpc_lexer_pool->lexer) {
-		mpc_lexer_t *** lexertmp = realloc(mpc_lexer_pool->lexer, sizeof(mpc_lexer_t)*(mpc_lexer_pool->count+1));
-		if (lexertmp != NULL) mpc_lexer_pool->lexer = lexertmp;
-		else return;
-		mpc_lexer_pool->count++;
-	}
-	printf("adding %s to pool %d\n", (**l)->name, mpc_lexer_pool->count-1);
-	mpc_lexer_pool->lexer[mpc_lexer_pool->count-1] = *l;
-// 	mpc_lexer_pool_print();
-}
-
-void mpc_lexer_pool_print(void) {
-	if (!mpc_lexer_pool) {
-		puts("pool is not defined");
-		return;
-	}
-	for (int i = 0; i < mpc_lexer_pool->count; i++) {
-		for (int ii = 0; ii < mpc_lexer_pool->lexer[i][0]->count; ii++) {
-			printf("mpc_lexer_pool->lexer[%d][0][%d].name: %s\n", i, ii, mpc_lexer_pool->lexer[i][0][ii].name);
-			printf("mpc_lexer_pool->lexer[%d][0][%d].parser->name: %s\n", i, ii, mpc_lexer_pool->lexer[i][0][ii].parser->name);
-		}
-	}
-}
-
-void mpc_lexer_pool_free(void) {
-	if (!mpc_lexer_pool) {
-		return;
-	}
-	for (int i = 0; i < mpc_lexer_pool->count; i++) {
-		mpc_lexer_pool->lexer[i] = NULL;
-	}
-	free(mpc_lexer_pool->lexer);
-	mpc_lexer_pool->count = 0;
-	free(mpc_lexer_pool);
-	mpc_lexer_pool = NULL;
-}
-
-// lexer itself
-
-mpc_lexer_t **mpc_lexer_undefined(void) {
-  mpc_lexer_t **l = calloc(1, sizeof(mpc_lexer_t));
-  *l = calloc(1, sizeof(mpc_lexer_t));
-  (*l)->name = NULL;
-  (*l)->parser = NULL;
-  (*l)->action = NULL;
-  (*l)->count = 1;
-  (*l)->self = (*l);
-  (*l)->mpc_lexer_pool = mpc_lexer_pool;
-  return l;
-}
-
-mpc_lexer_t **mpc_lexer_new(const char *name) {
-  mpc_lexer_t **l = mpc_lexer_undefined();
-  (*l)->name = realloc((*l)->name, strlen(name) + 1);
-  strcpy((*l)->name, name);
-  mpc_lexer_pool_add(&l);
-  return l;
-}
-
-void mpc_lexer_add(mpc_lexer_t *** l, mpc_parser_t * p, MPC_LEX_ACTION(action)) {
-	if (!p->name) {
-		return;
-	}
-	
-	mpc_lexer_t ** lexer;
-	
-	if (!l) {
-		lexer = mpc_lexer_undefined();
-	} else lexer = *l;
-	
-	if ((*lexer)->count != 1 || (*lexer)->parser) {
-		mpc_lexer_t * lexertmp = realloc((*lexer), sizeof(mpc_lexer_t)*((*lexer)->count+1));
-		if (lexertmp != NULL) (*lexer) = lexertmp;
-		else return;
-		(*lexer)->count++;
-		**l = (*lexer);
-	}
-
-	(*lexer)[(*lexer)->count-1].self = **l;
-	(*lexer)[(*lexer)->count-1].mpc_lexer_pool = mpc_lexer_pool;
-	(*lexer)[(*lexer)->count-1].name = (*lexer)->name;
-	(*lexer)[(*lexer)->count-1].parser = p;
-	
-	if (action) (*lexer)[(*lexer)->count-1].action = action;
-	else (*lexer)[(*lexer)->count-1].action = NULL;
-}
-
-void mpc_lexer_print(mpc_lexer_t ** l) {
-	if (!(*l)) {
-		puts("lexer is not defined");
-		return;
-	}
-	for (int i = 0; i < (*l)->count; i++) {
-		printf("%s: parser: %s\n%s: action: %p\n\n", (*l)->name?(*l)->name:"Undefined", (*l)[i].parser?(*l)[i].parser->name?(*l)[i].parser->name:"Undefined":"Undefined", (*l)->name?(*l)->name:"Undefined", (*l)[i].action);
-	}
-}
-
-mpc_lexer_t * mpc_lexer_find(char * lexer, char * name) {
-	for (int i = 0; i < mpc_lexer_pool->count; i++) {
-		for (int ii = 0; ii < mpc_lexer_pool->lexer[i][0]->count; ii++) {
-			if (lexer != NULL) {
-				if (strcmp(mpc_lexer_pool->lexer[i][0][ii].name, lexer) == 0) {
-						if (strcmp(mpc_lexer_pool->lexer[i][0][ii].parser->name, name) == 0) return &mpc_lexer_pool->lexer[i][0][ii];
-				}
-			} else if (strcmp(mpc_lexer_pool->lexer[i][0][ii].parser->name, name) == 0) return &mpc_lexer_pool->lexer[i][0][ii];
-		}
-	}
-	return NULL;
-}
-
-void mpc_lexer_free(mpc_lexer_t ** l) {
-	if (!(*l)) {
-		return;
-	}
-	if ((*l)->name) free((*l)->name);
-	for (int i = 0; i < (*l)->count; i++) {
-		(*l)[i].parser = NULL;
-		(*l)[i].action = NULL;
-		(*l)[i].self = NULL;
-		(*l)[i].mpc_lexer_pool = NULL;
-	}
-	(*l)->count = 0;
-	free(l);
-	(*l) = NULL;
-}
-
-int mpc_lexer(char * input, mpc_lexer_t ** list, mpc_result_t * result) {
-	int parsed_succesfully = 0;
-	while(strcmp(input,"")!=0) {
-		for (int i = 0; i < (*list)->count; i++) {
-			if (mpc_parse("lexer", input, (*list)[i].parser, result)) {
-				if (strcmp(result->output,"") != 0) {
-					parsed_succesfully = 1;
-					int len = strlen(result->output);
-					input+=len;
-					// &list[i] is the address of the structure at index i of the array list
-					if ((*list)[i].action) (*list)[i].action(&(*list)[i], result);
-					// if matches the lexer should reset to parse from the top of the list, if this is the case is the while loop needed? and could lexing bugs appear if two parsers happen to match the same input, for example, given "abab", and the parsers mpc_char('a'), mpc_any(), mpc_string("ab"), in that order, if we dont reset, it will parse as "a" > "b" > "ab", and if we do reset it will parse as "a" > "b" > "a" > "b"
-					i = -1;
-				}
-			}
-		}
-	}
-	return parsed_succesfully;
-}
-
-// a simple line lexer
-
-mpc_lexer_t ** mpcl_line(MPC_LEX_ACTION(EOL_ACTION), MPC_LEX_ACTION(LINE_ACTION)) {
-	mpc_parser_t * EOL = mpc_new("EOL");
-	mpc_define(EOL, mpc_or(2, mpc_newline(), mpc_eoi));
-	mpc_parser_t * Line = mpc_new("Line");
-	mpc_define(Line, mpc_re("[^\n]*"));
-	
-	mpc_lexer_t ** lexer = mpc_lexer_new("lexer");
-	mpc_lexer_add(&lexer, EOL, EOL_ACTION);
-	mpc_lexer_add(&lexer, Line, LINE_ACTION);
-	return lexer;
-}
-
-mpc_lexer_t ** mpcl_shline(MPC_LEX_ACTION(EOL_ACTION), MPC_LEX_ACTION(LINE_ACTION)) {
-	mpc_parser_t * EOL = mpc_new("EOL");
-	mpc_define(EOL, mpc_or(3, mpc_char(';'), mpc_newline(), mpc_eoi));
-	mpc_parser_t * Line = mpc_new("Line");
-	mpc_define(Line, mpc_re(".[^;\n]*"));
-	
-	mpc_lexer_t ** lexer = mpc_lexer_new("lexer");
-	mpc_lexer_add(&lexer, EOL, EOL_ACTION);
-	mpc_lexer_add(&lexer, Line, LINE_ACTION);
-	return lexer;
-}
-
-// xs functions
-
-struct mpc_xs_t {
-	mpc_val_t **xs;
-	int count;
-};
-
-mpc_xs_t *mpc_xs_undefined(void) {
-  mpc_xs_t *xs = calloc(1, sizeof(mpc_xs_t));
-  xs->xs = calloc(1, sizeof(mpc_val_t **));
-  return xs;
-}
-
-void mpc_xs_add(mpc_xs_t **x, mpc_result_t * result) {
-	mpc_xs_t * xs;
-	
-	if (!x) {
-		xs = mpc_xs_undefined();
-	} else xs = *x;
-	
-	if (xs->count != 1 || xs->xs) {
-		mpc_val_t ** xstmp = realloc(xs->xs, sizeof(mpc_val_t **)*(xs->count+1));
-		if (xstmp != NULL) xs->xs = xstmp;
-		else return;
-		xs->count++;
-		*x = xs;
-	}
-
-	xs->xs[xs->count-1] = result->output;
-}
-
-void mpc_xs_print(mpc_xs_t * x) {
-	if (!x) {
-		puts("xs is not defined");
-		return;
-	}
-	for (int i = 0; i < x->count; i++) {
-		printf("x->xs[%d]: %s\n", i, (char *) x->xs[i]);
-	}
-}
-
-void mpc_xs_free(mpc_xs_t * x) {
-	if (!x) {
-		return;
-	}
-	for (int i = 0; i < x->count; i++) {
-		x[i].xs = NULL;
-	}
-	x->count = 0;
-	free(x);
-	x = NULL;
-}
+#include "lex.c"
