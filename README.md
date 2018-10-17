@@ -1053,7 +1053,7 @@ then it is assigned some parsers:
 ```
 mpc_lexer_add(&lexer, EOL, outEOL, NULL);
 ```
-this causes `lexer` to have binded to it an End Of Line parser, and is registered the function outEOL as a parser action, in which the action to be performed when parsing is successful (this CAN be NULL to specify no function should be binded), and binds a lexer to `lexer` registering it as a mode change (this CAN be NULL to specify no mode should be binded), this is called via `mpc_lexer`, if it succeeds it executes its binded function if any, switches the lexer to the desired lexer if any, and consumes the input it has managed to match, then moves on to the next parser, if there are no other parsers then it checks itself again or returns if all parsers fail to match any input
+this causes `lexer` to have binded to it an End Of Line parser, and is registered the function `outEOL` as a parser action, in which the action to be performed when parsing is successful (this CAN be NULL to specify no function should be binded), and binds a lexer to `lexer` registering it as a mode change (this CAN be NULL to specify no mode should be binded), this is called via `mpc_lexer`, if it succeeds it executes its binded function if any, switches the lexer to the desired lexer if any, and consumes the input it has managed to match, then moves on to the next parser, if there are no other parsers then it checks itself again or returns if all parsers fail to match any input
 
 ```
 mpc_lexer_add(&lexer, Line, outLINE, NULL);
@@ -1204,7 +1204,7 @@ int mpc_lexer(char * input, mpc_lexer_t ** list, mpc_result_t * result) {
 }
 ```
 
-here is a beakdown of the function and what it does:
+here is a breakdown of the function and what it does:
 
 ```
 	int parsed_succesfully = 0;
