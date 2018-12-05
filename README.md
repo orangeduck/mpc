@@ -116,7 +116,7 @@ Basic Parsers
 
 All the following functions construct new basic parsers of the type `mpc_parser_t *`. All of those parsers return a newly allocated `char *` with the character(s) they manage to match. If unsuccessful they will return an error. They have the following functionality.
 
-* * * 
+* * *
 
 ```c
 mpc_parser_t *mpc_any(void);
@@ -124,7 +124,7 @@ mpc_parser_t *mpc_any(void);
 
 Matches any individual character
 
-* * * 
+* * *
 
 ```c
 mpc_parser_t *mpc_char(char c);
@@ -283,7 +283,7 @@ Run a parser on the contents of some file.
 Combinators
 -----------
 
-Combinators are functions that take one or more parsers and return a new parser of some given functionality. 
+Combinators are functions that take one or more parsers and return a new parser of some given functionality.
 
 These combinators work independently of exactly what data type the parser(s) supplied as input return. In languages such as Haskell ensuring you don't input one type of data into a parser requiring a different type is done by the compiler. But in C we don't have that luxury. So it is at the discretion of the programmer to ensure that he or she deals correctly with the outputs of different parser types.
 
@@ -556,9 +556,9 @@ To ease the task of undefining and then deleting parsers `mpc_cleanup` can be us
 mpc_parser_t *mpc_copy(mpc_parser_t *a);
 ```
 
-This function makes a copy of a parser `a`. This can be useful when you want to 
-use a parser as input for some other parsers multiple times without retaining 
-it. 
+This function makes a copy of a parser `a`. This can be useful when you want to
+use a parser as input for some other parsers multiple times without retaining
+it.
 
 * * *
 
@@ -567,11 +567,11 @@ mpc_parser_t *mpc_re(const char *re);
 mpc_parser_t *mpc_re_mode(const char *re, int mode);
 ```
 
-This function takes as input the regular expression `re` and builds a parser 
-for it. With the `mpc_re_mode` function optional mode flags can also be given. 
-Available flags are `MPC_RE_MULTILINE` / `MPC_RE_M` where the start of input 
-character `^` also matches the beginning of new lines and the end of input `$` 
-character also matches new lines, and `MPC_RE_DOTALL` / `MPC_RE_S` where the 
+This function takes as input the regular expression `re` and builds a parser
+for it. With the `mpc_re_mode` function optional mode flags can also be given.
+Available flags are `MPC_RE_MULTILINE` / `MPC_RE_M` where the start of input
+character `^` also matches the beginning of new lines and the end of input `$`
+character also matches new lines, and `MPC_RE_DOTALL` / `MPC_RE_S` where the
 any character token `.` also matches newlines (by default it doesn't).
 
 
@@ -626,7 +626,7 @@ Useful Parsers
 
   <tr><td><code>mpc_startswith(mpc_parser_t *a);</code></td><td>Matches the start of input followed by <code>a</code></td></tr>
   <tr><td><code>mpc_endswith(mpc_parser_t *a, mpc_dtor_t da);</code></td><td>Matches <code>a</code> followed by the end of input</td></tr>
-  <tr><td><code>mpc_whole(mpc_parser_t *a, mpc_dtor_t da);</code></td><td>Matches the start of input, <code>a</code>, and the end of input</td></tr>  
+  <tr><td><code>mpc_whole(mpc_parser_t *a, mpc_dtor_t da);</code></td><td>Matches the start of input, <code>a</code>, and the end of input</td></tr>
   <tr><td><code>mpc_stripl(mpc_parser_t *a);</code></td><td>Matches <code>a</code> first consuming any whitespace to the left</td></tr>
   <tr><td><code>mpc_stripr(mpc_parser_t *a);</code></td><td>Matches <code>a</code> then consumes any whitespace to the right</td></tr>
   <tr><td><code>mpc_strip(mpc_parser_t *a);</code></td><td>Matches <code>a</code> consuming any surrounding whitespace</td></tr>
@@ -707,17 +707,17 @@ We start with a fold function that will fold two `int *` into a new `int *` base
 
 ```c
 mpc_val_t *fold_maths(int n, mpc_val_t **xs) {
-  
+
   int **vs = (int**)xs;
-    
+
   if (strcmp(xs[1], "*") == 0) { *vs[0] *= *vs[2]; }
   if (strcmp(xs[1], "/") == 0) { *vs[0] /= *vs[2]; }
   if (strcmp(xs[1], "%") == 0) { *vs[0] %= *vs[2]; }
   if (strcmp(xs[1], "+") == 0) { *vs[0] += *vs[2]; }
   if (strcmp(xs[1], "-") == 0) { *vs[0] -= *vs[2]; }
-  
+
   free(xs[1]); free(xs[2]);
-  
+
   return xs[0];
 }
 ```
@@ -730,14 +730,14 @@ mpc_parser_t *Factor = mpc_new("factor");
 mpc_parser_t *Term   = mpc_new("term");
 mpc_parser_t *Maths  = mpc_new("maths");
 
-mpc_define(Expr, mpc_or(2, 
+mpc_define(Expr, mpc_or(2,
   mpc_and(3, fold_maths,
     Factor, mpc_oneof("+-"), Factor,
     free, free),
   Factor
 ));
 
-mpc_define(Factor, mpc_or(2, 
+mpc_define(Factor, mpc_or(2,
   mpc_and(3, fold_maths,
     Term, mpc_oneof("*/"), Term,
     free, free),
@@ -781,6 +781,8 @@ The syntax for this is defined as follows.
   <tr><td><code>'a' | 'b'</code></td><td>Either <code>'a'</code> is required, or <code>'b'</code> is required.</td></tr>
   <tr><td><code>'a'*</code></td><td>Zero or more <code>'a'</code> are required.</td></tr>
   <tr><td><code>'a'+</code></td><td>One or more <code>'a'</code> are required.</td></tr>
+  <tr><td><code>'a'?</code></td><td>Zero or one <code>'a'</code> is required.</td></tr>
+  <tr><td><code>'a'{x}</code></td><td>Exactly <code>x</code> (integer) copies of <code>'a'</code> are required.</td></tr>
   <tr><td><code>&lt;abba&gt;</code></td><td>The rule called <code>abba</code> is required.</td></tr>
 </table>
 
@@ -825,17 +827,17 @@ This opens and reads in the contents of the file given by `filename` and passes 
 Case Study - Tokenizer
 ======================
 
-Another common task we might be interested in doing is tokenizing some block of 
+Another common task we might be interested in doing is tokenizing some block of
 text (splitting the text into individual elements) and performing some function
 on each one of these elements as it is read. We can do this with `mpc` too.
 
-First, we can build a regular expression which parses an individual token. For 
-example if our tokens are identifiers, integers, commas, periods and colons we 
-could build something like this `mpc_re("\\s*([a-zA-Z_]+|[0-9]+|,|\\.|:)")`. 
-Next we can strip any whitespace, and add a callback function using `mpc_apply` 
-which gets called every time this regex is parsed successfully 
-`mpc_apply(mpc_strip(mpc_re("\\s*([a-zA-Z_]+|[0-9]+|,|\\.|:)")), print_token)`. 
-Finally we can surround all of this in `mpc_many` to parse it zero or more 
+First, we can build a regular expression which parses an individual token. For
+example if our tokens are identifiers, integers, commas, periods and colons we
+could build something like this `mpc_re("\\s*([a-zA-Z_]+|[0-9]+|,|\\.|:)")`.
+Next we can strip any whitespace, and add a callback function using `mpc_apply`
+which gets called every time this regex is parsed successfully
+`mpc_apply(mpc_strip(mpc_re("\\s*([a-zA-Z_]+|[0-9]+|,|\\.|:)")), print_token)`.
+Finally we can surround all of this in `mpc_many` to parse it zero or more
 times. The final code might look something like this:
 
 ```c
@@ -847,16 +849,16 @@ static mpc_val_t *print_token(mpc_val_t *x) {
 int main(int argc, char **argv) {
 
   const char *input = "  hello 4352 ,  \n foo.bar   \n\n  test:ing   ";
-  
+
   mpc_parser_t* Tokens = mpc_many(
-    mpcf_all_free, 
+    mpcf_all_free,
     mpc_apply(mpc_strip(mpc_re("\\s*([a-zA-Z_]+|[0-9]+|,|\\.|:)")), print_token));
-  
+
   mpc_result_t r;
   mpc_parse("input", input, Tokens, &r);
-  
+
   mpc_delete(Tokens);
-  
+
   return 0;
 }
 ```
@@ -875,7 +877,7 @@ Token: ':'
 Token: 'ing'
 ```
 
-By extending the regex we can easily extend this to parse many more types of 
+By extending the regex we can easily extend this to parse many more types of
 tokens and quickly and easily build a tokenizer for whatever language we are
 interested in.
 
@@ -991,5 +993,3 @@ When parsing from a grammar, the abstract syntax tree is tagged with different t
 If you have a rule in your grammar called `string`, `char` or `regex`, you may encounter some confusion. This is because nodes will be tagged with (for example) `string` _either_ if they are a string primitive, _or_ if they were parsed via your `string` rule. If you are detecting node type using something like `strstr`, in this situation it might break. One solution to this is to always check that `string` is the innermost tag to test for string primitives, or to rename your rule called `string` to something that doesn't conflict.
 
 Yes it is annoying but its probably not going to change!
-
-
