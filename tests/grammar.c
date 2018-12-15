@@ -337,6 +337,69 @@ void test_regex_mode(void) {
   mpc_cleanup(4, Line0, Line1, Line2, Line3);
 }
 
+void test_digits_file(void) {
+  
+  FILE *f;
+  mpc_result_t r;
+  mpc_parser_t *Digit = mpc_new("digit");
+  mpc_parser_t *Program = mpc_new("program");
+  mpc_ast_t* t0;
+  
+  mpc_err_t* err = mpca_lang(MPCA_LANG_DEFAULT,
+    " digit   : /[0-9]/ ;"
+    " program : /^/ <digit>+ /$/ ;"
+    , Digit, Program, NULL);
+  
+  PT_ASSERT(err == NULL);
+
+  t0 = mpc_ast_build(5, ">", 
+    mpc_ast_new("regex", ""),
+    mpc_ast_new("digit|regex", "1"),
+    mpc_ast_new("digit|regex", "2"),
+    mpc_ast_new("digit|regex", "3"),
+    mpc_ast_new("regex", ""));
+  
+  if (mpc_parse_contents("tests/digits.txt", Program, &r)) {
+    PT_ASSERT(1);
+    PT_ASSERT(mpc_ast_eq(t0, r.output));
+    mpc_ast_delete(r.output);
+  } else {
+    PT_ASSERT(0);
+    mpc_err_print(r.error);
+    mpc_err_delete(r.error);
+  }
+  
+  f = fopen("tests/digits.txt", "r");
+  PT_ASSERT(f != NULL);
+
+  if (mpc_parse_file("tests/digits.txt", f, Program, &r)) {
+    PT_ASSERT(1);
+    PT_ASSERT(mpc_ast_eq(t0, r.output));
+    mpc_ast_delete(r.output);
+  } else {
+    PT_ASSERT(0);
+    mpc_err_print(r.error);
+    mpc_err_delete(r.error);
+  }
+    
+  fclose(f);
+    
+  if (mpc_parse("tests/digits.txt", "123", Program, &r)) {
+    PT_ASSERT(1);
+    PT_ASSERT(mpc_ast_eq(t0, r.output));
+    mpc_ast_delete(r.output);
+  } else {
+    PT_ASSERT(0);
+    mpc_err_print(r.error);
+    mpc_err_delete(r.error);
+  }
+  
+  mpc_ast_delete(t0);
+    
+  mpc_cleanup(2, Digit, Program);
+  
+}
+
 void suite_grammar(void) {
   pt_add_test(test_grammar, "Test Grammar", "Suite Grammar");
   pt_add_test(test_language, "Test Language", "Suite Grammar");
@@ -346,4 +409,5 @@ void suite_grammar(void) {
   pt_add_test(test_qscript, "Test QScript", "Suite Grammar");
   pt_add_test(test_missingrule, "Test Missing Rule", "Suite Grammar");
   pt_add_test(test_regex_mode, "Test Regex Mode", "Suite Grammar");
+  pt_add_test(test_digits_file, "Test Digits File", "Suite Grammar");
 }

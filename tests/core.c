@@ -188,7 +188,7 @@ void test_reader(void) {
 static int token_count = 0;
 
 static mpc_val_t *print_token(mpc_val_t *x) {
-  printf("Token: '%s'\n", (char*)x);
+  /*printf("Token: '%s'\n", (char*)x);*/
   token_count++;
   return x;
 }

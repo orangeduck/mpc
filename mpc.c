@@ -363,13 +363,6 @@ static char mpc_input_buffer_get(mpc_input_t *i) {
   return i->buffer[i->state.pos - i->marks[0].pos];
 }
 
-static int mpc_input_terminated(mpc_input_t *i) {
-  if (i->type == MPC_INPUT_STRING && i->state.pos == (long)strlen(i->string)) { return 1; }
-  if (i->type == MPC_INPUT_FILE && feof(i->file)) { return 1; }
-  if (i->type == MPC_INPUT_PIPE && feof(i->file)) { return 1; }
-  return 0;
-}
-
 static char mpc_input_getc(mpc_input_t *i) {
   
   char c = '\0';
@@ -431,6 +424,10 @@ static char mpc_input_peekc(mpc_input_t *i) {
   
 }
 
+static int mpc_input_terminated(mpc_input_t *i) {
+  return mpc_input_peekc(i) == '\0';
+}
+
 static int mpc_input_failure(mpc_input_t *i, char c) {
 
   switch (i->type) {
@@ -479,38 +476,44 @@ static int mpc_input_success(mpc_input_t *i, char c, char **o) {
 }
 
 static int mpc_input_any(mpc_input_t *i, char **o) {
-  char x = mpc_input_getc(i);
+  char x;
   if (mpc_input_terminated(i)) { return 0; }
+  x = mpc_input_getc(i);
   return mpc_input_success(i, x, o);
 }
 
 static int mpc_input_char(mpc_input_t *i, char c, char **o) {
-  char x = mpc_input_getc(i);
+  char x;
   if (mpc_input_terminated(i)) { return 0; }
+  x = mpc_input_getc(i);
   return x == c ? mpc_input_success(i, x, o) : mpc_input_failure(i, x);
 }
 
 static int mpc_input_range(mpc_input_t *i, char c, char d, char **o) {
-  char x = mpc_input_getc(i);
+  char x;
   if (mpc_input_terminated(i)) { return 0; }
+  x = mpc_input_getc(i);
   return x >= c && x <= d ? mpc_input_success(i, x, o) : mpc_input_failure(i, x);  
 }
 
 static int mpc_input_oneof(mpc_input_t *i, const char *c, char **o) {
-  char x = mpc_input_getc(i);
+  char x;
   if (mpc_input_terminated(i)) { return 0; }
+  x = mpc_input_getc(i);
   return strchr(c, x) != 0 ? mpc_input_success(i, x, o) : mpc_input_failure(i, x);  
 }
 
 static int mpc_input_noneof(mpc_input_t *i, const char *c, char **o) {
-  char x = mpc_input_getc(i);
+  char x;
   if (mpc_input_terminated(i)) { return 0; }
+  x = mpc_input_getc(i);
   return strchr(c, x) == 0 ? mpc_input_success(i, x, o) : mpc_input_failure(i, x);  
 }
 
 static int mpc_input_satisfy(mpc_input_t *i, int(*cond)(char), char **o) {
-  char x = mpc_input_getc(i);
+  char x;
   if (mpc_input_terminated(i)) { return 0; }
+  x = mpc_input_getc(i);
   return cond(x) ? mpc_input_success(i, x, o) : mpc_input_failure(i, x);  
 }
 
