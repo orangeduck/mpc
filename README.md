@@ -1,7 +1,7 @@
 Micro Parser Combinators
 ========================
 
-Version 0.8.8
+Version 0.9.0
 
 
 About
