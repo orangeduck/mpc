@@ -3442,6 +3442,13 @@ static int is_number(const char* s) {
   return 1;
 }
 
+static mpc_parser_t *mpc_add_parser(mpca_grammar_st_t *st, mpc_parser_t *p) {
+  st->parsers_num++;
+  st->parsers = realloc(st->parsers, sizeof(mpc_parser_t*) * st->parsers_num);
+  st->parsers[st->parsers_num-1] = p;
+  return p;
+}
+
 static mpc_parser_t *mpca_grammar_find_parser(char *x, mpca_grammar_st_t *st) {
 
   int i;
@@ -3453,9 +3460,8 @@ static mpc_parser_t *mpca_grammar_find_parser(char *x, mpca_grammar_st_t *st) {
     i = strtol(x, NULL, 10);
 
     while (st->parsers_num <= i) {
-      st->parsers_num++;
-      st->parsers = realloc(st->parsers, sizeof(mpc_parser_t*) * st->parsers_num);
-      st->parsers[st->parsers_num-1] = va_arg(*st->va, mpc_parser_t*);
+      mpc_add_parser(st, va_arg(*st->va, mpc_parser_t*));
+  
       if (st->parsers[st->parsers_num-1] == NULL) {
         return mpc_failf("No Parser in position %i! Only supplied %i Parsers!", i, st->parsers_num);
       }
@@ -3473,14 +3479,14 @@ static mpc_parser_t *mpca_grammar_find_parser(char *x, mpca_grammar_st_t *st) {
       if (q->name && strcmp(q->name, x) == 0) { return q; }
     }
 
+    if (x[0] == '_') {
+      /* Create internal parser */
+      return mpc_add_parser(st, mpc_new(x));
+    }
+
     /* Search New Parsers */
     while (1) {
-
-      p = va_arg(*st->va, mpc_parser_t*);
-
-      st->parsers_num++;
-      st->parsers = realloc(st->parsers, sizeof(mpc_parser_t*) * st->parsers_num);
-      st->parsers[st->parsers_num-1] = p;
+      p = mpc_add_parser(st, va_arg(*st->va, mpc_parser_t*));
 
       if (p == NULL || p->name == NULL) { return mpc_failf("Unknown Parser '%s'!", x); }
       if (p->name && strcmp(p->name, x) == 0) { return p; }
