@@ -96,6 +96,7 @@ mpc_parser_t *mpc_undefine(mpc_parser_t *p);
 
 void mpc_delete(mpc_parser_t *p);
 void mpc_cleanup(int n, ...);
+void mpc_cleanup_internal(int len, mpc_parser_t **arr);
 
 /*
 ** Basic Parsers
@@ -358,7 +359,7 @@ enum {
 
 mpc_parser_t *mpca_grammar(int flags, const char *grammar, ...);
 
-mpc_err_t *mpca_lang(int flags, const char *language, ...);
+mpc_err_t *mpca_lang(int flags, mpc_parser_t ***internals, int *num_internal, const char *language, ...);
 mpc_err_t *mpca_lang_file(int flags, FILE *f, ...);
 mpc_err_t *mpca_lang_pipe(int flags, FILE *f, ...);
 mpc_err_t *mpca_lang_contents(int flags, const char *filename, ...);

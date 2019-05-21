@@ -1594,6 +1594,13 @@ void mpc_cleanup(int n, ...) {
   free(list);
 }
 
+void mpc_cleanup_internal(int len, mpc_parser_t** arr) {
+  int i;
+  for (i = 0; i < len; i++) { mpc_undefine(arr[i]); }
+  for (i = 0; i < len; i++) { mpc_delete(arr[i]); }
+  free(arr);
+}
+
 mpc_parser_t *mpc_pass(void) {
   mpc_parser_t *p = mpc_undefined();
   p->type = MPC_TYPE_PASS;
@@ -3365,6 +3372,7 @@ mpc_parser_t *mpca_total(mpc_parser_t *a) { return mpc_total(a, (mpc_dtor_t)mpc_
 typedef struct {
   va_list *va;
   int parsers_num;
+  int internal_parsers_num;
   mpc_parser_t **parsers;
   int flags;
 } mpca_grammar_st_t;
@@ -3480,7 +3488,7 @@ static mpc_parser_t *mpca_grammar_find_parser(char *x, mpca_grammar_st_t *st) {
     }
 
     if (x[0] == '_') {
-      /* Create internal parser */
+      st->internal_parsers_num++;
       return mpc_add_parser(st, mpc_new(x));
     }
 
@@ -3779,7 +3787,7 @@ mpc_err_t *mpca_lang_pipe(int flags, FILE *p, ...) {
   return err;
 }
 
-mpc_err_t *mpca_lang(int flags, const char *language, ...) {
+mpc_err_t *mpca_lang(int flags, mpc_parser_t ***internals, int *num_internal, const char *language, ...) {
 
   mpca_grammar_st_t st;
   mpc_input_t *i;
@@ -3790,12 +3798,22 @@ mpc_err_t *mpca_lang(int flags, const char *language, ...) {
 
   st.va = &va;
   st.parsers_num = 0;
+  st.internal_parsers_num = 0;
   st.parsers = NULL;
   st.flags = flags;
 
   i = mpc_input_new_string("<mpca_lang>", language);
   err = mpca_lang_st(i, &st);
   mpc_input_delete(i);
+  *internals = malloc(st.internal_parsers_num * sizeof(mpc_parser_t *));
+  *num_internal = st.internal_parsers_num;
+
+  int j, internal = 0;
+  for (j = 0; j < st.parsers_num && internal < *num_internal; j++) {
+    if (st.parsers[j]->name[0] == '_') {
+      (*internals)[internal++] = st.parsers[j];
+    }
+  }
 
   free(st.parsers);
   va_end(va);
