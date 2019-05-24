@@ -2,6 +2,7 @@ PROJ = mpc
 CC ?= gcc
 STND = -ansi
 DIST = build
+MKDIR  ?= mkdir -p
 PREFIX ?= /usr/local
 CFLAGS ?= $(STND) -pedantic -O3 -g -Wall -Werror -Wextra -Wformat=2 -Wshadow \
   -Wno-long-long -Wno-overlength-strings -Wno-format-nonliteral -Wcast-align \
@@ -17,7 +18,7 @@ EXAMPLESEXE = $(EXAMPLES:.c=)
 all: $(EXAMPLESEXE) check
 
 $(DIST):
-	mkdir -p $(DIST)/examples
+	$(MKDIR) $(DIST)/examples
 
 check: test-file test-static test-dynamic
 	./$(DIST)/test-file
@@ -41,7 +42,7 @@ lib$(PROJ).so: $(DIST) $(PROJ).c
 
 lib$(PROJ).a: $(DIST) $(PROJ).c
 	$(CC) $(CFLAGS) -c $(PROJ).c -o $(DIST)/$(PROJ).o
-	ar rcs $(DIST)/lib$(PROJ).a $(DIST)/$(PROJ).o
+	$(AR) rcs $(DIST)/lib$(PROJ).a $(DIST)/$(PROJ).o
 
 libs: lib$(PROJ).so lib$(PROJ).a
   
