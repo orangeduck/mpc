@@ -38,7 +38,11 @@ examples/%: $(DIST) examples/%.c $(PROJ).c
 	$(CC) $(CFLAGS) $(filter-out $(DIST), $^) -lm -o $(DIST)/$@
 
 lib$(PROJ).so: $(DIST) $(PROJ).c
+ifneq ($(OS),Windows_NT)
 	$(CC) $(CFLAGS) -fPIC -shared $(PROJ).c -o $(DIST)/lib$(PROJ).so
+else
+	$(CC) $(CFLAGS) -shared $(PROJ).c -o $(DIST)/lib$(PROJ).so
+endif
 
 lib$(PROJ).a: $(DIST) $(PROJ).c
 	$(CC) $(CFLAGS) -c $(PROJ).c -o $(DIST)/$(PROJ).o
