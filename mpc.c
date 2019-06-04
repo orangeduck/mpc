@@ -320,6 +320,7 @@ static void mpc_input_mark(mpc_input_t *i) {
 }
 
 static void mpc_input_unmark(mpc_input_t *i) {
+  int j;
 
   if (i->backtrack < 1) { return; }
 
@@ -335,6 +336,9 @@ static void mpc_input_unmark(mpc_input_t *i) {
   }
 
   if (i->type == MPC_INPUT_PIPE && i->marks_num == 0) {
+    for (j = strlen(i->buffer) - 1; j >= 0; j--)
+      ungetc(i->buffer[j], i->file);
+
     free(i->buffer);
     i->buffer = NULL;
   }
