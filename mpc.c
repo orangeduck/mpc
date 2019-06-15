@@ -923,8 +923,8 @@ typedef struct { int(*f)(char); } mpc_pdata_satisfy_t;
 typedef struct { char *x; } mpc_pdata_string_t;
 typedef struct { mpc_parser_t *x; mpc_apply_t f; } mpc_pdata_apply_t;
 typedef struct { mpc_parser_t *x; mpc_apply_to_t f; void *d; } mpc_pdata_apply_to_t;
-typedef struct { mpc_parser_t *x; mpc_check_t f; char *e; } mpc_pdata_check_t;
-typedef struct { mpc_parser_t *x; mpc_check_with_t f; void *d; char *e; } mpc_pdata_check_with_t;
+typedef struct { mpc_parser_t *x; mpc_dtor_t dx; mpc_check_t f; char *e; } mpc_pdata_check_t;
+typedef struct { mpc_parser_t *x; mpc_dtor_t dx; mpc_check_with_t f; void *d; char *e; } mpc_pdata_check_with_t;
 typedef struct { mpc_parser_t *x; } mpc_pdata_predict_t;
 typedef struct { mpc_parser_t *x; mpc_dtor_t dx; mpc_ctor_t lf; } mpc_pdata_not_t;
 typedef struct { int n; mpc_fold_t f; mpc_parser_t *x; mpc_dtor_t dx; } mpc_pdata_repeat_t;
@@ -1090,6 +1090,7 @@ static int mpc_parse_run(mpc_input_t *i, mpc_parser_t *p, mpc_result_t *r, mpc_e
         if (p->data.check.f(&r->output)) {
           MPC_SUCCESS(r->output);
         } else {
+          mpc_parse_dtor(i, p->data.check.dx, r->output);
           MPC_FAILURE(mpc_err_fail(i, p->data.check.e));
         }
       } else {
@@ -1101,6 +1102,7 @@ static int mpc_parse_run(mpc_input_t *i, mpc_parser_t *p, mpc_result_t *r, mpc_e
         if (p->data.check_with.f(&r->output, p->data.check_with.d)) {
           MPC_SUCCESS(r->output);
         } else {
+          mpc_parse_dtor(i, p->data.check.dx, r->output);
           MPC_FAILURE(mpc_err_fail(i, p->data.check_with.e));
         }
       } else {
@@ -1799,20 +1801,22 @@ mpc_parser_t *mpc_apply_to(mpc_parser_t *a, mpc_apply_to_t f, void *x) {
   return p;
 }
 
-mpc_parser_t *mpc_check(mpc_parser_t *a, mpc_check_t f, const char *e) {
+mpc_parser_t *mpc_check(mpc_parser_t *a, mpc_dtor_t da, mpc_check_t f, const char *e) {
   mpc_parser_t  *p = mpc_undefined();
-  p->type          = MPC_TYPE_CHECK;
-  p->data.check.x  = a;
-  p->data.check.f  = f;
-  p->data.check.e  = malloc(strlen(e) + 1);
+  p->type = MPC_TYPE_CHECK;
+  p->data.check.x = a;
+  p->data.check.dx = da;
+  p->data.check.f = f;
+  p->data.check.e = malloc(strlen(e) + 1);
   strcpy(p->data.check.e, e);
   return p;
 }
 
-mpc_parser_t *mpc_check_with(mpc_parser_t *a, mpc_check_with_t f, void *x, const char *e) {
-  mpc_parser_t  *p     = mpc_undefined();
-  p->type              = MPC_TYPE_CHECK_WITH;
+mpc_parser_t *mpc_check_with(mpc_parser_t *a, mpc_dtor_t da, mpc_check_with_t f, void *x, const char *e) {
+  mpc_parser_t  *p = mpc_undefined();
+  p->type = MPC_TYPE_CHECK_WITH;
   p->data.check_with.x = a;
+  p->data.check_with.dx = da;
   p->data.check_with.f = f;
   p->data.check_with.d = x;
   p->data.check_with.e = malloc(strlen(e) + 1);
@@ -1820,34 +1824,34 @@ mpc_parser_t *mpc_check_with(mpc_parser_t *a, mpc_check_with_t f, void *x, const
   return p;
 }
 
-mpc_parser_t *mpc_checkf(mpc_parser_t *a, mpc_check_t f, const char *fmt, ...) {
-  va_list        va;
-  char          *buffer;
-  mpc_parser_t  *p;
+mpc_parser_t *mpc_checkf(mpc_parser_t *a, mpc_dtor_t da, mpc_check_t f, const char *fmt, ...) {
+  va_list va;
+  char *buffer;
+  mpc_parser_t *p;
 
   va_start(va, fmt);
   buffer = malloc(2048);
   vsprintf(buffer, fmt, va);
   va_end(va);
 
-  p = mpc_check (a, f, buffer);
-  free (buffer);
+  p = mpc_check(a, da, f, buffer);
+  free(buffer);
 
   return p;
 }
 
-mpc_parser_t *mpc_check_withf(mpc_parser_t *a, mpc_check_with_t f, void *x, const char *fmt, ...) {
-  va_list        va;
-  char          *buffer;
-  mpc_parser_t  *p;
+mpc_parser_t *mpc_check_withf(mpc_parser_t *a, mpc_dtor_t da, mpc_check_with_t f, void *x, const char *fmt, ...) {
+  va_list va;
+  char *buffer;
+  mpc_parser_t *p;
 
   va_start(va, fmt);
   buffer = malloc(2048);
   vsprintf(buffer, fmt, va);
   va_end(va);
 
-  p = mpc_check_with (a, f, x, buffer);
-  free (buffer);
+  p = mpc_check_with(a, da, f, x, buffer);
+  free(buffer);
 
   return p;
 }
