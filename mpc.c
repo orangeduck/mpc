@@ -653,7 +653,7 @@ char *mpc_err_string(mpc_err_t *x) {
   }
 
   mpc_err_string_cat(buffer, &pos, &max, " at ");
-  mpc_err_string_cat(buffer, &pos, &max, mpc_err_char_unescape(x->recieved));
+  mpc_err_string_cat(buffer, &pos, &max, mpc_err_char_unescape(x->received));
   mpc_err_string_cat(buffer, &pos, &max, "\n");
 
   return realloc(buffer, strlen(buffer) + 1);
@@ -671,7 +671,7 @@ static mpc_err_t *mpc_err_new(mpc_input_t *i, const char *expected) {
   x->expected[0] = mpc_malloc(i, strlen(expected) + 1);
   strcpy(x->expected[0], expected);
   x->failure = NULL;
-  x->recieved = mpc_input_peekc(i);
+  x->received = mpc_input_peekc(i);
   return x;
 }
 
@@ -686,7 +686,7 @@ static mpc_err_t *mpc_err_fail(mpc_input_t *i, const char *failure) {
   x->expected = NULL;
   x->failure = mpc_malloc(i, strlen(failure) + 1);
   strcpy(x->failure, failure);
-  x->recieved = ' ';
+  x->received = ' ';
   return x;
 }
 
@@ -700,7 +700,7 @@ static mpc_err_t *mpc_err_file(const char *filename, const char *failure) {
   x->expected = NULL;
   x->failure = malloc(strlen(failure) + 1);
   strcpy(x->failure, failure);
-  x->recieved = ' ';
+  x->received = ' ';
   return x;
 }
 
@@ -777,7 +777,7 @@ static mpc_err_t *mpc_err_or(mpc_input_t *i, mpc_err_t** x, int n) {
       break;
     }
 
-    e->recieved = x[j]->recieved;
+    e->received = x[j]->received;
 
     for (k = 0; k < x[j]->expected_num; k++) {
       if (!mpc_err_contains_expected(i, e, x[j]->expected[k])) {
