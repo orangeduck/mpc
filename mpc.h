@@ -43,7 +43,7 @@ typedef struct {
   char *filename;
   char *failure;
   char **expected;
-  char recieved;
+  char received;
 } mpc_err_t;
 
 void mpc_err_delete(mpc_err_t *e);
