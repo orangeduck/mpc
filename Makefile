@@ -20,35 +20,35 @@ all: $(EXAMPLESEXE) check
 $(DIST):
 	$(MKDIR) $(DIST)/examples
 
-check: test-file test-static test-dynamic
+check: $(DIST)/test-file $(DIST)/test-static $(DIST)/test-dynamic
 	./$(DIST)/test-file
 	./$(DIST)/test-static
 	LD_LIBRARY_PATH=$(DIST) ./$(DIST)/test-dynamic
 
-test-file: $(DIST) $(TESTS) $(PROJ).c
+$(DIST)/test-file: $(TESTS) $(PROJ).c mpc.h tests/ptest.h
 	$(CC) $(filter-out -Werror, $(CFLAGS)) $(TESTS) $(PROJ).c -lm -o $(DIST)/test-file
 
-test-dynamic: $(DIST) $(TESTS) lib$(PROJ).so
+$(DIST)/test-dynamic: $(TESTS) $(DIST)/lib$(PROJ).so mpc.h tests/ptest.h
 	$(CC) $(filter-out -Werror, $(CFLAGS)) $(TESTS) -lm -L$(DIST) -l$(PROJ) -o $(DIST)/test-dynamic
 
-test-static: $(DIST) $(TESTS) lib$(PROJ).a
+$(DIST)/test-static: $(TESTS) $(DIST)/lib$(PROJ).a mpc.h tests/ptest.h
 	$(CC) $(filter-out -Werror, $(CFLAGS)) $(TESTS) -lm -L$(DIST) -l$(PROJ) -static -o $(DIST)/test-static
 
-examples/%: $(DIST) examples/%.c $(PROJ).c
+examples/%: $(DIST) examples/%.c $(PROJ).c mpc.h
 	$(CC) $(CFLAGS) $(filter-out $(DIST), $^) -lm -o $(DIST)/$@
 
-lib$(PROJ).so: $(DIST) $(PROJ).c
+$(DIST)/lib$(PROJ).so: $(PROJ).c mpc.h
 ifneq ($(OS),Windows_NT)
 	$(CC) $(CFLAGS) -fPIC -shared $(PROJ).c -o $(DIST)/lib$(PROJ).so
 else
 	$(CC) $(CFLAGS) -shared $(PROJ).c -o $(DIST)/lib$(PROJ).so
 endif
 
-lib$(PROJ).a: $(DIST) $(PROJ).c
+$(DIST)/lib$(PROJ).a: $(PROJ).c mpc.h
 	$(CC) $(CFLAGS) -c $(PROJ).c -o $(DIST)/$(PROJ).o
 	$(AR) rcs $(DIST)/lib$(PROJ).a $(DIST)/$(PROJ).o
 
-libs: lib$(PROJ).so lib$(PROJ).a
+libs: $(DIST)/lib$(PROJ).so $(DIST)/lib$(PROJ).a
   
 clean:
 	rm -rf -- $(DIST)
