@@ -2470,7 +2470,7 @@ mpc_val_t *mpcf_strtriml(mpc_val_t *x) {
 mpc_val_t *mpcf_strtrimr(mpc_val_t *x) {
   char *s = x;
   size_t l = strlen(s);
-  while (isspace((unsigned char)s[l-1])) {
+  while (l > 0 && isspace((unsigned char)s[l-1])) {
     s[l-1] = '\0'; l--;
   }
   return s;
