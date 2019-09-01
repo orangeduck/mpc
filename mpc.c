@@ -1038,12 +1038,19 @@ enum {
   if (x) { MPC_SUCCESS(r->output); } \
   else { MPC_FAILURE(NULL); }
 
-static int mpc_parse_run(mpc_input_t *i, mpc_parser_t *p, mpc_result_t *r, mpc_err_t **e) {
+#define MPC_MAX_RECURSION_DEPTH 1000
+
+static int mpc_parse_run(mpc_input_t *i, mpc_parser_t *p, mpc_result_t *r, mpc_err_t **e, int depth) {
 
   int j = 0, k = 0;
   mpc_result_t results_stk[MPC_PARSE_STACK_MIN];
   mpc_result_t *results;
   int results_slots = MPC_PARSE_STACK_MIN;
+
+  if (depth == MPC_MAX_RECURSION_DEPTH)
+  {
+    MPC_FAILURE(mpc_err_fail(i, "Maximum recursion depth exceeded!"));
+  }
 
   switch (p->type) {
 
@@ -1072,21 +1079,21 @@ static int mpc_parse_run(mpc_input_t *i, mpc_parser_t *p, mpc_result_t *r, mpc_e
     /* Application Parsers */
 
     case MPC_TYPE_APPLY:
-      if (mpc_parse_run(i, p->data.apply.x, r, e)) {
+      if (mpc_parse_run(i, p->data.apply.x, r, e, depth+1)) {
         MPC_SUCCESS(mpc_parse_apply(i, p->data.apply.f, r->output));
       } else {
         MPC_FAILURE(r->output);
       }
 
     case MPC_TYPE_APPLY_TO:
-      if (mpc_parse_run(i, p->data.apply_to.x, r, e)) {
+      if (mpc_parse_run(i, p->data.apply_to.x, r, e, depth+1)) {
         MPC_SUCCESS(mpc_parse_apply_to(i, p->data.apply_to.f, r->output, p->data.apply_to.d));
       } else {
         MPC_FAILURE(r->error);
       }
 
     case MPC_TYPE_CHECK:
-      if (mpc_parse_run(i, p->data.check.x, r, e)) {
+      if (mpc_parse_run(i, p->data.check.x, r, e, depth+1)) {
         if (p->data.check.f(&r->output)) {
           MPC_SUCCESS(r->output);
         } else {
@@ -1098,7 +1105,7 @@ static int mpc_parse_run(mpc_input_t *i, mpc_parser_t *p, mpc_result_t *r, mpc_e
       }
 
     case MPC_TYPE_CHECK_WITH:
-      if (mpc_parse_run(i, p->data.check_with.x, r, e)) {
+      if (mpc_parse_run(i, p->data.check_with.x, r, e, depth+1)) {
         if (p->data.check_with.f(&r->output, p->data.check_with.d)) {
           MPC_SUCCESS(r->output);
         } else {
@@ -1111,7 +1118,7 @@ static int mpc_parse_run(mpc_input_t *i, mpc_parser_t *p, mpc_result_t *r, mpc_e
 
     case MPC_TYPE_EXPECT:
       mpc_input_suppress_enable(i);
-      if (mpc_parse_run(i, p->data.expect.x, r, e)) {
+      if (mpc_parse_run(i, p->data.expect.x, r, e, depth+1)) {
         mpc_input_suppress_disable(i);
         MPC_SUCCESS(r->output);
       } else {
@@ -1121,7 +1128,7 @@ static int mpc_parse_run(mpc_input_t *i, mpc_parser_t *p, mpc_result_t *r, mpc_e
 
     case MPC_TYPE_PREDICT:
       mpc_input_backtrack_disable(i);
-      if (mpc_parse_run(i, p->data.predict.x, r, e)) {
+      if (mpc_parse_run(i, p->data.predict.x, r, e, depth+1)) {
         mpc_input_backtrack_enable(i);
         MPC_SUCCESS(r->output);
       } else {
@@ -1136,7 +1143,7 @@ static int mpc_parse_run(mpc_input_t *i, mpc_parser_t *p, mpc_result_t *r, mpc_e
     case MPC_TYPE_NOT:
       mpc_input_mark(i);
       mpc_input_suppress_enable(i);
-      if (mpc_parse_run(i, p->data.not.x, r, e)) {
+      if (mpc_parse_run(i, p->data.not.x, r, e, depth+1)) {
         mpc_input_rewind(i);
         mpc_input_suppress_disable(i);
         mpc_parse_dtor(i, p->data.not.dx, r->output);
@@ -1148,7 +1155,7 @@ static int mpc_parse_run(mpc_input_t *i, mpc_parser_t *p, mpc_result_t *r, mpc_e
       }
 
     case MPC_TYPE_MAYBE:
-      if (mpc_parse_run(i, p->data.not.x, r, e)) {
+      if (mpc_parse_run(i, p->data.not.x, r, e, depth+1)) {
         MPC_SUCCESS(r->output);
       } else {
         *e = mpc_err_merge(i, *e, r->error);
@@ -1161,7 +1168,7 @@ static int mpc_parse_run(mpc_input_t *i, mpc_parser_t *p, mpc_result_t *r, mpc_e
 
       results = results_stk;
 
-      while (mpc_parse_run(i, p->data.repeat.x, &results[j], e)) {
+      while (mpc_parse_run(i, p->data.repeat.x, &results[j], e, depth+1)) {
         j++;
         if (j == MPC_PARSE_STACK_MIN) {
           results_slots = j + j / 2;
@@ -1183,7 +1190,7 @@ static int mpc_parse_run(mpc_input_t *i, mpc_parser_t *p, mpc_result_t *r, mpc_e
 
       results = results_stk;
 
-      while (mpc_parse_run(i, p->data.repeat.x, &results[j], e)) {
+      while (mpc_parse_run(i, p->data.repeat.x, &results[j], e, depth+1)) {
         j++;
         if (j == MPC_PARSE_STACK_MIN) {
           results_slots = j + j / 2;
@@ -1214,7 +1221,7 @@ static int mpc_parse_run(mpc_input_t *i, mpc_parser_t *p, mpc_result_t *r, mpc_e
         ? mpc_malloc(i, sizeof(mpc_result_t) * p->data.repeat.n)
         : results_stk;
 
-      while (mpc_parse_run(i, p->data.repeat.x, &results[j], e)) {
+      while (mpc_parse_run(i, p->data.repeat.x, &results[j], e, depth+1)) {
         j++;
         if (j == p->data.repeat.n) { break; }
       }
@@ -1243,7 +1250,7 @@ static int mpc_parse_run(mpc_input_t *i, mpc_parser_t *p, mpc_result_t *r, mpc_e
         : results_stk;
 
       for (j = 0; j < p->data.or.n; j++) {
-        if (mpc_parse_run(i, p->data.or.xs[j], &results[j], e)) {
+        if (mpc_parse_run(i, p->data.or.xs[j], &results[j], e, depth+1)) {
           MPC_SUCCESS(results[j].output;
             if (p->data.or.n > MPC_PARSE_STACK_MIN) { mpc_free(i, results); });
         } else {
@@ -1264,7 +1271,7 @@ static int mpc_parse_run(mpc_input_t *i, mpc_parser_t *p, mpc_result_t *r, mpc_e
 
       mpc_input_mark(i);
       for (j = 0; j < p->data.and.n; j++) {
-        if (!mpc_parse_run(i, p->data.and.xs[j], &results[j], e)) {
+        if (!mpc_parse_run(i, p->data.and.xs[j], &results[j], e, depth+1)) {
           mpc_input_rewind(i);
           for (k = 0; k < j; k++) {
             mpc_parse_dtor(i, p->data.and.dxs[k], results[k].output);
@@ -1297,7 +1304,7 @@ int mpc_parse_input(mpc_input_t *i, mpc_parser_t *p, mpc_result_t *r) {
   int x;
   mpc_err_t *e = mpc_err_fail(i, "Unknown Error");
   e->state = mpc_state_invalid();
-  x = mpc_parse_run(i, p, r, &e);
+  x = mpc_parse_run(i, p, r, &e, 0);
   if (x) {
     mpc_err_delete_internal(i, e);
     r->output = mpc_export(i, r->output);
