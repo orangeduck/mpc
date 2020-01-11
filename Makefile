@@ -49,7 +49,7 @@ $(DIST)/lib$(PROJ).a: $(PROJ).c mpc.h
 	$(AR) rcs $(DIST)/lib$(PROJ).a $(DIST)/$(PROJ).o
 
 libs: $(DIST)/lib$(PROJ).so $(DIST)/lib$(PROJ).a
-  
+
 clean:
 	rm -rf -- $(DIST)
 
