@@ -1,9 +1,9 @@
 {
-  "name": "mpc",
+  "name": "pcq",
   "version": "0.9.8",
-  "repo": "orangeduck/mpc",
+  "repo": "orangeduck/pcq",
   "description": "A Parser Combinator library for C",
-  "keywords": ["parser", "combinator", "library", "c", "mpc"],
+  "keywords": ["parser", "combinator", "library", "c", "mpc", "pcq"],
   "license": "BSD",
-  "src": ["mpc.c", "mpc.h"]
+  "src": ["pcq.c", "pcq.h"]
 }
