@@ -13,7 +13,7 @@ TESTS = $(wildcard tests/*.c)
 EXAMPLES = $(wildcard examples/*.c)
 EXAMPLESEXE = $(EXAMPLES:.c=)
 
-.PHONY: all check clean libs
+.PHONY: all check clean libs $(DIST)/$(PROJ).pc
 
 all: $(EXAMPLESEXE) check
 
@@ -50,14 +50,19 @@ $(DIST)/lib$(PROJ).a: $(PROJ).c mpc.h
 
 libs: $(DIST)/lib$(PROJ).so $(DIST)/lib$(PROJ).a
 
+$(DIST)/$(PROJ).pc: $(DIST) $(PROJ).pc
+	cp $(PROJ).pc $(DIST)/$(PROJ).pc
+	sed -i '1i\prefix=$(PREFIX)/' $(DIST)/$(PROJ).pc
+
 clean:
 	rm -rf -- $(DIST)
 
 install: all
-	install -d -m644 $(DESTDIR)$(PREFIX)/{include,lib,share/$(PROJ)}
+	install -d -m644 $(DESTDIR)$(PREFIX)/{include,lib/pkgconfig,share/$(PROJ)}
 	install -m755 -t $(DESTDIR)$(PREFIX)/lib $(DIST)/lib*
 	install -m644 -t $(DESTDIR)$(PREFIX)/share/$(PROJ) $(PROJ).{c,h}
 	install -m644 $(PROJ).h $(DESTDIR)$(PREFIX)/include/$(PROJ).h
+	install -m644 $(DIST)/$(PROJ).pc $(DESTDIR)$(PREFIX)/lib/pkgconfig/$(PROJ).pc
 
 uninstall:
 	rm -rf -- \
