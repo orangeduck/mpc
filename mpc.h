@@ -258,6 +258,7 @@ mpc_val_t *mpcf_snd_free(int n, mpc_val_t** xs);
 mpc_val_t *mpcf_trd_free(int n, mpc_val_t** xs);
 mpc_val_t *mpcf_all_free(int n, mpc_val_t** xs);
 
+mpc_val_t *mpcf_freefold(int n, mpc_val_t** xs);
 mpc_val_t *mpcf_strfold(int n, mpc_val_t** xs);
 mpc_val_t *mpcf_maths(int n, mpc_val_t** xs);
 
