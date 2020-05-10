@@ -1,1 +1,3 @@
-"* text=auto" 
+* text=auto
+
+Makefile text eol=lf
