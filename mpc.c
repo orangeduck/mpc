@@ -2622,8 +2622,7 @@ static mpc_val_t *mpcf_nth_free(int n, mpc_val_t **xs, int x) {
 mpc_val_t *mpcf_fst_free(int n, mpc_val_t **xs) { return mpcf_nth_free(n, xs, 0); }
 mpc_val_t *mpcf_snd_free(int n, mpc_val_t **xs) { return mpcf_nth_free(n, xs, 1); }
 mpc_val_t *mpcf_trd_free(int n, mpc_val_t **xs) { return mpcf_nth_free(n, xs, 2); }
-
-mpc_val_t *mpcf_freefold(int n, mpc_val_t **xs) {
+mpc_val_t *mpcf_all_free(int n, mpc_val_t** xs) {
   int i;
   for (i = 0; i < n; i++) {
     free(xs[i]);
