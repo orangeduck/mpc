@@ -18,9 +18,10 @@ EXAMPLESEXE = $(EXAMPLES:.c=)
 all: $(EXAMPLESEXE) check
 
 $(DIST):
+	$(MKDIR) $(DIST)
 	$(MKDIR) $(DIST)/examples
 
-check: $(DIST)/test-file $(DIST)/test-static $(DIST)/test-dynamic
+check: $(DIST) $(DIST)/test-file $(DIST)/test-static $(DIST)/test-dynamic
 	./$(DIST)/test-file
 	./$(DIST)/test-static
 	LD_LIBRARY_PATH=$(DIST) ./$(DIST)/test-dynamic
