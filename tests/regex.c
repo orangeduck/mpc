@@ -25,7 +25,7 @@ void test_regex_basic(void) {
   re3 = mpc_re("abc(abdd)?");
   re4 = mpc_re("ab|c(abdd)?");
   re5 = mpc_re("abc(ab|dd)+g$");
-  
+
   PT_ASSERT(regex_test_pass(re0, "abc", "abc"));
   PT_ASSERT(regex_test_pass(re0, "bcd", "bcd"));
   PT_ASSERT(regex_test_fail(re0, "bc", "bc"));
@@ -35,7 +35,7 @@ void test_regex_basic(void) {
   PT_ASSERT(regex_test_pass(re2, "abcabab", "abcabab"));
   PT_ASSERT(regex_test_pass(re2, "abcababd", "abcabab"));
   PT_ASSERT(regex_test_pass(re5, "abcddg", "abcddg"));
-  
+
   mpc_delete(re0);
   mpc_delete(re1);
   mpc_delete(re2);
@@ -57,47 +57,47 @@ void test_regex_boundary(void) {
   PT_ASSERT(regex_test_pass(re0, "foo.", "foo"));
   PT_ASSERT(regex_test_pass(re0, "foo)", "foo"));
   PT_ASSERT(regex_test_pass(re0, "foo baz", "foo"));
-  
+
   PT_ASSERT(regex_test_fail(re0, "foobar", "foo"));
   PT_ASSERT(regex_test_fail(re0, "foo3", "foo"));
-  
+
   PT_ASSERT(regex_test_pass(re1, "foo", "foo"));
   PT_ASSERT(regex_test_pass(re1, " foo", " foo"));
   PT_ASSERT(regex_test_fail(re1, "wfoo", "foo"));
-  
+
   PT_ASSERT(regex_test_pass(re2, "python", "python"));
   PT_ASSERT(regex_test_pass(re2, "py3", "py3"));
   PT_ASSERT(regex_test_pass(re2, "py2", "py2"));
   PT_ASSERT(regex_test_fail(re2, "py", "py"));
   PT_ASSERT(regex_test_fail(re2, "py.", "py."));
   PT_ASSERT(regex_test_fail(re2, "py!", "py!"));
-  
+
   mpc_delete(re0);
   mpc_delete(re1);
   mpc_delete(re2);
-  
+
 }
 
 void test_regex_range(void) {
 
   mpc_parser_t *re0, *re1, *re2, *re3;
-  
+
   re0 = mpc_re("abg[abcdef]");
   re1 = mpc_re("y*[a-z]");
   re2 = mpc_re("zz(p+)?[A-Z_0\\]123]*");
   re3 = mpc_re("^[^56hy].*$");
-  
+
   /* TODO: Testing */
-  
+
   mpc_delete(re0);
   mpc_delete(re1);
   mpc_delete(re2);
   mpc_delete(re3);
-  
+
 }
 
 void test_regex_string(void) {
-  
+
   mpc_parser_t *re0 = mpc_re("\"(\\\\.|[^\"])*\"");
 
   PT_ASSERT(regex_test_pass(re0, "\"there\"", "\"there\""));
@@ -110,26 +110,26 @@ void test_regex_string(void) {
 }
 
 void test_regex_lisp_comment(void) {
-  
+
   mpc_parser_t *re0 = mpc_re(";[^\\n\\r]*");
 
   PT_ASSERT(regex_test_pass(re0, ";comment", ";comment"));
   PT_ASSERT(regex_test_pass(re0, ";i am the\nman", ";i am the"));
-  
+
   mpc_delete(re0);
-  
+
 }
 
 void test_regex_newline(void) {
-  
+
   mpc_parser_t *re0 = mpc_re("[a-z]*");
 
   PT_ASSERT(regex_test_pass(re0, "hi", "hi"));
   PT_ASSERT(regex_test_pass(re0, "hi\nk", "hi"));
   PT_ASSERT(regex_test_fail(re0, "hi\nk", "hi\nk"));
-  
+
   mpc_delete(re0);
-  
+
 }
 
 void test_regex_multiline(void) {
@@ -142,13 +142,13 @@ void test_regex_multiline(void) {
   PT_ASSERT(regex_test_fail(re0, "45234", "45234"));
   PT_ASSERT(regex_test_fail(re0, "\n45234", "\n45234"));
   PT_ASSERT(regex_test_pass(re0, "\n45234", "\n"));
-  
+
   mpc_delete(re0);
-  
+
 }
 
 void test_regex_dotall(void) {
-  
+
   mpc_parser_t *re0 = mpc_re_mode("^.*$", MPC_RE_DEFAULT);
   mpc_parser_t *re1 = mpc_re_mode("^.*$", MPC_RE_DOTALL);
 
@@ -157,16 +157,16 @@ void test_regex_dotall(void) {
   PT_ASSERT(regex_test_fail(re0, "he\nllo\n", "he"));
   PT_ASSERT(regex_test_pass(re0, "34njaksdklmasd", "34njaksdklmasd"));
   PT_ASSERT(regex_test_fail(re0, "34njaksd\nklmasd", "34njaksd"));
-  
+
   PT_ASSERT(regex_test_pass(re1, "hello", "hello"));
   PT_ASSERT(regex_test_pass(re1, "hello\n", "hello\n"));
   PT_ASSERT(regex_test_pass(re1, "he\nllo\n", "he\nllo\n"));
   PT_ASSERT(regex_test_pass(re1, "34njaksdklmasd", "34njaksdklmasd"));
   PT_ASSERT(regex_test_pass(re1, "34njaksd\nklmasd", "34njaksd\nklmasd"));
-  
+
   mpc_delete(re0);
   mpc_delete(re1);
-  
+
 }
 
 void suite_regex(void) {
