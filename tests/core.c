@@ -1,5 +1,5 @@
 #include "ptest.h"
-#include "../mpc.h"
+#include "../pcq.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -13,161 +13,161 @@ void test_ident(void) {
 
   /* ^[a-zA-Z_][a-zA-Z0-9_]*$ */
 
-  mpc_parser_t* Ident = mpc_whole(
-    mpc_and(2, mpcf_strfold,
-      mpc_or(2, mpc_alpha(), mpc_underscore()),
-      mpc_many1(mpcf_strfold, mpc_or(3, mpc_alpha(), mpc_underscore(), mpc_digit())),
+  pcq_parser_t* Ident = pcq_whole(
+    pcq_and(2, pcqf_strfold,
+      pcq_or(2, pcq_alpha(), pcq_underscore()),
+      pcq_many1(pcqf_strfold, pcq_or(3, pcq_alpha(), pcq_underscore(), pcq_digit())),
       free),
     free
   );
 
-  PT_ASSERT(mpc_test_pass(Ident, "test", "test", streq, free, strprint));
-  PT_ASSERT(mpc_test_fail(Ident, "  blah", "", streq, free, strprint));
-  PT_ASSERT(mpc_test_pass(Ident, "anoth21er", "anoth21er", streq, free, strprint));
-  PT_ASSERT(mpc_test_pass(Ident, "du__de", "du__de", streq, free, strprint));
-  PT_ASSERT(mpc_test_fail(Ident, "some spaces", "", streq, free, strprint));
-  PT_ASSERT(mpc_test_fail(Ident, "", "", streq, free, strprint));
-  PT_ASSERT(mpc_test_fail(Ident, "18nums", "", streq, free, strprint));
+  PT_ASSERT(pcq_test_pass(Ident, "test", "test", streq, free, strprint));
+  PT_ASSERT(pcq_test_fail(Ident, "  blah", "", streq, free, strprint));
+  PT_ASSERT(pcq_test_pass(Ident, "anoth21er", "anoth21er", streq, free, strprint));
+  PT_ASSERT(pcq_test_pass(Ident, "du__de", "du__de", streq, free, strprint));
+  PT_ASSERT(pcq_test_fail(Ident, "some spaces", "", streq, free, strprint));
+  PT_ASSERT(pcq_test_fail(Ident, "", "", streq, free, strprint));
+  PT_ASSERT(pcq_test_fail(Ident, "18nums", "", streq, free, strprint));
 
-  mpc_delete(Ident);
+  pcq_delete(Ident);
 
 }
 
 void test_maths(void) {
 
-  mpc_parser_t *Expr, *Factor, *Term, *Maths;
+  pcq_parser_t *Expr, *Factor, *Term, *Maths;
   int r0 = 1, r1 = 5, r2 = 13, r3 = 0, r4 = 2;
 
-  Expr   = mpc_new("expr");
-  Factor = mpc_new("factor");
-  Term   = mpc_new("term");
-  Maths  = mpc_new("maths");
+  Expr   = pcq_new("expr");
+  Factor = pcq_new("factor");
+  Term   = pcq_new("term");
+  Maths  = pcq_new("maths");
 
-  mpc_define(Expr, mpc_or(2,
-    mpc_and(3, mpcf_maths, Factor, mpc_oneof("*/"), Factor, free, free),
+  pcq_define(Expr, pcq_or(2,
+    pcq_and(3, pcqf_maths, Factor, pcq_oneof("*/"), Factor, free, free),
     Factor
   ));
 
-  mpc_define(Factor, mpc_or(2,
-    mpc_and(3, mpcf_maths, Term, mpc_oneof("+-"), Term, free, free),
+  pcq_define(Factor, pcq_or(2,
+    pcq_and(3, pcqf_maths, Term, pcq_oneof("+-"), Term, free, free),
     Term
   ));
 
-  mpc_define(Term, mpc_or(2,
-    mpc_int(),
-    mpc_parens(Expr, free)
+  pcq_define(Term, pcq_or(2,
+    pcq_int(),
+    pcq_parens(Expr, free)
   ));
 
-  mpc_define(Maths, mpc_whole(Expr, free));
+  pcq_define(Maths, pcq_whole(Expr, free));
 
-  PT_ASSERT(mpc_test_pass(Maths, "1", &r0, int_eq, free, int_print));
-  PT_ASSERT(mpc_test_pass(Maths, "(5)", &r1, int_eq, free, int_print));
-  PT_ASSERT(mpc_test_pass(Maths, "(4*2)+5", &r2, int_eq, free, int_print));
-  PT_ASSERT(mpc_test_fail(Maths, "a", &r3, int_eq, free, int_print));
-  PT_ASSERT(mpc_test_fail(Maths, "2b+4", &r4, int_eq, free, int_print));
+  PT_ASSERT(pcq_test_pass(Maths, "1", &r0, int_eq, free, int_print));
+  PT_ASSERT(pcq_test_pass(Maths, "(5)", &r1, int_eq, free, int_print));
+  PT_ASSERT(pcq_test_pass(Maths, "(4*2)+5", &r2, int_eq, free, int_print));
+  PT_ASSERT(pcq_test_fail(Maths, "a", &r3, int_eq, free, int_print));
+  PT_ASSERT(pcq_test_fail(Maths, "2b+4", &r4, int_eq, free, int_print));
 
-  mpc_cleanup(4, Expr, Factor, Term, Maths);
+  pcq_cleanup(4, Expr, Factor, Term, Maths);
 }
 
 void test_strip(void) {
 
-  mpc_parser_t *Stripperl = mpc_apply(mpc_many(mpcf_strfold, mpc_any()), mpcf_strtriml);
-  mpc_parser_t *Stripperr = mpc_apply(mpc_many(mpcf_strfold, mpc_any()), mpcf_strtrimr);
-  mpc_parser_t *Stripper  = mpc_apply(mpc_many(mpcf_strfold, mpc_any()), mpcf_strtrim);
+  pcq_parser_t *Stripperl = pcq_apply(pcq_many(pcqf_strfold, pcq_any()), pcqf_strtriml);
+  pcq_parser_t *Stripperr = pcq_apply(pcq_many(pcqf_strfold, pcq_any()), pcqf_strtrimr);
+  pcq_parser_t *Stripper  = pcq_apply(pcq_many(pcqf_strfold, pcq_any()), pcqf_strtrim);
 
-  PT_ASSERT(mpc_test_pass(Stripperl, " asdmlm dasd  ", "asdmlm dasd  ", streq, free, strprint));
-  PT_ASSERT(mpc_test_pass(Stripperr, " asdmlm dasd  ", " asdmlm dasd", streq, free, strprint));
-  PT_ASSERT(mpc_test_pass(Stripper,  " asdmlm dasd  ", "asdmlm dasd", streq, free, strprint));
+  PT_ASSERT(pcq_test_pass(Stripperl, " asdmlm dasd  ", "asdmlm dasd  ", streq, free, strprint));
+  PT_ASSERT(pcq_test_pass(Stripperr, " asdmlm dasd  ", " asdmlm dasd", streq, free, strprint));
+  PT_ASSERT(pcq_test_pass(Stripper,  " asdmlm dasd  ", "asdmlm dasd", streq, free, strprint));
 
-  mpc_delete(Stripperl);
-  mpc_delete(Stripperr);
-  mpc_delete(Stripper);
+  pcq_delete(Stripperl);
+  pcq_delete(Stripperr);
+  pcq_delete(Stripper);
 
 }
 
 void test_repeat(void) {
 
   int success;
-  mpc_result_t r;
-  mpc_parser_t *p = mpc_count(3, mpcf_strfold, mpc_digit(), free);
+  pcq_result_t r;
+  pcq_parser_t *p = pcq_count(3, pcqf_strfold, pcq_digit(), free);
 
-  success = mpc_parse("test", "046", p, &r);
+  success = pcq_parse("test", "046", p, &r);
   PT_ASSERT(success);
   PT_ASSERT_STR_EQ(r.output, "046");
   free(r.output);
 
-  success = mpc_parse("test", "046aa", p, &r);
+  success = pcq_parse("test", "046aa", p, &r);
   PT_ASSERT(success);
   PT_ASSERT_STR_EQ(r.output, "046");
   free(r.output);
 
-  success = mpc_parse("test", "04632", p, &r);
+  success = pcq_parse("test", "04632", p, &r);
   PT_ASSERT(success);
   PT_ASSERT_STR_EQ(r.output, "046");
   free(r.output);
 
-  success = mpc_parse("test", "04", p, &r);
+  success = pcq_parse("test", "04", p, &r);
   PT_ASSERT(!success);
-  mpc_err_delete(r.error);
+  pcq_err_delete(r.error);
 
-  mpc_delete(p);
+  pcq_delete(p);
 
 }
 
 void test_copy(void) {
 
   int success;
-  mpc_result_t r;
-  mpc_parser_t* p = mpc_or(2, mpc_char('a'), mpc_char('b'));
-  mpc_parser_t* q = mpc_and(2, mpcf_strfold, p, mpc_copy(p), free);
+  pcq_result_t r;
+  pcq_parser_t* p = pcq_or(2, pcq_char('a'), pcq_char('b'));
+  pcq_parser_t* q = pcq_and(2, pcqf_strfold, p, pcq_copy(p), free);
 
-  success = mpc_parse("test", "aa", q, &r);
+  success = pcq_parse("test", "aa", q, &r);
   PT_ASSERT(success);
   PT_ASSERT_STR_EQ(r.output, "aa");
   free(r.output);
 
-  success = mpc_parse("test", "bb", q, &r);
+  success = pcq_parse("test", "bb", q, &r);
   PT_ASSERT(success);
   PT_ASSERT_STR_EQ(r.output, "bb");
   free(r.output);
 
-  success = mpc_parse("test", "ab", q, &r);
+  success = pcq_parse("test", "ab", q, &r);
   PT_ASSERT(success);
   PT_ASSERT_STR_EQ(r.output, "ab");
   free(r.output);
 
-  success = mpc_parse("test", "ba", q, &r);
+  success = pcq_parse("test", "ba", q, &r);
   PT_ASSERT(success);
   PT_ASSERT_STR_EQ(r.output, "ba");
   free(r.output);
 
-  success = mpc_parse("test", "c", p, &r);
+  success = pcq_parse("test", "c", p, &r);
   PT_ASSERT(!success);
-  mpc_err_delete(r.error);
+  pcq_err_delete(r.error);
 
-  mpc_delete(mpc_copy(p));
-  mpc_delete(mpc_copy(q));
+  pcq_delete(pcq_copy(p));
+  pcq_delete(pcq_copy(q));
 
-  mpc_delete(q);
+  pcq_delete(q);
 
 }
 
 static int line_count = 0;
 
-static mpc_val_t* read_line(mpc_val_t* line) {
+static pcq_val_t* read_line(pcq_val_t* line) {
   line_count++;
   return line;
 }
 
 void test_reader(void) {
 
-  mpc_parser_t* Line = mpc_many(
-    mpcf_strfold,
-    mpc_apply(mpc_re("[^\\n]*(\\n|$)"), read_line));
+  pcq_parser_t* Line = pcq_many(
+    pcqf_strfold,
+    pcq_apply(pcq_re("[^\\n]*(\\n|$)"), read_line));
 
   line_count = 0;
 
-  PT_ASSERT(mpc_test_pass(Line,
+  PT_ASSERT(pcq_test_pass(Line,
     "hello\nworld\n\nthis\nis\ndan",
     "hello\nworld\n\nthis\nis\ndan", streq, free, strprint));
 
@@ -175,19 +175,19 @@ void test_reader(void) {
 
   line_count = 0;
 
-  PT_ASSERT(mpc_test_pass(Line,
+  PT_ASSERT(pcq_test_pass(Line,
     "abcHVwufvyuevuy3y436782\n\n\nrehre\nrew\n-ql.;qa\neg",
     "abcHVwufvyuevuy3y436782\n\n\nrehre\nrew\n-ql.;qa\neg", streq, free, strprint));
 
   PT_ASSERT(line_count == 7);
 
-  mpc_delete(Line);
+  pcq_delete(Line);
 
 }
 
 static int token_count = 0;
 
-static mpc_val_t *print_token(mpc_val_t *x) {
+static pcq_val_t *print_token(pcq_val_t *x) {
   /*printf("Token: '%s'\n", (char*)x);*/
   token_count++;
   return x;
@@ -195,30 +195,30 @@ static mpc_val_t *print_token(mpc_val_t *x) {
 
 void test_tokens(void) {
 
-  mpc_parser_t* Tokens = mpc_many(
-    mpcf_strfold,
-    mpc_apply(mpc_strip(mpc_re("\\s*([a-zA-Z_]+|[0-9]+|,|\\.|:)")), print_token));
+  pcq_parser_t* Tokens = pcq_many(
+    pcqf_strfold,
+    pcq_apply(pcq_strip(pcq_re("\\s*([a-zA-Z_]+|[0-9]+|,|\\.|:)")), print_token));
 
   token_count = 0;
 
-  PT_ASSERT(mpc_test_pass(Tokens,
+  PT_ASSERT(pcq_test_pass(Tokens,
     "  hello 4352 ,  \n foo.bar   \n\n  test:ing   ",
     "hello4352,foo.bartest:ing", streq, free, strprint));
 
   PT_ASSERT(token_count == 9);
 
-  mpc_delete(Tokens);
+  pcq_delete(Tokens);
 
 }
 
 void test_eoi(void) {
 
-  mpc_parser_t* Line = mpc_re("[^\\n]*$");
+  pcq_parser_t* Line = pcq_re("[^\\n]*$");
 
-  PT_ASSERT(mpc_test_pass(Line, "blah", "blah", streq, free, strprint));
-  PT_ASSERT(mpc_test_pass(Line, "blah\n", "blah\n", streq, free, strprint));
+  PT_ASSERT(pcq_test_pass(Line, "blah", "blah", streq, free, strprint));
+  PT_ASSERT(pcq_test_pass(Line, "blah\n", "blah\n", streq, free, strprint));
 
-  mpc_delete(Line);
+  pcq_delete(Line);
 
 }
 

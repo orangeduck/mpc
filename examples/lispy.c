@@ -1,19 +1,19 @@
-#include "../mpc.h"
+#include "../pcq.h"
 
 int main(int argc, char **argv) {
   
-  mpc_result_t r;  
+  pcq_result_t r;  
   
-  mpc_parser_t* Number  = mpc_new("number");
-  mpc_parser_t* Symbol  = mpc_new("symbol");
-  mpc_parser_t* String  = mpc_new("string");
-  mpc_parser_t* Comment = mpc_new("comment");
-  mpc_parser_t* Sexpr   = mpc_new("sexpr");
-  mpc_parser_t* Qexpr   = mpc_new("qexpr");
-  mpc_parser_t* Expr    = mpc_new("expr");
-  mpc_parser_t* Lispy   = mpc_new("lispy");
+  pcq_parser_t* Number  = pcq_new("number");
+  pcq_parser_t* Symbol  = pcq_new("symbol");
+  pcq_parser_t* String  = pcq_new("string");
+  pcq_parser_t* Comment = pcq_new("comment");
+  pcq_parser_t* Sexpr   = pcq_new("sexpr");
+  pcq_parser_t* Qexpr   = pcq_new("qexpr");
+  pcq_parser_t* Expr    = pcq_new("expr");
+  pcq_parser_t* Lispy   = pcq_new("lispy");
 
-  mpca_lang(MPCA_LANG_PREDICTIVE,
+  pcqa_lang(PCQA_LANG_PREDICTIVE,
     " number  \"number\"  : /[0-9]+/ ;                         "
     " symbol  \"symbol\"  : /[a-zA-Z0-9_+\\-*\\/\\\\=<>!&]+/ ; "
     " string  \"string\"  : /\"(\\\\.|[^\"])*\"/ ;             "
@@ -27,27 +27,27 @@ int main(int argc, char **argv) {
   
   if (argc > 1) {
 
-    if (mpc_parse_contents(argv[1], Lispy, &r)) {
-      mpc_ast_print(r.output);
-      mpc_ast_delete(r.output);
+    if (pcq_parse_contents(argv[1], Lispy, &r)) {
+      pcq_ast_print(r.output);
+      pcq_ast_delete(r.output);
     } else {
-      mpc_err_print(r.error);
-      mpc_err_delete(r.error);
+      pcq_err_print(r.error);
+      pcq_err_delete(r.error);
     }
         
   } else {
     
-    if (mpc_parse_pipe("<stdin>", stdin, Lispy, &r)) {
-      mpc_ast_print(r.output);
-      mpc_ast_delete(r.output);
+    if (pcq_parse_pipe("<stdin>", stdin, Lispy, &r)) {
+      pcq_ast_print(r.output);
+      pcq_ast_delete(r.output);
     } else {
-      mpc_err_print(r.error);
-      mpc_err_delete(r.error);
+      pcq_err_print(r.error);
+      pcq_err_delete(r.error);
     }
   
   }
 
-  mpc_cleanup(8, Number, Symbol, String, Comment, Sexpr, Qexpr, Expr, Lispy);
+  pcq_cleanup(8, Number, Symbol, String, Comment, Sexpr, Qexpr, Expr, Lispy);
   
   return 0;
   

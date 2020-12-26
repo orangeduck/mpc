@@ -1,84 +1,84 @@
 #include "ptest.h"
-#include "../mpc.h"
+#include "../pcq.h"
 
-static int check_is_a(mpc_val_t** x) {
+static int check_is_a(pcq_val_t** x) {
   return strcmp(*x, "a") == 0;
 }
 
-static int check_is(mpc_val_t** x, void* t) {
+static int check_is(pcq_val_t** x, void* t) {
   return strcmp(*x, t) == 0;
 }
 
 void test_check(void) {
   int success;
-  mpc_result_t  r;
-  mpc_parser_t* p = mpc_check(mpc_or(2, mpc_char('a'), mpc_char('b')), free, check_is_a, "Expected 'a'");
+  pcq_result_t  r;
+  pcq_parser_t* p = pcq_check(pcq_or(2, pcq_char('a'), pcq_char('b')), free, check_is_a, "Expected 'a'");
 
-  success = mpc_parse("test", "a", p, &r);
+  success = pcq_parse("test", "a", p, &r);
   PT_ASSERT(success);
   PT_ASSERT_STR_EQ(r.output, "a");
-  if (success) free(r.output); else mpc_err_delete(r.error);
+  if (success) free(r.output); else pcq_err_delete(r.error);
 
-  success = mpc_parse("test", "b", p, &r);
+  success = pcq_parse("test", "b", p, &r);
   PT_ASSERT(!success);
   PT_ASSERT_STR_EQ(r.error->failure, "Expected 'a'");
-  if (success) free(r.output); else mpc_err_delete(r.error);
+  if (success) free(r.output); else pcq_err_delete(r.error);
 
-  mpc_delete(p);
+  pcq_delete(p);
 }
 
 void test_check_with(void) {
   int success;
-  mpc_result_t  r;
-  mpc_parser_t* p = mpc_check_with(mpc_or(2, mpc_char('a'), mpc_char('b')), free, check_is, (void*)"a", "Expected 'a'");
+  pcq_result_t  r;
+  pcq_parser_t* p = pcq_check_with(pcq_or(2, pcq_char('a'), pcq_char('b')), free, check_is, (void*)"a", "Expected 'a'");
 
-  success = mpc_parse("test", "a", p, &r);
+  success = pcq_parse("test", "a", p, &r);
   PT_ASSERT(success);
   if (success) PT_ASSERT_STR_EQ(r.output, "a");
-  if (success) free(r.output); else mpc_err_delete(r.error);
+  if (success) free(r.output); else pcq_err_delete(r.error);
 
-  success = mpc_parse("test", "b", p, &r);
+  success = pcq_parse("test", "b", p, &r);
   PT_ASSERT(!success);
   if (!success) PT_ASSERT_STR_EQ(r.error->failure, "Expected 'a'");
-  if (success) free(r.output); else mpc_err_delete(r.error);
+  if (success) free(r.output); else pcq_err_delete(r.error);
 
-  mpc_delete(p);
+  pcq_delete(p);
 }
 
 void test_checkf(void) {
   int success;
-  mpc_result_t  r;
-  mpc_parser_t* p = mpc_checkf(mpc_or(2, mpc_char('a'), mpc_char('b')), free, check_is_a, "Expected '%s'", "a");
+  pcq_result_t  r;
+  pcq_parser_t* p = pcq_checkf(pcq_or(2, pcq_char('a'), pcq_char('b')), free, check_is_a, "Expected '%s'", "a");
 
-  success = mpc_parse("test", "a", p, &r);
+  success = pcq_parse("test", "a", p, &r);
   PT_ASSERT(success);
   PT_ASSERT_STR_EQ(r.output, "a");
-  if (success) free(r.output); else mpc_err_delete(r.error);
+  if (success) free(r.output); else pcq_err_delete(r.error);
 
-  success = mpc_parse("test", "b", p, &r);
+  success = pcq_parse("test", "b", p, &r);
   PT_ASSERT(!success);
   PT_ASSERT_STR_EQ(r.error->failure, "Expected 'a'");
-  if (success) free(r.output); else mpc_err_delete(r.error);
+  if (success) free(r.output); else pcq_err_delete(r.error);
 
-  mpc_delete(p);
+  pcq_delete(p);
 }
 
 void test_check_withf(void) {
   int success;
-  mpc_result_t  r;
-  mpc_parser_t* p = mpc_check_withf(mpc_or(2, mpc_char('a'), mpc_char('b')), free, check_is, (void*)"a", "Expected '%s'", "a");
+  pcq_result_t  r;
+  pcq_parser_t* p = pcq_check_withf(pcq_or(2, pcq_char('a'), pcq_char('b')), free, check_is, (void*)"a", "Expected '%s'", "a");
 
-  success = mpc_parse("test", "a", p, &r);
+  success = pcq_parse("test", "a", p, &r);
   PT_ASSERT(success);
   if (success) PT_ASSERT_STR_EQ(r.output, "a");
-  if (success) free(r.output); else mpc_err_delete(r.error);
+  if (success) free(r.output); else pcq_err_delete(r.error);
 
-  success = mpc_parse("test", "b", p, &r);
+  success = pcq_parse("test", "b", p, &r);
   PT_ASSERT(!success);
   if (!success) PT_ASSERT_STR_EQ(r.error->failure, "Expected 'a'");
-  if (success) free(r.output); else mpc_err_delete(r.error);
+  if (success) free(r.output); else pcq_err_delete(r.error);
 
-  mpc_delete(p);
+  pcq_delete(p);
 }
 
 void suite_combinators(void) {

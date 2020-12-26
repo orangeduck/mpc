@@ -1,4 +1,4 @@
-PROJ = mpc
+PROJ = pcq
 CC ?= gcc
 STD ?= -ansi
 DIST = build

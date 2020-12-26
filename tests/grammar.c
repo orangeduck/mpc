@@ -1,105 +1,105 @@
 #include "ptest.h"
-#include "../mpc.h"
+#include "../pcq.h"
 
 void test_grammar(void) {
 
-  mpc_parser_t *Expr, *Prod, *Value, *Maths;
-  mpc_ast_t *t0, *t1, *t2;
+  pcq_parser_t *Expr, *Prod, *Value, *Maths;
+  pcq_ast_t *t0, *t1, *t2;
   
-  Expr  = mpc_new("expression");
-  Prod  = mpc_new("product");
-  Value = mpc_new("value");
-  Maths = mpc_new("maths");
+  Expr  = pcq_new("expression");
+  Prod  = pcq_new("product");
+  Value = pcq_new("value");
+  Maths = pcq_new("maths");
   
-  mpc_define(Expr,  mpca_grammar(MPCA_LANG_DEFAULT, " <product> (('+' | '-') <product>)* ", Prod));
-  mpc_define(Prod,  mpca_grammar(MPCA_LANG_DEFAULT, " <value>   (('*' | '/')   <value>)* ", Value));
-  mpc_define(Value, mpca_grammar(MPCA_LANG_DEFAULT, " /[0-9]+/ | '(' <expression> ')' ", Expr));
-  mpc_define(Maths, mpca_total(Expr));
+  pcq_define(Expr,  pcqa_grammar(PCQA_LANG_DEFAULT, " <product> (('+' | '-') <product>)* ", Prod));
+  pcq_define(Prod,  pcqa_grammar(PCQA_LANG_DEFAULT, " <value>   (('*' | '/')   <value>)* ", Value));
+  pcq_define(Value, pcqa_grammar(PCQA_LANG_DEFAULT, " /[0-9]+/ | '(' <expression> ')' ", Expr));
+  pcq_define(Maths, pcqa_total(Expr));
   
-  t0 = mpc_ast_new("product|value|regex", "24");
-  t1 = mpc_ast_build(1, "product|>",
-    mpc_ast_build(3, "value|>",
-      mpc_ast_new("char", "("),
-      mpc_ast_new("expression|product|value|regex", "5"),
-      mpc_ast_new("char", ")")));
+  t0 = pcq_ast_new("product|value|regex", "24");
+  t1 = pcq_ast_build(1, "product|>",
+    pcq_ast_build(3, "value|>",
+      pcq_ast_new("char", "("),
+      pcq_ast_new("expression|product|value|regex", "5"),
+      pcq_ast_new("char", ")")));
   
-  t2 = mpc_ast_build(3, ">",
+  t2 = pcq_ast_build(3, ">",
       
-      mpc_ast_build(3, "product|value|>",
-        mpc_ast_new("char", "("),
-        mpc_ast_build(3, "expression|>",
+      pcq_ast_build(3, "product|value|>",
+        pcq_ast_new("char", "("),
+        pcq_ast_build(3, "expression|>",
           
-          mpc_ast_build(5, "product|>", 
-            mpc_ast_new("value|regex", "4"),
-            mpc_ast_new("char", "*"),
-            mpc_ast_new("value|regex", "2"),
-            mpc_ast_new("char", "*"),
-            mpc_ast_new("value|regex", "11")),
+          pcq_ast_build(5, "product|>", 
+            pcq_ast_new("value|regex", "4"),
+            pcq_ast_new("char", "*"),
+            pcq_ast_new("value|regex", "2"),
+            pcq_ast_new("char", "*"),
+            pcq_ast_new("value|regex", "11")),
             
-          mpc_ast_new("char", "+"),
-          mpc_ast_new("product|value|regex", "2")),
-        mpc_ast_new("char", ")")),
+          pcq_ast_new("char", "+"),
+          pcq_ast_new("product|value|regex", "2")),
+        pcq_ast_new("char", ")")),
       
-      mpc_ast_new("char", "+"),
-      mpc_ast_new("product|value|regex", "5"));
+      pcq_ast_new("char", "+"),
+      pcq_ast_new("product|value|regex", "5"));
   
-  PT_ASSERT(mpc_test_pass(Maths, "  24 ", t0, (int(*)(const void*,const void*))mpc_ast_eq, (mpc_dtor_t)mpc_ast_delete, (void(*)(const void*))mpc_ast_print));
-  PT_ASSERT(mpc_test_pass(Maths, "(5)", t1, (int(*)(const void*,const void*))mpc_ast_eq, (mpc_dtor_t)mpc_ast_delete, (void(*)(const void*))mpc_ast_print));
-  PT_ASSERT(mpc_test_pass(Maths, "(4 * 2 * 11 + 2) + 5", t2, (int(*)(const void*,const void*))mpc_ast_eq, (mpc_dtor_t)mpc_ast_delete, (void(*)(const void*))mpc_ast_print));
-  PT_ASSERT(mpc_test_fail(Maths, "a", t0, (int(*)(const void*,const void*))mpc_ast_eq, (mpc_dtor_t)mpc_ast_delete, (void(*)(const void*))mpc_ast_print));
-  PT_ASSERT(mpc_test_fail(Maths, "2b+4", t0, (int(*)(const void*,const void*))mpc_ast_eq, (mpc_dtor_t)mpc_ast_delete, (void(*)(const void*))mpc_ast_print));
+  PT_ASSERT(pcq_test_pass(Maths, "  24 ", t0, (int(*)(const void*,const void*))pcq_ast_eq, (pcq_dtor_t)pcq_ast_delete, (void(*)(const void*))pcq_ast_print));
+  PT_ASSERT(pcq_test_pass(Maths, "(5)", t1, (int(*)(const void*,const void*))pcq_ast_eq, (pcq_dtor_t)pcq_ast_delete, (void(*)(const void*))pcq_ast_print));
+  PT_ASSERT(pcq_test_pass(Maths, "(4 * 2 * 11 + 2) + 5", t2, (int(*)(const void*,const void*))pcq_ast_eq, (pcq_dtor_t)pcq_ast_delete, (void(*)(const void*))pcq_ast_print));
+  PT_ASSERT(pcq_test_fail(Maths, "a", t0, (int(*)(const void*,const void*))pcq_ast_eq, (pcq_dtor_t)pcq_ast_delete, (void(*)(const void*))pcq_ast_print));
+  PT_ASSERT(pcq_test_fail(Maths, "2b+4", t0, (int(*)(const void*,const void*))pcq_ast_eq, (pcq_dtor_t)pcq_ast_delete, (void(*)(const void*))pcq_ast_print));
 
-  mpc_ast_delete(t0);
-  mpc_ast_delete(t1);
-  mpc_ast_delete(t2);
+  pcq_ast_delete(t0);
+  pcq_ast_delete(t1);
+  pcq_ast_delete(t2);
   
-  mpc_cleanup(4, Expr, Prod, Value, Maths);
+  pcq_cleanup(4, Expr, Prod, Value, Maths);
   
 }
 
 void test_language(void) {
   
-  mpc_parser_t *Expr, *Prod, *Value, *Maths;
+  pcq_parser_t *Expr, *Prod, *Value, *Maths;
   
-  Expr  = mpc_new("expression");
-  Prod  = mpc_new("product");
-  Value = mpc_new("value");
-  Maths = mpc_new("maths");
+  Expr  = pcq_new("expression");
+  Prod  = pcq_new("product");
+  Value = pcq_new("value");
+  Maths = pcq_new("maths");
   
-  mpca_lang(MPCA_LANG_DEFAULT,
+  pcqa_lang(PCQA_LANG_DEFAULT,
     " expression : <product> (('+' | '-') <product>)*; "
     " product : <value>   (('*' | '/')   <value>)*;    "
     " value : /[0-9]+/ | '(' <expression> ')';         "
     " maths : /^/ <expression> /$/;                    ",
     Expr, Prod, Value, Maths);
   
-  mpc_cleanup(4, Expr, Prod, Value, Maths);
+  pcq_cleanup(4, Expr, Prod, Value, Maths);
 }
 
 void test_language_file(void) {
   
-  mpc_parser_t *Expr, *Prod, *Value, *Maths;
+  pcq_parser_t *Expr, *Prod, *Value, *Maths;
   
-  Expr  = mpc_new("expression");
-  Prod  = mpc_new("product");
-  Value = mpc_new("value");
-  Maths = mpc_new("maths");
+  Expr  = pcq_new("expression");
+  Prod  = pcq_new("product");
+  Value = pcq_new("value");
+  Maths = pcq_new("maths");
   
-  mpca_lang_contents(MPCA_LANG_DEFAULT, "./tests/maths.grammar", Expr, Prod, Value, Maths);
+  pcqa_lang_contents(PCQA_LANG_DEFAULT, "./tests/maths.grammar", Expr, Prod, Value, Maths);
   
-  mpc_cleanup(4, Expr, Prod, Value, Maths);
+  pcq_cleanup(4, Expr, Prod, Value, Maths);
   
 }
 
 void test_doge(void) {
   
-  mpc_ast_t *t0;  
-  mpc_parser_t* Adjective = mpc_new("adjective");
-  mpc_parser_t* Noun      = mpc_new("noun");
-  mpc_parser_t* Phrase    = mpc_new("phrase");
-  mpc_parser_t* Doge      = mpc_new("doge");
+  pcq_ast_t *t0;  
+  pcq_parser_t* Adjective = pcq_new("adjective");
+  pcq_parser_t* Noun      = pcq_new("noun");
+  pcq_parser_t* Phrase    = pcq_new("phrase");
+  pcq_parser_t* Doge      = pcq_new("doge");
 
-  mpca_lang(MPCA_LANG_DEFAULT,
+  pcqa_lang(PCQA_LANG_DEFAULT,
     " adjective : \"wow\" | \"many\" | \"so\" | \"such\";                 "
     " noun      : \"lisp\" | \"language\" | \"c\" | \"book\" | \"build\"; "
     " phrase    : <adjective> <noun>;                                     "
@@ -107,41 +107,41 @@ void test_doge(void) {
     Adjective, Noun, Phrase, Doge, NULL);
   
   t0 = 
-      mpc_ast_build(4, ">", 
-          mpc_ast_new("regex", ""),
-          mpc_ast_build(2, "phrase|>", 
-            mpc_ast_new("adjective|string", "so"),
-            mpc_ast_new("noun|string", "c")),
-          mpc_ast_build(2, "phrase|>", 
-            mpc_ast_new("adjective|string", "so"),
-            mpc_ast_new("noun|string", "c")),
-          mpc_ast_new("regex", "")
+      pcq_ast_build(4, ">", 
+          pcq_ast_new("regex", ""),
+          pcq_ast_build(2, "phrase|>", 
+            pcq_ast_new("adjective|string", "so"),
+            pcq_ast_new("noun|string", "c")),
+          pcq_ast_build(2, "phrase|>", 
+            pcq_ast_new("adjective|string", "so"),
+            pcq_ast_new("noun|string", "c")),
+          pcq_ast_new("regex", "")
         );
             
-  PT_ASSERT(mpc_test_pass(Doge, "so c so c", t0, (int(*)(const void*,const void*))mpc_ast_eq, (mpc_dtor_t)mpc_ast_delete, (void(*)(const void*))mpc_ast_print));
+  PT_ASSERT(pcq_test_pass(Doge, "so c so c", t0, (int(*)(const void*,const void*))pcq_ast_eq, (pcq_dtor_t)pcq_ast_delete, (void(*)(const void*))pcq_ast_print));
  
-  PT_ASSERT(mpc_test_fail(Doge, "so a so c", t0, (int(*)(const void*,const void*))mpc_ast_eq, (mpc_dtor_t)mpc_ast_delete, (void(*)(const void*))mpc_ast_print));
+  PT_ASSERT(pcq_test_fail(Doge, "so a so c", t0, (int(*)(const void*,const void*))pcq_ast_eq, (pcq_dtor_t)pcq_ast_delete, (void(*)(const void*))pcq_ast_print));
   
-  mpc_ast_delete(t0);
+  pcq_ast_delete(t0);
   
-  mpc_cleanup(4, Adjective, Noun, Phrase, Doge);
+  pcq_cleanup(4, Adjective, Noun, Phrase, Doge);
   
 }
 
 void test_partial(void) {
   
-  mpc_ast_t *t0;
-  mpc_err_t *err;
+  pcq_ast_t *t0;
+  pcq_err_t *err;
 
-  mpc_parser_t *Line = mpc_new("line");
-  mpc_parser_t *Number = mpc_new("number");
-  mpc_parser_t *QuotedString = mpc_new("quoted_string");
-  mpc_parser_t *LinePragma = mpc_new("linepragma");
-  mpc_parser_t *Parser = mpc_new("parser");
+  pcq_parser_t *Line = pcq_new("line");
+  pcq_parser_t *Number = pcq_new("number");
+  pcq_parser_t *QuotedString = pcq_new("quoted_string");
+  pcq_parser_t *LinePragma = pcq_new("linepragma");
+  pcq_parser_t *Parser = pcq_new("parser");
   
-  mpc_define(Line, mpca_tag(mpc_apply(mpc_sym("#line"), mpcf_str_ast), "string"));
+  pcq_define(Line, pcqa_tag(pcq_apply(pcq_sym("#line"), pcqf_str_ast), "string"));
   
-  err = mpca_lang(MPCA_LANG_PREDICTIVE,
+  err = pcqa_lang(PCQA_LANG_PREDICTIVE,
     "number        : /[0-9]+/ ;\n"
     "quoted_string : /\"(\\.|[^\"])*\"/ ;\n"
     "linepragma    : <line> <number> <quoted_string>;\n"
@@ -150,48 +150,48 @@ void test_partial(void) {
   
   PT_ASSERT(err == NULL);
   
-  t0 = mpc_ast_build(3, ">", 
-          mpc_ast_new("regex", ""),
-          mpc_ast_build(3, "linepragma|>", 
-            mpc_ast_new("line|string", "#line"),
-            mpc_ast_new("number|regex", "10"),
-            mpc_ast_new("quoted_string|regex", "\"test\"")),
-          mpc_ast_new("regex", ""));
+  t0 = pcq_ast_build(3, ">", 
+          pcq_ast_new("regex", ""),
+          pcq_ast_build(3, "linepragma|>", 
+            pcq_ast_new("line|string", "#line"),
+            pcq_ast_new("number|regex", "10"),
+            pcq_ast_new("quoted_string|regex", "\"test\"")),
+          pcq_ast_new("regex", ""));
   
-  PT_ASSERT(mpc_test_pass(Parser, "#line 10 \"test\"", t0, 
-    (int(*)(const void*,const void*))mpc_ast_eq, 
-    (mpc_dtor_t)mpc_ast_delete, 
-    (void(*)(const void*))mpc_ast_print));
+  PT_ASSERT(pcq_test_pass(Parser, "#line 10 \"test\"", t0, 
+    (int(*)(const void*,const void*))pcq_ast_eq, 
+    (pcq_dtor_t)pcq_ast_delete, 
+    (void(*)(const void*))pcq_ast_print));
     
-  mpc_ast_delete(t0);
+  pcq_ast_delete(t0);
 
-  mpc_cleanup(5, Line, Number, QuotedString, LinePragma, Parser);
+  pcq_cleanup(5, Line, Number, QuotedString, LinePragma, Parser);
 
 }
 
 void test_qscript(void) {
   
-  mpc_ast_t *t0;
-  mpc_parser_t *Qscript = mpc_new("qscript");
-  mpc_parser_t *Comment = mpc_new("comment");
-  mpc_parser_t *Resource = mpc_new("resource");
-  mpc_parser_t *Rtype = mpc_new("rtype");
-  mpc_parser_t *Rname = mpc_new("rname");
-  mpc_parser_t *InnerBlock = mpc_new("inner_block");
-  mpc_parser_t *Statement = mpc_new("statement");
-  mpc_parser_t *Function = mpc_new("function");
-  mpc_parser_t *Parameter = mpc_new("parameter");
-  mpc_parser_t *Literal = mpc_new("literal");
-  mpc_parser_t *Block = mpc_new("block");
-  mpc_parser_t *Seperator = mpc_new("seperator");
-  mpc_parser_t *Qstring = mpc_new("qstring");
-  mpc_parser_t *SimpleStr = mpc_new("simplestr");
-  mpc_parser_t *ComplexStr = mpc_new("complexstr");
-  mpc_parser_t *Number = mpc_new("number");
-  mpc_parser_t *Float = mpc_new("float");
-  mpc_parser_t *Int = mpc_new("int");
+  pcq_ast_t *t0;
+  pcq_parser_t *Qscript = pcq_new("qscript");
+  pcq_parser_t *Comment = pcq_new("comment");
+  pcq_parser_t *Resource = pcq_new("resource");
+  pcq_parser_t *Rtype = pcq_new("rtype");
+  pcq_parser_t *Rname = pcq_new("rname");
+  pcq_parser_t *InnerBlock = pcq_new("inner_block");
+  pcq_parser_t *Statement = pcq_new("statement");
+  pcq_parser_t *Function = pcq_new("function");
+  pcq_parser_t *Parameter = pcq_new("parameter");
+  pcq_parser_t *Literal = pcq_new("literal");
+  pcq_parser_t *Block = pcq_new("block");
+  pcq_parser_t *Seperator = pcq_new("seperator");
+  pcq_parser_t *Qstring = pcq_new("qstring");
+  pcq_parser_t *SimpleStr = pcq_new("simplestr");
+  pcq_parser_t *ComplexStr = pcq_new("complexstr");
+  pcq_parser_t *Number = pcq_new("number");
+  pcq_parser_t *Float = pcq_new("float");
+  pcq_parser_t *Int = pcq_new("int");
   
-  mpc_err_t *err = mpca_lang(0,
+  pcq_err_t *err = pcqa_lang(0,
     "  qscript        : /^/ (<comment> | <resource>)* /$/ ;\n"
     "   comment     : '#' /[^\\n]*/ ;\n"
     "resource       : '[' (<rtype> <rname>) ']' <inner_block> ;\n"
@@ -219,40 +219,40 @@ void test_qscript(void) {
  
   PT_ASSERT(err == NULL);
   
-  t0 = mpc_ast_build(3, ">",
-          mpc_ast_new("regex", ""),
-          mpc_ast_build(5, "resource|>",
-            mpc_ast_new("char", "["),
-            mpc_ast_new("rtype|regex", ""),
-            mpc_ast_new("rname|qstring|simplestr|regex", "my_func"),
-            mpc_ast_new("char", "]"),
-            mpc_ast_build(5, "inner_block|statement|>",
-              mpc_ast_new("function|qstring|simplestr|regex", "echo"),
-              mpc_ast_new("char", "("),
-              mpc_ast_build(2, "parameter|literal|>",
-                mpc_ast_build(2, "qstring|>",
-                  mpc_ast_new("simplestr|regex", "a"),
-                  mpc_ast_build(2, "qstring|>",
-                    mpc_ast_new("simplestr|regex", "b"),
-                    mpc_ast_new("qstring|simplestr|regex", "c")
+  t0 = pcq_ast_build(3, ">",
+          pcq_ast_new("regex", ""),
+          pcq_ast_build(5, "resource|>",
+            pcq_ast_new("char", "["),
+            pcq_ast_new("rtype|regex", ""),
+            pcq_ast_new("rname|qstring|simplestr|regex", "my_func"),
+            pcq_ast_new("char", "]"),
+            pcq_ast_build(5, "inner_block|statement|>",
+              pcq_ast_new("function|qstring|simplestr|regex", "echo"),
+              pcq_ast_new("char", "("),
+              pcq_ast_build(2, "parameter|literal|>",
+                pcq_ast_build(2, "qstring|>",
+                  pcq_ast_new("simplestr|regex", "a"),
+                  pcq_ast_build(2, "qstring|>",
+                    pcq_ast_new("simplestr|regex", "b"),
+                    pcq_ast_new("qstring|simplestr|regex", "c")
                   )
                 ),
-                mpc_ast_new("seperator|string", "")
+                pcq_ast_new("seperator|string", "")
               ),
-              mpc_ast_new("char", ")"),
-              mpc_ast_new("seperator|string", "")
+              pcq_ast_new("char", ")"),
+              pcq_ast_new("seperator|string", "")
             )
           ),
-          mpc_ast_new("regex", ""));
+          pcq_ast_new("regex", ""));
   
-  PT_ASSERT(mpc_test_pass(Qscript, "[my_func]\n  echo (a b c)\n", t0,
-    (int(*)(const void*,const void*))mpc_ast_eq,
-    (mpc_dtor_t)mpc_ast_delete,
-    (void(*)(const void*))mpc_ast_print));
+  PT_ASSERT(pcq_test_pass(Qscript, "[my_func]\n  echo (a b c)\n", t0,
+    (int(*)(const void*,const void*))pcq_ast_eq,
+    (pcq_dtor_t)pcq_ast_delete,
+    (void(*)(const void*))pcq_ast_print));
   
-  mpc_ast_delete(t0);
+  pcq_ast_delete(t0);
 
-  mpc_cleanup(18, Qscript, Comment, Resource, Rtype, Rname, InnerBlock,
+  pcq_cleanup(18, Qscript, Comment, Resource, Rtype, Rname, InnerBlock,
   Statement, Function, Parameter, Literal, Block, Seperator, Qstring,
   SimpleStr, ComplexStr, Number, Float, Int);
   
@@ -261,142 +261,142 @@ void test_qscript(void) {
 void test_missingrule(void) {
   
   int result;
-  mpc_err_t *err;
-  mpc_result_t r;
-  mpc_parser_t *Parser = mpc_new("parser");
+  pcq_err_t *err;
+  pcq_result_t r;
+  pcq_parser_t *Parser = pcq_new("parser");
   
-  err = mpca_lang(MPCA_LANG_DEFAULT,
+  err = pcqa_lang(PCQA_LANG_DEFAULT,
     "parser        : /^/ (<missing>)* /$/ ;\n",
     Parser, NULL);
   
   PT_ASSERT(err == NULL);
   
-  result = mpc_parse("<stdin>", "test", Parser, &r);
+  result = pcq_parse("<stdin>", "test", Parser, &r);
   
   PT_ASSERT(result == 0);
   PT_ASSERT(r.error != NULL);
   PT_ASSERT(strcmp(r.error->failure, "Unknown Parser 'missing'!") == 0);
   
-  mpc_err_delete(r.error);
-  mpc_cleanup(1, Parser);
+  pcq_err_delete(r.error);
+  pcq_cleanup(1, Parser);
 
 }
 
 void test_regex_mode(void) {
   
-  mpc_parser_t *Line0, *Line1, *Line2, *Line3;
-  mpc_ast_t *t0, *t1, *t2, *t3, *t4;
+  pcq_parser_t *Line0, *Line1, *Line2, *Line3;
+  pcq_ast_t *t0, *t1, *t2, *t3, *t4;
   
-  Line0 = mpc_new("line0");
-  Line1 = mpc_new("line1");
-  Line2 = mpc_new("line2");
-  Line3 = mpc_new("line3");
+  Line0 = pcq_new("line0");
+  Line1 = pcq_new("line1");
+  Line2 = pcq_new("line2");
+  Line3 = pcq_new("line3");
   
-  mpca_lang(MPCA_LANG_DEFAULT, " line0 : /.*/; ", Line0);
-  mpca_lang(MPCA_LANG_DEFAULT, " line1 : /.*/s; ", Line1);
-  mpca_lang(MPCA_LANG_DEFAULT, " line2 : /(^[a-z]*$)*/; ", Line2);
-  mpca_lang(MPCA_LANG_DEFAULT, " line3 : /(^[a-z]*$)*/m; ", Line3);
+  pcqa_lang(PCQA_LANG_DEFAULT, " line0 : /.*/; ", Line0);
+  pcqa_lang(PCQA_LANG_DEFAULT, " line1 : /.*/s; ", Line1);
+  pcqa_lang(PCQA_LANG_DEFAULT, " line2 : /(^[a-z]*$)*/; ", Line2);
+  pcqa_lang(PCQA_LANG_DEFAULT, " line3 : /(^[a-z]*$)*/m; ", Line3);
   
-  t0 = mpc_ast_new("regex", "blah");
-  t1 = mpc_ast_new("regex", "blah\nblah");
-  t2 = mpc_ast_new("regex", "");
-  t3 = mpc_ast_new("regex", "blah");
-  t4 = mpc_ast_new("regex", "blah\nblah");
+  t0 = pcq_ast_new("regex", "blah");
+  t1 = pcq_ast_new("regex", "blah\nblah");
+  t2 = pcq_ast_new("regex", "");
+  t3 = pcq_ast_new("regex", "blah");
+  t4 = pcq_ast_new("regex", "blah\nblah");
   
-  PT_ASSERT(mpc_test_pass(Line0, "blah\nblah", t0,
-    (int(*)(const void*,const void*))mpc_ast_eq,
-    (mpc_dtor_t)mpc_ast_delete,
-    (void(*)(const void*))mpc_ast_print));
+  PT_ASSERT(pcq_test_pass(Line0, "blah\nblah", t0,
+    (int(*)(const void*,const void*))pcq_ast_eq,
+    (pcq_dtor_t)pcq_ast_delete,
+    (void(*)(const void*))pcq_ast_print));
   
-  PT_ASSERT(mpc_test_pass(Line1, "blah\nblah", t1,
-    (int(*)(const void*,const void*))mpc_ast_eq,
-    (mpc_dtor_t)mpc_ast_delete,
-    (void(*)(const void*))mpc_ast_print));
+  PT_ASSERT(pcq_test_pass(Line1, "blah\nblah", t1,
+    (int(*)(const void*,const void*))pcq_ast_eq,
+    (pcq_dtor_t)pcq_ast_delete,
+    (void(*)(const void*))pcq_ast_print));
   
-  PT_ASSERT(mpc_test_pass(Line2, "blah\nblah", t2,
-    (int(*)(const void*,const void*))mpc_ast_eq,
-    (mpc_dtor_t)mpc_ast_delete,
-    (void(*)(const void*))mpc_ast_print));
+  PT_ASSERT(pcq_test_pass(Line2, "blah\nblah", t2,
+    (int(*)(const void*,const void*))pcq_ast_eq,
+    (pcq_dtor_t)pcq_ast_delete,
+    (void(*)(const void*))pcq_ast_print));
 
-  PT_ASSERT(mpc_test_pass(Line2, "blah", t3,
-    (int(*)(const void*,const void*))mpc_ast_eq,
-    (mpc_dtor_t)mpc_ast_delete,
-    (void(*)(const void*))mpc_ast_print));
+  PT_ASSERT(pcq_test_pass(Line2, "blah", t3,
+    (int(*)(const void*,const void*))pcq_ast_eq,
+    (pcq_dtor_t)pcq_ast_delete,
+    (void(*)(const void*))pcq_ast_print));
     
-  PT_ASSERT(mpc_test_pass(Line3, "blah\nblah", t4,
-    (int(*)(const void*,const void*))mpc_ast_eq,
-    (mpc_dtor_t)mpc_ast_delete,
-    (void(*)(const void*))mpc_ast_print));
+  PT_ASSERT(pcq_test_pass(Line3, "blah\nblah", t4,
+    (int(*)(const void*,const void*))pcq_ast_eq,
+    (pcq_dtor_t)pcq_ast_delete,
+    (void(*)(const void*))pcq_ast_print));
   
-  mpc_ast_delete(t0);
-  mpc_ast_delete(t1);
-  mpc_ast_delete(t2);
-  mpc_ast_delete(t3);
-  mpc_ast_delete(t4);
+  pcq_ast_delete(t0);
+  pcq_ast_delete(t1);
+  pcq_ast_delete(t2);
+  pcq_ast_delete(t3);
+  pcq_ast_delete(t4);
   
-  mpc_cleanup(4, Line0, Line1, Line2, Line3);
+  pcq_cleanup(4, Line0, Line1, Line2, Line3);
 }
 
 void test_digits_file(void) {
   
   FILE *f;
-  mpc_result_t r;
-  mpc_parser_t *Digit = mpc_new("digit");
-  mpc_parser_t *Program = mpc_new("program");
-  mpc_ast_t* t0;
+  pcq_result_t r;
+  pcq_parser_t *Digit = pcq_new("digit");
+  pcq_parser_t *Program = pcq_new("program");
+  pcq_ast_t* t0;
   
-  mpc_err_t* err = mpca_lang(MPCA_LANG_DEFAULT,
+  pcq_err_t* err = pcqa_lang(PCQA_LANG_DEFAULT,
     " digit   : /[0-9]/ ;"
     " program : /^/ <digit>+ /$/ ;"
     , Digit, Program, NULL);
   
   PT_ASSERT(err == NULL);
 
-  t0 = mpc_ast_build(5, ">", 
-    mpc_ast_new("regex", ""),
-    mpc_ast_new("digit|regex", "1"),
-    mpc_ast_new("digit|regex", "2"),
-    mpc_ast_new("digit|regex", "3"),
-    mpc_ast_new("regex", ""));
+  t0 = pcq_ast_build(5, ">", 
+    pcq_ast_new("regex", ""),
+    pcq_ast_new("digit|regex", "1"),
+    pcq_ast_new("digit|regex", "2"),
+    pcq_ast_new("digit|regex", "3"),
+    pcq_ast_new("regex", ""));
   
-  if (mpc_parse_contents("tests/digits.txt", Program, &r)) {
+  if (pcq_parse_contents("tests/digits.txt", Program, &r)) {
     PT_ASSERT(1);
-    PT_ASSERT(mpc_ast_eq(t0, r.output));
-    mpc_ast_delete(r.output);
+    PT_ASSERT(pcq_ast_eq(t0, r.output));
+    pcq_ast_delete(r.output);
   } else {
     PT_ASSERT(0);
-    mpc_err_print(r.error);
-    mpc_err_delete(r.error);
+    pcq_err_print(r.error);
+    pcq_err_delete(r.error);
   }
   
   f = fopen("tests/digits.txt", "r");
   PT_ASSERT(f != NULL);
 
-  if (mpc_parse_file("tests/digits.txt", f, Program, &r)) {
+  if (pcq_parse_file("tests/digits.txt", f, Program, &r)) {
     PT_ASSERT(1);
-    PT_ASSERT(mpc_ast_eq(t0, r.output));
-    mpc_ast_delete(r.output);
+    PT_ASSERT(pcq_ast_eq(t0, r.output));
+    pcq_ast_delete(r.output);
   } else {
     PT_ASSERT(0);
-    mpc_err_print(r.error);
-    mpc_err_delete(r.error);
+    pcq_err_print(r.error);
+    pcq_err_delete(r.error);
   }
     
   fclose(f);
     
-  if (mpc_parse("tests/digits.txt", "123", Program, &r)) {
+  if (pcq_parse("tests/digits.txt", "123", Program, &r)) {
     PT_ASSERT(1);
-    PT_ASSERT(mpc_ast_eq(t0, r.output));
-    mpc_ast_delete(r.output);
+    PT_ASSERT(pcq_ast_eq(t0, r.output));
+    pcq_ast_delete(r.output);
   } else {
     PT_ASSERT(0);
-    mpc_err_print(r.error);
-    mpc_err_delete(r.error);
+    pcq_err_print(r.error);
+    pcq_err_delete(r.error);
   }
   
-  mpc_ast_delete(t0);
+  pcq_ast_delete(t0);
     
-  mpc_cleanup(2, Digit, Program);
+  pcq_cleanup(2, Digit, Program);
   
 }
 
