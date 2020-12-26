@@ -1,4 +1,4 @@
-#include "../mpc.h"
+#include "../pcq.h"
 
 static void* read_line(void* line) {
   printf("Reading Line: %s", (char*)line);
@@ -16,19 +16,19 @@ int main(int argc, char **argv) {
     "-ql.;qa\n"
     "eg";
 		
-  mpc_parser_t* Line = mpc_many(
-    mpcf_strfold, 
-    mpc_apply(mpc_re("[^\\n]*(\\n|$)"), read_line));
+  pcq_parser_t* Line = pcq_many(
+    pcqf_strfold, 
+    pcq_apply(pcq_re("[^\\n]*(\\n|$)"), read_line));
   
-  mpc_result_t r;
+  pcq_result_t r;
 
   (void)argc; (void)argv;
 
-  mpc_parse("input", input, Line, &r);
+  pcq_parse("input", input, Line, &r);
   printf("\nParsed String: %s", (char*)r.output);
   free(r.output);
   
-  mpc_delete(Line);
+  pcq_delete(Line);
   
   return 0;
 }

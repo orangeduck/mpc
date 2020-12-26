@@ -1,15 +1,15 @@
-#include "../mpc.h"
+#include "../pcq.h"
 
 int main(int argc, char **argv) {
 
-  mpc_result_t r;
+  pcq_result_t r;
   
-  mpc_parser_t* Adjective = mpc_new("adjective");
-  mpc_parser_t* Noun      = mpc_new("noun");
-  mpc_parser_t* Phrase    = mpc_new("phrase");
-  mpc_parser_t* Doge      = mpc_new("doge");
+  pcq_parser_t* Adjective = pcq_new("adjective");
+  pcq_parser_t* Noun      = pcq_new("noun");
+  pcq_parser_t* Phrase    = pcq_new("phrase");
+  pcq_parser_t* Doge      = pcq_new("doge");
 
-  mpca_lang(MPCA_LANG_DEFAULT,
+  pcqa_lang(PCQA_LANG_DEFAULT,
     " adjective : \"wow\" | \"many\" | \"so\" | \"such\";                 "
     " noun      : \"lisp\" | \"language\" | \"c\" | \"book\" | \"build\"; "
     " phrase    : <adjective> <noun>;                                     "
@@ -18,27 +18,27 @@ int main(int argc, char **argv) {
   
   if (argc > 1) {
     
-    if (mpc_parse_contents(argv[1], Doge, &r)) {
-      mpc_ast_print(r.output);
-      mpc_ast_delete(r.output);
+    if (pcq_parse_contents(argv[1], Doge, &r)) {
+      pcq_ast_print(r.output);
+      pcq_ast_delete(r.output);
     } else {
-      mpc_err_print(r.error);
-      mpc_err_delete(r.error);
+      pcq_err_print(r.error);
+      pcq_err_delete(r.error);
     }
   
   } else {
 
-    if (mpc_parse_pipe("<stdin>", stdin, Doge, &r)) {
-      mpc_ast_print(r.output);
-      mpc_ast_delete(r.output);
+    if (pcq_parse_pipe("<stdin>", stdin, Doge, &r)) {
+      pcq_ast_print(r.output);
+      pcq_ast_delete(r.output);
     } else {
-      mpc_err_print(r.error);
-      mpc_err_delete(r.error);
+      pcq_err_print(r.error);
+      pcq_err_delete(r.error);
     }
   
   }
 
-  mpc_cleanup(4, Adjective, Noun, Phrase, Doge);
+  pcq_cleanup(4, Adjective, Noun, Phrase, Doge);
   
   return 0;
   
