@@ -924,6 +924,10 @@ Performs some basic optimisations on a parser to reduce it's size and increase i
 Limitations & FAQ
 =================
 
+### I'm getting namespace issues due to `libmpc`, what can I do?
+
+There is a re-naming of this project to `pcq` hosted on the [pcq branch](https://github.com/orangeduck/mpc/tree/pcq) which should be usable without namespace issues.
+
 ### Does _mpc_ support Unicode?
 
 _mpc_ Only supports ASCII. Sorry! Writing a parser library that supports Unicode is pretty difficult. I welcome contributions!
