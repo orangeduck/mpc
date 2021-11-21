@@ -38,14 +38,14 @@ $(DIST)/test-static: $(TESTS) $(DIST)/lib$(PROJ).a $(PROJ).h tests/ptest.h
 examples/%: $(DIST) examples/%.c $(PROJ).c $(PROJ).h
 	$(CC) $(CFLAGS) $(filter-out $(DIST) $(PROJ).h, $^) -lm -o $(DIST)/$@
 
-$(DIST)/lib$(PROJ).so: $(PROJ).c $(PROJ).h
+$(DIST)/lib$(PROJ).so: $(DIST) $(PROJ).c $(PROJ).h
 ifneq ($(OS),Windows_NT)
 	$(CC) $(CFLAGS) -fPIC -shared $(PROJ).c -o $(DIST)/lib$(PROJ).so
 else
 	$(CC) $(CFLAGS) -shared $(PROJ).c -o $(DIST)/lib$(PROJ).so
 endif
 
-$(DIST)/lib$(PROJ).a: $(PROJ).c $(PROJ).h
+$(DIST)/lib$(PROJ).a: $(DIST) $(PROJ).c $(PROJ).h
 	$(CC) $(CFLAGS) -c $(PROJ).c -o $(DIST)/$(PROJ).o
 	$(AR) rcs $(DIST)/lib$(PROJ).a $(DIST)/$(PROJ).o
 
