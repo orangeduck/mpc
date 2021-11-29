@@ -59,11 +59,13 @@ clean:
 	rm -rf -- $(DIST)
 
 install: all
-	install -d -m644 $(DESTDIR)$(PREFIX)/{include,lib/pkgconfig,share/$(PROJ)}
+	install -d -m644 $(DESTDIR)$(PREFIX)/include
+	install -d -m644 $(DESTDIR)$(PREFIX)/lib/pkgconfig
+	install -d -m644 $(DESTDIR)$(PREFIX)/share/$(PROJ)
 	install -m755 -t $(DESTDIR)$(PREFIX)/lib $(DIST)/lib*
-	install -m644 -t $(DESTDIR)$(PREFIX)/share/$(PROJ) $(PROJ).{c,h}
+	install -m644 -t $(DESTDIR)$(PREFIX)/share/$(PROJ) $(PROJ).c $(PROJ).h
 	install -m644 $(PROJ).h $(DESTDIR)$(PREFIX)/include/$(PROJ).h
-	install -m644 $(DIST)/$(PROJ).pc $(DESTDIR)$(PREFIX)/lib/pkgconfig/$(PROJ).pc
+	install -m644 $(PROJ).pc $(DESTDIR)$(PREFIX)/lib/pkgconfig/$(PROJ).pc
 
 uninstall:
 	rm -rf -- \
