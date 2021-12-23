@@ -11,15 +11,18 @@ CFLAGS ?= $(STD) -pedantic -O3 -g -Wall -Werror -Wextra -Wformat=2 -Wshadow \
 
 TESTS = $(wildcard tests/*.c)
 EXAMPLES = $(wildcard examples/*.c)
+FUZZ = $(wildcard fuzz/*.c)
 EXAMPLESEXE = $(EXAMPLES:.c=)
+FUZZEXE = $(FUZZ:.c=)
 
 .PHONY: all check clean libs $(DIST)/$(PROJ).pc
 
-all: $(EXAMPLESEXE) check
+all: $(EXAMPLESEXE) $(FUZZEXE) check
 
 $(DIST):
 	$(MKDIR) $(DIST)
 	$(MKDIR) $(DIST)/examples
+	$(MKDIR) $(DIST)/fuzz
 
 check: $(DIST) $(DIST)/test-file $(DIST)/test-static $(DIST)/test-dynamic
 	./$(DIST)/test-file
@@ -37,6 +40,11 @@ $(DIST)/test-static: $(TESTS) $(DIST)/lib$(PROJ).a $(PROJ).h tests/ptest.h
 
 examples/%: $(DIST) examples/%.c $(PROJ).c $(PROJ).h
 	$(CC) $(CFLAGS) $(filter-out $(DIST) $(PROJ).h, $^) -lm -o $(DIST)/$@
+
+fuzz/%: $(DIST) fuzz/%.c $(PROJ).c $(PROJ).h
+	$(CC) $(CFLAGS) $(filter-out $(DIST) $(PROJ).h, $^) -lm -o $(DIST)/$@
+	cp -r fuzz/*_input $(DIST)/fuzz/
+#cp -r fuzz/doge_input $(DIST)/fuzz/
 
 $(DIST)/lib$(PROJ).so: $(DIST) $(PROJ).c $(PROJ).h
 ifneq ($(OS),Windows_NT)

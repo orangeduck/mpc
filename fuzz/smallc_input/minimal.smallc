@@ -1,0 +1,11 @@
+#include "stdio.h"
+
+main() {
+
+  int i;
+  int j;
+
+  j = 10;
+  
+  return 0;
+}
