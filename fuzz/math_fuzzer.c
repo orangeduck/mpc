@@ -4,6 +4,8 @@
 
 int main(void) {
   
+  mpc_result_t r;
+
   mpc_parser_t *Expr  = mpc_new("expression");
   mpc_parser_t *Prod  = mpc_new("product");
   mpc_parser_t *Value = mpc_new("value");
@@ -27,15 +29,12 @@ int main(void) {
   mpc_print(Value);
   mpc_print(Maths);
   
-  if(1) {
-  	mpc_result_t r;
-  	if (mpc_parse_contents("./math_exprs/readme.maths", Maths, &r)) {
-    	mpc_ast_print(r.output);
-    	mpc_ast_delete(r.output);
-  	} else {
-    	mpc_err_print(r.error);
-    	mpc_err_delete(r.error);
-  	}
+  if (mpc_parse_contents("./math_exprs/readme.maths", Maths, &r)) {
+  	mpc_ast_print(r.output);
+   	mpc_ast_delete(r.output);
+  } else {
+   	mpc_err_print(r.error);
+   	mpc_err_delete(r.error);
   }
 
   mpc_cleanup(4, Expr, Prod, Value, Maths);

@@ -44,6 +44,7 @@ examples/%: $(DIST) examples/%.c $(PROJ).c $(PROJ).h
 fuzz/%: $(DIST) fuzz/%.c $(PROJ).c $(PROJ).h
 	$(CC) $(CFLAGS) $(filter-out $(DIST) $(PROJ).h, $^) -lm -o $(DIST)/$@
 	cp -r fuzz/*_input $(DIST)/fuzz/
+	cp -r fuzz/*_exprs $(DIST)/fuzz/
 #cp -r fuzz/doge_input $(DIST)/fuzz/
 
 $(DIST)/lib$(PROJ).so: $(DIST) $(PROJ).c $(PROJ).h

@@ -1,6 +1,6 @@
 #include "../mpc.h"
 
-int main(int argc, char **argv) {
+int main(void) {
 
   mpc_parser_t* Ident     = mpc_new("ident");
   mpc_parser_t* Number    = mpc_new("number");
@@ -20,46 +20,13 @@ int main(int argc, char **argv) {
   mpc_parser_t* Includes  = mpc_new("includes");
   mpc_parser_t* Smallc    = mpc_new("smallc");
 
-  mpc_err_t* err = mpca_lang(MPCA_LANG_DEFAULT,
-    " ident     : /[a-zA-Z_][a-zA-Z0-9_]*/ ;                           \n"
-    " number    : /[0-9]+/ ;                                           \n"
-    " character : /'.'/ ;                                              \n"
-    " string    : /\"(\\\\.|[^\"])*\"/ ;                               \n"
-    "                                                                  \n"
-    " factor    : '(' <lexp> ')'                                       \n"
-    "           | <number>                                             \n"
-    "           | <character>                                          \n"
-    "           | <string>                                             \n"
-    "           | <ident> '(' <lexp>? (',' <lexp>)* ')'                \n"
-    "           | <ident> ;                                            \n"
-    "                                                                  \n"
-    " term      : <factor> (('*' | '/' | '%') <factor>)* ;             \n"
-    " lexp      : <term> (('+' | '-') <term>)* ;                       \n"
-    "                                                                  \n"
-    " stmt      : '{' <stmt>* '}'                                      \n"
-    "           | \"while\" '(' <exp> ')' <stmt>                       \n"
-    "           | \"if\"    '(' <exp> ')' <stmt>                       \n"
-    "           | <ident> '=' <lexp> ';'                               \n"
-    "           | \"print\" '(' <lexp>? ')' ';'                        \n"
-    "           | \"return\" <lexp>? ';'                               \n"
-    "           | <ident> '(' <ident>? (',' <ident>)* ')' ';' ;        \n"
-    "                                                                  \n"
-    " exp       : <lexp> '>' <lexp>                                    \n"
-    "           | <lexp> '<' <lexp>                                    \n"
-    "           | <lexp> \">=\" <lexp>                                 \n"
-    "           | <lexp> \"<=\" <lexp>                                 \n"
-    "           | <lexp> \"!=\" <lexp>                                 \n"
-    "           | <lexp> \"==\" <lexp> ;                               \n"
-    "                                                                  \n"
-    " typeident : (\"int\" | \"char\") <ident> ;                       \n"
-    " decls     : (<typeident> ';')* ;                                 \n"
-    " args      : <typeident>? (',' <typeident>)* ;                    \n"
-    " body      : '{' <decls> <stmt>* '}' ;                            \n"
-    " procedure : (\"int\" | \"char\") <ident> '(' <args> ')' <body> ; \n"
-    " main      : \"main\" '(' ')' <body> ;                            \n"
-    " includes  : (\"#include\" <string>)* ;                           \n"
-    " smallc    : /^/ <includes> <decls> <procedure>* <main> /$/ ;     \n",
-    Ident, Number, Character, String, Factor, Term, Lexp, Stmt, Exp, 
+  mpc_err_t * err ;
+  char language[2048] = { 0, } ;
+  size_t s = fread(language, 2047, 1, stdin) ;
+  printf("s: %ld\n", s) ;
+
+  err = mpca_lang(MPCA_LANG_DEFAULT, language, 
+  	Ident, Number, Character, String, Factor, Term, Lexp, Stmt, Exp, 
     Typeident, Decls, Args, Body, Procedure, Main, Includes, Smallc, NULL);
   
   if (err != NULL) {
@@ -68,10 +35,10 @@ int main(int argc, char **argv) {
     exit(1);
   }
     
-  if (argc > 1) {
+  if (1) {
     
     mpc_result_t r;
-    if (mpc_parse_contents(argv[1], Smallc, &r)) {
+    if (mpc_parse_contents("./smallc_exprs/minimal.smallc", Smallc, &r)) {
       mpc_ast_print(r.output);
       mpc_ast_delete(r.output);
     } else {
