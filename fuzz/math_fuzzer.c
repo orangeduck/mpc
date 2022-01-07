@@ -17,7 +17,8 @@ int main(void) {
     Expr, Prod, Value, Maths, NULL);
 */
   char language[1024] = { 0, } ;
-  int s = fread(language, 1023, 1, stdin) ;
+  size_t s = fread(language, 1023, 1, stdin) ;
+  printf("s: %ld\n", s) ;
 
   mpca_lang(MPCA_LANG_PREDICTIVE, language, Expr, Prod, Value, Maths, NULL) ;
   
@@ -26,9 +27,9 @@ int main(void) {
   mpc_print(Value);
   mpc_print(Maths);
   
-  if(s > 0) {
+  if(1) {
   	mpc_result_t r;
-  	if (mpc_parse_contents("(4 * 2 * 11 + 2) - 5", Maths, &r)) {
+  	if (mpc_parse_contents("./math_exprs/readme.maths", Maths, &r)) {
     	mpc_ast_print(r.output);
     	mpc_ast_delete(r.output);
   	} else {
