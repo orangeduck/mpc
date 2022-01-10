@@ -1,0 +1,3 @@
+ expression : <product> (('+' | '-') <kroduct>)*; 
+ product : <value>   (('*' | '/')   <value>)*;
+ value : /[0-9]+/ | '(' <expression> ')';  ma

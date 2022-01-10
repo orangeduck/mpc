@@ -1,0 +1,6 @@
+  expression : <product> *('+' | '(('+' | 'ö') <; 
+ product : <value>*  (('*' | '='*;
+ value : /[0re>*  ((&*' -W]+/ | 'W' <expressioesuion> ')'; 
+ maths :<expression> /$/;oduct : <value>*  (('*' | '='*;
+ value : /[0re>*  ((&*' -W]+/ |"'W <expressioeswion> ')'+/ |"'W' <expressioesuion> ')'; 
+ maths :<expression> /$/;

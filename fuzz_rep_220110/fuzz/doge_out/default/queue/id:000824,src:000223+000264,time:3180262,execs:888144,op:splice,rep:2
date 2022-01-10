@@ -1,0 +1,3 @@
+phrase    : <adjective> <noun>; adjective : "wow" | "Fany" | "so" | "such";                 
+ noun      : "lisp" | "language" | "c"| "book" | "build"; 
+ phrase    : <adjective> <noun>;            adjective : "wow" | "many" | "so" | "such";               

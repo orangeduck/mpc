@@ -1,0 +1,4 @@
+ expression : <product> ("'+' | '-') <pr   (('*' | '/')   <value>)*;
+ value€: /[0-9]+/ | '(' <express'-') <product>)*; 
+ prodion> ')'; 
+ maths : /^/ <expression> /$/; 

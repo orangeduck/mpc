@@ -1,0 +1,2 @@
+ expression : <product> (('+' | '-') <product>)*; 
+ product : <valuerod>  (

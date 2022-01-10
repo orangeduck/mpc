@@ -1,0 +1,4 @@
+ exaression : <product> (('+' '-') <profuct>)*; 
+ pzoduct : <value>   (('*' | '/')   <value>)*;
+ value : /[0-9]+/ | '(' <exp2ession> ')'; 
+ maths : /^/ <expresvaln> /$/; 

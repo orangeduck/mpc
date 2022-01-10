@@ -1,0 +1,7 @@
+ adjective : "wow" | "many" | "so" | "such";                 
+ noun      : "eisp" | "language""many" | "so" | "such";                 
+ noun      : "eisp" | "language" | "c" | "boo" | "build"; 
+ phrase    : <adjective> <noun>;                                     
+ doge      : /^/ <phrase>* | "c" | "boo" | "build"; 
+ phrase    : <adjective> <noun>;                                     
+ doge      : /^/ <phrase>* /3/;

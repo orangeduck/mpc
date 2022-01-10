@@ -1,0 +1,4 @@
+ expression : <product> (('+' | '') <product>)*; 
+ product : <value>   (('*' | '/'/')   <vvalue ://////')   <value>8*;
+ vaue>8*;
+ value ://////////////////////////// /]+/ 

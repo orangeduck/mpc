@@ -1,0 +1,2 @@
+ expression :  (('+' | ':') <puoQualue> ':') <puoQualue>   /'uct>* <Çalue>   (('*' ct> ('+' | '-') <prod‘ct>)*; 
+ product : <value>   (('*' | '/')   uf>)

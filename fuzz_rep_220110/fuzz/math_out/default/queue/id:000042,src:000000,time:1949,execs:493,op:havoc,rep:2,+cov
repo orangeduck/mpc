@@ -1,0 +1,3 @@
+ expression : <product> (('+' | '-') <product>)*; 
+ pdoduct : <value>   (('*' | '/')   <value>)*;
+ value : /[0-9]+/ | '(' <expressiexpression> /$/; 

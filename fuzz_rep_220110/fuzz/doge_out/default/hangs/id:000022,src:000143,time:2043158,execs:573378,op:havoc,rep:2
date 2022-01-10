@@ -1,0 +1,4 @@
+ adjective : "wow" | "many" | "so" | "such";                 
+ noun      : "lisp"!| "lJnguage" | "c" | "book" | "build"; 
+ phrase    : <noun>;                                    
+ doge      : /^/ <phrase>* /$/;

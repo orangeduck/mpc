@@ -1,0 +1,4 @@
+ adjective : "woSSSSSSSSSSSSSSSSSSSSSSSSSSSS                 
+ noun      : ook" | "build"; 
+ phrase    : <adjective> <noun>;                                    
+ doge      : /^/ <phrase>* /$/;

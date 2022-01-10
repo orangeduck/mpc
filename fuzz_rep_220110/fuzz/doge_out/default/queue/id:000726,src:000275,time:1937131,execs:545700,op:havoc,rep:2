@@ -1,0 +1,4 @@
+ adjective : "wow" | "maèy" | "so" | "suchd;                 
+ noun      : ook" | "build"; 
+ phrase    : <adjective> <noun>;                                     
+ doge      : /^/ <phrase>*    ;

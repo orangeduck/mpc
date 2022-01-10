@@ -1,0 +1,4 @@
+ expression : <product> (('+' | '-') <product>)*; 
+ product : <value>   (('*' | '/')   <value>)*;
+ value : /duct> *( x '-') B ) alue>)*; <va@ue>) prïduct : <value>   ^^/!;
+ va

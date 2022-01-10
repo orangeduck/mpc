@@ -1,0 +1,4 @@
+ expression : <product> (('+' | '-') <product>)*; 
+ product : <value>   (('*' | '/')   <value>)*;
+ value : /[A-d]+/ | '(' <expression> ')'; 
+ maths : /^/ <expression> /$/; 

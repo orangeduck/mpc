@@ -1,0 +1,11 @@
+ adjective : "wo             B  
+ noun      : 8lisp"!| "lanPòage"< 0
+
+ > < 0
+ > < 0
+ > < 0
+  > < 0
+ > < 0
+ > < | "c" | "book" | "build"; 
+ phrase    : <adjective>!<noun>;                                    
+ doae      : /^/ <phrase>* /$/;

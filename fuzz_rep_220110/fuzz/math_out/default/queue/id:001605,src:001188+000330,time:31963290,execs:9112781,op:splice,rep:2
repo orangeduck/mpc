@@ -1,0 +1,5 @@
+ expresskon : <n> ''; 
+ maths : /^^^[^^d^ù^^^^^1]+ expression : <product> (('+' | '-') <product>)*; 
+ pZoduct : <)+/ /'{3(('\\\\\\z\\|\\\\c>)*;)+/ /'{3/ /'{3(('\\\\\\\\ÿ\s\Uz\\\\ÿ*; 
+ ervalue>   (('*' | '/')   <value>)*;
+ value : /[0-9]+/ | '(' 

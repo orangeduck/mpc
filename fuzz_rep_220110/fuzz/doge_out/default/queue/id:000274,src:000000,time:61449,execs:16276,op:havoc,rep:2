@@ -1,0 +1,4 @@
+ adjective : "w" | "so" | "such";                 
+ noun      : "lisp" | "language" | "c" | "book<noun>;          " | "build"; 
+ phrase    : <adjective> <noun>;                                     
+ doge      : /^/ <phrase>* /$/;

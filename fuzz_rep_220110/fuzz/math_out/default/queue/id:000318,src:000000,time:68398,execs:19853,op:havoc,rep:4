@@ -1,0 +1,32 @@
+ expression : <product> (('+' | '-') <product>)*; 
+ product : <value>   (('*' | '/') " <val
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
++
+
+
+
+
+
+
+
+
+
+ue>)*;
+ value : /[0-9]+/ | 'îîîîîîîression> ')'; 
+ maths : /^/ <expression> /$/; 

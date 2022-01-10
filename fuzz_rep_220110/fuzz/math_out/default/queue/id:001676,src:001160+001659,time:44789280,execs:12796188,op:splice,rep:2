@@ -1,0 +1,10 @@
+ expresskon : <n> ')'; 
+ maths : /^^^^^[^^^^ ^^^^^a^^^^^^^^^^^^^/!;
+  expresskon : <n> ')'; 
+ maths : /^^^^^[^^^^ ^^^^^a^^^^^^^^^q^^^/!;
+  expression : <product> (('+' | '-') <przduct>)*; 
+ product : <value>   (('*' | '/')   <value>)*;
+ value : /[0-9]+/ | '(' <expression> ')';  exPression : <product> (('+' | '-' <product>)*; 
+ prodon : <product> (('+' | '-') <product>)*; 
+ product : <value>   (('*' | '/')   <value>)*;
+ value : /[0-9]+/ | '(' <Hxpression> ')';  expression : <product> (('+' | '-') <product>)*; uct : <

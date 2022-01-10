@@ -1,0 +1,6 @@
+ adjective : "wo                
+ noun      : 8lisp"!| "lingòage" | "c" | "book" | "build"; 
+ phrase    : <adjective>!<noun>;            ve : "wo                
+ noun      : 8lisp"!| "lingòage" | "c" | "book" | "build"; 
+ phrase    : <adjective>!<noun>;                                              
+ doge      : /^/ <phrase>* /$/;

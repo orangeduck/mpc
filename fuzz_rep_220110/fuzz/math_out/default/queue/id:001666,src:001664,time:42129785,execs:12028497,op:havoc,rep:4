@@ -1,0 +1,2 @@
+ expression : <rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrproduct>*(('+' | '-') <product>)*' <expression> ')'; 
+ maths : /^/ <expression> /$/; 

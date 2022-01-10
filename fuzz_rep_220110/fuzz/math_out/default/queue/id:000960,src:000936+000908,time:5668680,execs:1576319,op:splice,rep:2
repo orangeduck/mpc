@@ -1,0 +1,4 @@
+ expression : <n> ')'; 
+ maths : /^/ <exproduct>   (('*' | '/')   <value>)*;on : <product> (('+' | '-') <pression><pression> ')' ')'; 
+oduct : <value>   (('*' | '/')   <value>)*;
+ vadue : /[0-w]+/ | '(' <exp

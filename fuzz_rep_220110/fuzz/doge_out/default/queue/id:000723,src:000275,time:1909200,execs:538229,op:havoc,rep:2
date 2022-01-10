@@ -1,0 +1,4 @@
+ adjective :"""""" "wow" | "many" | "so" | "su   
+ noun      : ook" | "build"; 
+ phrase    : <adjective> <noun>;                                     
+ doge      : /^/ <phrase>* /$/;

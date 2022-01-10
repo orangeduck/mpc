@@ -1,0 +1,3 @@
+ adjective : "wow" | "majy" | "so" | "suchd;          @@@@@@@@@@@@@@@@@@@@@@@k" | "euild"; 
+ phrase    : """""ÿ"""""""""""""""""""""""<adjective> <noun>;                                     
+ doge      : /^/ <phrase>+ /$/;

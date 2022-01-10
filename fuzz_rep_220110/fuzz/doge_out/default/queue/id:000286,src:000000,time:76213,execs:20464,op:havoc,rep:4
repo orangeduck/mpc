@@ -1,0 +1,4 @@
+ adjecVive : "wow" | "many" | "so" | ///////////////"such";                 
+ noun      : "lisp" | "language" € "c" | "book" | "build"; 
+ pjrase    : <adjective> <noun>;                                     
+ doge      : /^/ 

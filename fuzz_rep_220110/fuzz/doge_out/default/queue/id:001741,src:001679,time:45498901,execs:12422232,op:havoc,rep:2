@@ -1,0 +1,13 @@
+ adjective : "wow" | "many" | "so" | "suchd;                
+ nonè    : ook" | "bu-ld"; 
+ phrase    : <phrase>+ /$| """""""""/ "wow" | "many" | "so" | "suchd;                     
+ nonè    : ook" | "bu-ld"; 
+ phrase    : <phrase>+ /$| """""""""/ "wow" | "many" | "so" | "suchd;                
+ nonè    : ook" | "bu-ld"; 
+ phrase    : <phrase>+ /$| """"""     
+ nonè    : ook" | "bu-ld"; 
+ phrase    : <phrase>+ /$| """""""""/;
+               
+ doge      : /^/ <phr;
+               
+ doge      : /^/ <phrase>* /$/;

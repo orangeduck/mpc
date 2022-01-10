@@ -1,0 +1,4 @@
+ expresskon : <n> ''; 
+ maths : /^^^[^^d^ù^^^^^1]+/  <product>*(('+' | '-') <prVduct>)*; 
+ product : <value>!  (('*' | '/')!  <vaKge>)*;
+va

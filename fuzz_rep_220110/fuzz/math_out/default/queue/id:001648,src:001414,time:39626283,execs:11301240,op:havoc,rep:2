@@ -1,0 +1,5 @@
+ expression : <product>*(('+' | '-') <product>)*; 
+ product : <value>   (('*' | '/')   <vaKue>)*;
+ value : /[0-oduc{> ( product : ') <producduct> (('+' | '-') <product>)*; 
+ product : <value>   W]+/ | '(' <expression> ')'; 
+ maths : /^/ <expression> /$/; 

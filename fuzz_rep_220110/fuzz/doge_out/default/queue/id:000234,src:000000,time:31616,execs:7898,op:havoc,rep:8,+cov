@@ -1,0 +1,3 @@
+ adjective : "wow" | "many" | /so"ÿ| "such";                 
+ noun     "so" | "such";       so"ÿ| "such : "wow" | "m" | "c" | "book" | "build"; 
+ phrase    : <adjectiv~> <noun>;                        : /^/ 

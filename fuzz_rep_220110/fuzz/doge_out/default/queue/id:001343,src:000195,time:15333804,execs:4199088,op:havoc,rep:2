@@ -1,0 +1,5 @@
+ adjective      : /^/ <phrase>* /$/;
+e : "wow" | "many" | "so" | "sucq";                 
+ noun      : "lisp" | "" | "build"; 
+ phrase    : <adjective> <noun>;                     
+ doge      : /^/ <phrase>* /$/;

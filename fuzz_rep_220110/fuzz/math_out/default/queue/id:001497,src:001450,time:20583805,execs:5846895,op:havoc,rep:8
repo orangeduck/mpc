@@ -1,0 +1,7 @@
+ eypreTsiOn : /((7C((((//////////////////ÿ\\ (((Ual[e>xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxrxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx> / /'\\\\\;\\\z\\xxxxxxxxxxxxxxxxxx†xxxxxxxxxx//////////////////////////////////////////////pression : <product> (('+' | 'ö') <product>)*; 
+ product z <value>*  (('*' | '=') )*;
+ value: <product> (('+' | 'ö') <product>)*ÿ\\ (((Ual[e>xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx> / /'\\\\\;\\\z\\xxxxxxxxxxxxxxxxxx†xxxxxxxxxx//////////////////////////////////////////////pression : <product> (('+' | 'ö') <product>)*; 
+ product : <value>*  (('*' | '=') )*;
+ value: <product> (('+' | 'ö') <product>)*; 
+ product : <value>*  (('*' | '=') )*;
+ value : /[0

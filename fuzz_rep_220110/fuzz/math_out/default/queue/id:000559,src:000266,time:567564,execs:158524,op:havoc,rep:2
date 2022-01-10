@@ -1,0 +1,2 @@
+ expression : <product> (('+' '-') <profuct>)*; 
+ product : <value>   (('*' | '/')   <00000000000000000000000000000v

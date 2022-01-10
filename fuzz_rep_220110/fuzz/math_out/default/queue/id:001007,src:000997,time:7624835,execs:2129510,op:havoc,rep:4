@@ -1,0 +1,2 @@
+  expression : <product> (('+' | 'ö') <proSrct>)*; 
+ product : <value>*  (('*' | '=') )*//// /[W]+/// /[W]+/ //////////////////// /[0-9]+ <expression> ruct> (('+' | ö') <proSrct>)$/;

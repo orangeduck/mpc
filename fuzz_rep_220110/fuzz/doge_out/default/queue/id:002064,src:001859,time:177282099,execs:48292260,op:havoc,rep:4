@@ -1,0 +1,4 @@
+ adjective : "wow"""""""""""| "so" | "such";                 
+ noun      : "lispdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd" """"""""""""| "many" | """""""""""""""""$"""""""| "mak›" | """""""""""""""""ddddddd" | "language" | "W"| "book""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""" | "b´ild"; 
+ phrase    : <adjective> <noun>;                                     
+ doge      : /^/ <phrase>* /$/;

@@ -1,0 +1,4 @@
+ exprMssZuct : <valee>   (('*' | '-') <66>   (('' | '/')   <v>   (('' |' | '-') <pduct>); 
+ maths : /^/ *; 
+ product : <valee>   (('*' | '/')   <value>)*;
+ value : /[0-9]+/ | '(' <expression> U)

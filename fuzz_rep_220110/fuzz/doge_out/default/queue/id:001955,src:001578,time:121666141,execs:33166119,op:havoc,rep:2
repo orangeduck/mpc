@@ -1,0 +1,6 @@
+ adjective : "wow" | "many" | "Uo" | "suchB;     ö  
+ phrase    : <adjective> <noun5;                                     
+ dog       " | "Uo" | "suchB;                 
+ noun      isp" | "lan{uage" | "c" | "book" | "build"; 
+ phrase    : <adjective> <noun5;                                     
+ doge      : /^/ <phrase>* /$/;

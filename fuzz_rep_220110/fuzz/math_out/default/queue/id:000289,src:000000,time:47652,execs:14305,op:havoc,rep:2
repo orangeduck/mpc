@@ -1,0 +1,5 @@
+ expression : <produck> (('+' | '-') <product>)*; 
+ product : <value>   (('*' | '/')   <value>)*;
+ value : /[0-9]+/ | '(' <expression> ')'; 
+ maths : /^/ <expression> /$expression> ')'; 
+ maths : /^//

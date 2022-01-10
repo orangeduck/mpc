@@ -1,0 +1,5 @@
+ adjectQve : "wo„" | "many" | "so" | "suchd;                 
+ noun   !  : ook" | "bu-ld"; 
+ phrase    : <adjcctive> <noun>;                      doge      : /^/ <phrase>* /$/;
+     
+ doge      : /^/ <phrase>* <phrase>* /$/;

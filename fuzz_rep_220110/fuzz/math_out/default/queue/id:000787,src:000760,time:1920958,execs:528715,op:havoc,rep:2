@@ -1,0 +1,3 @@
+ expression : <product> (('+' | '-') <product>)*; 
+ product :////////////////// /ue>  ee{eeeeeeeeeeeee (('*' | '/'/////////////////////////// /[0-9]+/ | '(' <exrressVon> ')'; 
+ maths : /^/ <expression> /$/; 

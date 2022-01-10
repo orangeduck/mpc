@@ -1,0 +1,4 @@
+ adjective : "wow" | "maèy" | "s4           
+ noun      : ook" | "build"; 
+ phrase    : <adjective> <noun>;                                     
+ doge      :<phrase>*    ;

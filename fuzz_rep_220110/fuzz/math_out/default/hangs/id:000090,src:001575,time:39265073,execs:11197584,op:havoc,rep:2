@@ -1,0 +1,4 @@
+  expression : <product> (('+' | 'ö') <pr_muct>)*; 
+ product : <value>*  (('*' | '=') )*////////// /\W*****[0-9\?/ | '(' <expression> ')'; 
+ maths : /^/ <expression> /$***/ | 'ÿ' <expression> ')'; 
+ maths : /^/ <expression> /$/;

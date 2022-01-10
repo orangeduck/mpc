@@ -1,0 +1,3 @@
+ expression : <prkduct> (('+' | '-') <product>)*; 
+ product: <product> (('+' | 'd') <product>)*; 
+ product : <value>   (('*' | '/')   <value>)*;

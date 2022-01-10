@@ -1,0 +1,11 @@
+ adjective : "wow
+ nou" | "many" | "so" | "suchd; )               
+ nown    ) : oVVVVVVVVVVVVVVVVV      
+ nown    ) : oVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVok" | "bu-" | "suchd; )               
+ nown    ) : oVVVVVVVVVVVVVVVVVVVVVVVVVVok" | "bu-" | "suchd; )               
+ nown    ) : oVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVok" | "bu-ld"; 
+ phrase    : /^/ <phrase>+ /$/;
+      ld"; 
+ phrase    : /^/ <phrase>+ /$/;
+               
+ doge      : /^/ <phrase>* /$/;

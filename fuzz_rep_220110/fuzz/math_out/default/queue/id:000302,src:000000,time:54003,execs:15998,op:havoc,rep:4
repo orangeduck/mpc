@@ -1,0 +1,3 @@
+ expression : <xroduct> (('+' | '-') <product>)*; 
+ product : <value>   (('*' | '/')  )*; 
+ product : <value>   (('*' ^/

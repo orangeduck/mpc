@@ -1,0 +1,4 @@
+ adjective : "wow" | "\any" | "so" | "Wuch";                 
+ noun      : "lisp" | "languag " | "c"| "booy" | "build"; 
+ phrase    : /adjective> <joun>;                 
+ dog€      : /^/

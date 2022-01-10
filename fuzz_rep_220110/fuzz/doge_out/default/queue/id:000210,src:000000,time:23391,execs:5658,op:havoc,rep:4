@@ -1,0 +1,3 @@
+ adjective : "{ow" | "many" | "so" | "such";                 
+ noun      : "lisq" | "language" | "c" | "book" | "build"; 
+ phrase    : <adjectiveoun>;          | "b

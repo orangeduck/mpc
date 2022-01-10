@@ -1,0 +1,12 @@
+ expression : <proioct66(('+' | '-) | '-') <66>   (
+'ÿ' | '/) <66666> (('+' | '-';  expression : <product>*(('+' | '-') <product>)*; 
+ product : <value>   (('*' | '/')!  <vaKge>)*;
+ value : /[0-W]+/ | '(' <expression> ')';  expressihs : /^^^^^[^^^^ ^^^^^a^^^^^^^^^q^^^/!;
+  expressivn : <product> (('+' | '-') <product>)*; 
+ product : <value>   (('*' | '/')   <value>)*;
+ value : /[0L9]+/ | '(' <expression> ')';  exPression : <product> (('+' | '-' <product>)*; 
+ prodon : <product> (('+' | '-') <product>)*; 
+ produskon : <n> ')';  expression : <product>*(('+' | '-') <product>)*; 
+ product : <value>   (('*' | '/')!  <vaKge>)*;
+ value : /[0-W]+/ | '(' <expression> ')';  express) | '-') <66>   (
+'ÿ' | ') <66>   (('' | ?

@@ -1,0 +1,23 @@
+ expResskon : <n> ')'; expresskon : <n> ')'; 
+ maths : /^^^^^[^^^^ ^^^^^a^^^^^^^^^^^^^/!;
+  expresskon : <n> ')'; 
+ maths : /^^^^^[^^^^ ^^^^^a^^^^^^^^^q^^^/!;
+  expression : <product> (('+' | '-') <product>)*; 
+ product : <value>   (('*' | '/')   <ralue>)*;
+ value : /[0-9]+/ | '(' <expression> ')'; resukon : <n> ')'; 
+ maths : /^^^^^[^^^^ ^^^^^a^^^^^^^^^^^^^/!;
+  expresskon : <n> ')'; 
+ maths : /^^^^^[^^^^ ^^^^^a^^^^^^^^^q^^^/!;
+  expresssskon : <n> ')'; 
+ maths : /^^^^^[^^^^ ^^^^^a^^^^^^^^^q^^^/!;
+  expression : <product> (('+' | '-') <product>)*; 
+ product : <value>   (('*' | '/')   <ralue>)*;
+ value : /[0-9]+/ | '(' <expression> ')'; resukon : <n> ')'; 
+ maths : /^^^^^[^^^^ ^^^^^a^^^^^^^^^^^^^/!;
+  expresskon : <n> ')'; 
+ maths : /^^^^^[^^^^ ^^^^^a^^^^^^^^^q^^^/!;
+  expression : <product> (('+' | '-') <product>)*; 
+ product : <value>   (('*' | '/')   <ralue>)*;
+ value : /[0-9]+/ | '(' <expression> ')';  exPression : <product> (('+' | '-' <product>)*; 
+ prodon : <product> (('+' | '-') <product>)*; 
+ produc

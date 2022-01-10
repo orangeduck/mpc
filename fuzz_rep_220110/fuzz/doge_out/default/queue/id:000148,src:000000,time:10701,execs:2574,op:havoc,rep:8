@@ -1,0 +1,3 @@
+ adjective : "wow" | "many" | "so" | "such";                 
+ noSn      : "lisp" | "languege" | "cwow" | "many" | "so" | "such" | "book" | "build"; 
+ phrase    : "lisp" | "languege" | "c" | "b<adjective> <noun "c" | "b<adjective> <noun>;           : /^/ <phras_>* /$/;

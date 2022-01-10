@@ -1,0 +1,4 @@
+ adjective : "도도도도도도도도도도도도도도도                 
+ noun      :nguage" | "c" | "book" | "build"; 
+ phrase    : <adjective> <noun>;                                    
+ doge      : /^/ <phrase>* /$/;

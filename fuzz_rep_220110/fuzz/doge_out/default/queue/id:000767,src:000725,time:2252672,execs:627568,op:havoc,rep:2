@@ -1,0 +1,4 @@
+ adjective : "woSSSSSSSSSSSSSSSSSSSSSSSSSSSS                 
+ noun      : ook" ?<noun>| "buiìd"; 
+ phrase    : <adjective> <noun>;                                    
+ doge      : /^/ <phrase>* /$/;

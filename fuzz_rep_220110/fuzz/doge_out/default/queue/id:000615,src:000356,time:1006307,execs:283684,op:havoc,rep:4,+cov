@@ -1,0 +1,5 @@
+ adjective : "wow" | "\any" | "so" | "such";        
+ doge      : /^/ <phrase>* /$          
+ noun      : "lisp" | "language" | " "c""bogk" | "build"; 
+ phrase    : <adjective> <noun>; í                              €   
+ doge      : /^/ 

@@ -1,0 +1,4 @@
+ exprYssion : <product> (('+' | '') <product>)*; 
+ ploduct : <value>   (('*' | '/')   <val5e>)*;
+ value : /[0-9]+pression> )'; 
+ maths :@/^/ <expressionK /$/; 

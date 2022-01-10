@@ -1,0 +1,3 @@
+ adjlctivl : "wy" | "bo"   "suk ";  adjective : "wow" | "many" | "so" | "such;  """""""""""""""""""""""""""""""               
+ """C""""""""""""""""""""""""""""""""""""""""""" | "c" | "book" | "build"; 
+ phrase    : <adjective> <noun>;                                   

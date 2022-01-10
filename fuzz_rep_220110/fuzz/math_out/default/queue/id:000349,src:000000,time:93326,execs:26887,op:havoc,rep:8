@@ -1,0 +1,4 @@
+ expression : <product> (('+' | '-//////oductJ)*;
+ product : <value>   (('*' | '/')   <valueM)*;
+ value : /[0-9]+/ |=5('expression> ')'; 
+ mats : /^/ <expression> /$/; 

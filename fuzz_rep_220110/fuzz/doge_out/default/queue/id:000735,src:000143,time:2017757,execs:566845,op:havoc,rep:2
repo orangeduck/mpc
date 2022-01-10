@@ -1,0 +1,4 @@
+ adjective : "wo                
+ noun      : 8lisp"!| "language" | "c" | "book" | "build"; 
+ phrase    : <adjective> <noun>;                                    
+ doge      : /^/ <phrase>* /$/;

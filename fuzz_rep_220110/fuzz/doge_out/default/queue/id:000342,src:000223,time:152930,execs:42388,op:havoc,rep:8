@@ -1,0 +1,5 @@
+ adjective : "wo" |/"\any" | "so" |  "c"| "book" | "build"; 
+ prase    : <adjectiKe 
+ noun      : "lisp" | "language" | "c"| "book" | "build"; 
+ phrase    : <adjective> <noun>;$                                    
+ doge     : /^

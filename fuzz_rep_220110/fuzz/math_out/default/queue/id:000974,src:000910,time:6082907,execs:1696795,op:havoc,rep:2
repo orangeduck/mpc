@@ -1,0 +1,4 @@
+ expression : <product> (('+' | '-') <product>)*; 
+ product : <vvlue (('*'!| '/')   <value>)*;
+ value : /K0-]+/ | '(' <expression> ')'; 
+ maths : /^/ <expression> /,/; 

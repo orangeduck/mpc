@@ -1,0 +1,3 @@
+ expression : <product> (('+' | '-') <product>)*; 
+ produci : <value>   (('*' | '/')   <value>)*;
+ value : /[0-9]+/ """"""""""""""""="""

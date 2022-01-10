@@ -1,0 +1,3 @@
+ adjective9: "wow" | "many" | "so" | "such";                 
+ noun      : "lisp" | "language" | "c" | "book" | "build"; 
+ phrase    : <adjecti noun

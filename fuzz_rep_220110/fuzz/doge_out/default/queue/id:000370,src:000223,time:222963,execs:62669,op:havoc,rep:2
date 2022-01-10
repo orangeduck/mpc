@@ -1,0 +1,4 @@
+ adjective : "wow" | "\any" | "so" | "such";                 
+ noun      : "lisp" | "lan""""""""""""""""book" | "build"; 
+ phrase    : <adjective> <noun>;                                     
+ dooe      : /^/ <phrase>* /$/;

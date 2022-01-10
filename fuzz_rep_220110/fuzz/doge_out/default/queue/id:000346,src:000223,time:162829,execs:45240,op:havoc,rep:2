@@ -1,0 +1,34 @@
+ adjective : "wow" | "\any" | "so" | "such";             
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+ noun      : "lisp" | "language" | "c"| "book" | "build"; 
+ phrase    : <adjective> <noun>;                                     
+ doge      : /k/ <phrase>* /$/;

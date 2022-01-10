@@ -1,0 +1,4 @@
+ expression : <product> (('+' '-') <profuct>)*; 
+ product : <value>   (('*' | '/')   <value>)*;
+ vaon : <product> ((<product>)*; lue : /[&-9]+/ | '(' <expression> ')'; 
+ maths : /^/ <expression> /$/; 

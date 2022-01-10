@@ -1,0 +1,5 @@
+ expree : /[0-›******/; )('+' | '-E)<product0)*; 
+ produät : <value>   | '/')   <value>)*;
+ value : [0-9]+/ |'(' <expression> ')'; 
+ maths : /^/ <ex )))))L))>)*;
+ value : /[0-›******/; 
