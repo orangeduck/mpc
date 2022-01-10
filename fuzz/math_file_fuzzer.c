@@ -2,22 +2,26 @@
 #include <string.h>
 #include "../mpc.h"
 
-int main(void) {
+int main(int argc, char * argv[]) {
   
-/*  mpc_result_t r; */
+  mpc_result_t r; 
 
   mpc_parser_t *Expr  = mpc_new("expression");
   mpc_parser_t *Prod  = mpc_new("product");
   mpc_parser_t *Value = mpc_new("value");
   mpc_parser_t *Maths = mpc_new("maths");
   
-  char language[1024] = { 0, } ;
-  size_t s = fread(language, 1023, 1, stdin) ;
-  printf("s: %ld\n", s) ;
+  FILE * fp = 0x0 ;
+  if (argc == 2) {
+	  fp = fopen(argv[1], "rb") ;
+  }
+  else {
+	  return 0 ;
+  }
+  
+  mpca_lang_file(MPCA_LANG_PREDICTIVE, fp, Expr, Prod, Value, Maths, NULL) ;
+  fclose(fp) ;
 
-  mpca_lang(MPCA_LANG_PREDICTIVE, language, Expr, Prod, Value, Maths, NULL) ;
-  
-  
   mpc_print(Expr);
   mpc_print(Prod);
   mpc_print(Value);
