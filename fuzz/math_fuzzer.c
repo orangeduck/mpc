@@ -4,7 +4,7 @@
 
 int main(void) {
   
-/*  mpc_result_t r; */
+  mpc_result_t r; 
 
   mpc_parser_t *Expr  = mpc_new("expression");
   mpc_parser_t *Prod  = mpc_new("product");
