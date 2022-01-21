@@ -1,0 +1,4 @@
+ expResskon : <n> ')';  expression : <product> (('+' | 'ö') <pr_muct>)*; 
+ product : <value>*  (('*' | '') )*////////// /\b]+**ÿÿÿ**********[0-9\?/ | '('*<expression> ')'; 
+ maths : /^/ <expression> /$#**/ | 'ÿ' <expression> ')'; 
+ maths :

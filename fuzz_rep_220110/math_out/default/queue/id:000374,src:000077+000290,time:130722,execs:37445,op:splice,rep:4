@@ -1,0 +1,2 @@
+ expression : /(('+' expressio€ : <produ@t> (('+' | '-') ,product>)*; 
+ product : <value>   ((/*' | '/')

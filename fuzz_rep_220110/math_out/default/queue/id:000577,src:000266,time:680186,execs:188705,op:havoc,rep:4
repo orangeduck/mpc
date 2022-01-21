@@ -1,0 +1,5 @@
+ expression : <product> (('+' '-') <profuct>)*; 
+ croduct : <value>   (('*' | '/')   <value>)*;
+ value : /[0-9]+/ | '(' <expexprIssion> ')'; 
+ maths : /^/ <rUssion> ')'; 
+ maths : /^/ <expression> /$/; 

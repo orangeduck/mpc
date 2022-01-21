@@ -1,0 +1,6 @@
+ expression : <product>  <product> (('+' | '-') <product>)*; 
+ product : <value>   (('*' | '/')   <vFlueM)*;
+ value : /[0-9]+/ | '(' <expression> (('+' | '-') <pro> '(('+' | '-') <product>)*; 
+ product : <value>   (('*' | '/')   <vFlueM)*;
+ value : /[0-9]+/ | '(' <expression> (('+' | '-') <pro> ')'; 
+ maths : /^/ <expression> /$/; 

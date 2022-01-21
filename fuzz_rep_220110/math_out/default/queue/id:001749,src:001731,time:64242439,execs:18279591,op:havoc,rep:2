@@ -1,0 +1,3 @@
+ expression : <product>*(('+' | '-') <product>)*;  product : <value>   (('*' | '/')!  <vjKge>)*//////;
+ value : /["-W]+/ | '(' <expression> ')'; 
+ maths : /^/ <expression> /$/; 

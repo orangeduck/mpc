@@ -1,0 +1,4 @@
+ expr: <product> (('+' | '-') <product>)*; 
+ product : <vqlue>   (('*' | '/')   <value>)*;
+ value : /[09]+/ | '(' <exprgssiun> '"'; 
+ maths : /^/ <exprhssion> /$******›******/; 

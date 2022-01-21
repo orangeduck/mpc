@@ -1,0 +1,4 @@
+ expression : <product> (('+' | '-') <pro_uct>)*; 
+ product : <value>   (('*' | '/')   <value>)*;
+ value : /*******************************&************************************************************************************ê****************************************[L-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa9]+/ | '(' <expressiNn> ')'; 
+ maths : /^/ <expression> /$***********?**š******/; 

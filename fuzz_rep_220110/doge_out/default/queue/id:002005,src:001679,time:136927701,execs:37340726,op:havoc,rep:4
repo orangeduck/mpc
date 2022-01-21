@@ -1,0 +1,6 @@
+ adjective : "wowso" | "suchd;                
+ non       
+è    : ook" | "bu6 d"; 
+ phrase    : <phrase>+ /$| """""""""/;
+               
+ doge      : /^/ <phrase>* /^/ <phrase>* /$/;

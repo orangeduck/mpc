@@ -1,0 +1,4 @@
+ adjective : "wow"/| "\any" | "so" | "such";                               
+ doge     / "^/ " | "c"| "bTok" | "build"; 
+ phrase    : <adjective>                                     
+ dog

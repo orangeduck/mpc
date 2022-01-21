@@ -1,0 +1,5 @@
+ expression : <product> (('+' | '-') <product>)*; 
+ product : <value>   (('*' | '/')   <value>)*;
+ value : /***************************************************/ <expression> /$%*********************[0-9]?/ | '(' <expression> ')'; 
+ maths : /^/ <expression> (' <expression> ')'; 
+ maths : /^/ <expression> /$*** *******?**›******/;

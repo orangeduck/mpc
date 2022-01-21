@@ -1,0 +1,8 @@
+ expression : <product>*(('+' | '/')<product>)*; 
+ product : <value>   (('*' | '/')!  <vjKge>)*//////;
+ value : /[0-W]+/ | '(' <expression> ')'; 
+ muct : <value>   (('*'    <value>)*;
+ value : /[0-9]+/ | '(' <expression> ')'; 
+ maths  : <value>   (('*'    <value>)*;
+ value : /[0-9]+/ | '(' <expression> ')'; 
+ maaths : /^/ <expression> /$/; 

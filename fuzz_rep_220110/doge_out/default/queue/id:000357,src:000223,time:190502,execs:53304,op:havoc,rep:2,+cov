@@ -1,0 +1,4 @@
+ adjKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKective : "wow" | "\any" | "so" | "such";                 
+ noun      : "lisp" | "language" | "c"| "book" | "build"; 
+ pwow" | " : <adjective> <noun>;                                     
+ doge      : /^/ <phrase>* /$/;

@@ -1,0 +1,5 @@
+ expResskon : <n> ')';   expression : <product> (('+' | 'ö') <pr_muct>)*; 
+ product : <value>* <n> ')';   expression : <product> (('K' | 'ö') <pr_muct>)*; 
+ product : <value>*  (( <product> '*' | '=') )*//  (( <product> '*' | '=') )*////////// /\W]+****************[0-9\?/ | '(' <ezpression> ')'; 
+ maths : /^/ <expression> /$***/ | 'ÿ' <expression> ')'; 
+ maths 

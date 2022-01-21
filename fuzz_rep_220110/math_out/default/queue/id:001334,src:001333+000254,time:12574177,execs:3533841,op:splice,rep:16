@@ -1,0 +1,6 @@
+  expressiol : /produmt> (('+'dumt> (('+' | 'ö') <; 
+ prod expression : <product5 (('+' | '-') <t : <value>   product : <value>   (( | 'ö') <; * prod expre | 'ö'alue>   product : <value>   (( | 'ö') <; 
+ prod expression : <product> (( +' |'-', <t : <value>   producŽ : <; * prod expre | 'ö') <; 
+ prod expression : <product5 (('+' | '-') <t : <value>   product : <   <value>)*;
+ valu'+' | '-') <t : <<value>)*;
+ value : /[0-9]+/ | '(' <exp

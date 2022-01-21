@@ -1,0 +1,8 @@
+ expressJon : <n> ')'; 
+ expressJon : <n> ')'; 
+ expression : <product> (('+' | '-') <product>)*; 
+ product : <value>   (('*' | '/')   <value>)*;
+ valuesion : <product> (('+' | '-') <product>)*; 
+ product : <value>   (('*' | '/')   <value>)*;
+ value : /[0-9]d/ | '(' <expression> ')'; 
+ maths : /^/ <expression> / '(

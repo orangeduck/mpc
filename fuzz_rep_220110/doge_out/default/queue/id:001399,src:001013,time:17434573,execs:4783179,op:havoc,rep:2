@@ -1,0 +1,4 @@
+ adjective : "w                          hd;              7  
+ noun    "; 
+ phrase    : <adjective>+<noun>;                                     
+ doge   	  : /^/ <phrase>*    ;

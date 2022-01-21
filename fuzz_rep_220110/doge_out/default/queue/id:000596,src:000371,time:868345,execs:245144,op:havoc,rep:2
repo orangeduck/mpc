@@ -1,0 +1,4 @@
+ adjective : "w^w" | "\anr" | "so" | "su\anr" | "so" | "séc  
+ noun     @:e" | "c"| "book" | "build"; 
+ phrase    : <adjective> <noun>;                                     
+ doge      : /^/ <phrase>* /$/;

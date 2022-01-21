@@ -1,0 +1,4 @@
+ adjective : "wow" |/"\any" | "so" | "such";                 
+ noun.     : "lis构构构构构构箍构构构构构构构构筽" | "language" | "#"| "book" | "build"; 
+ phrase    : <adjective> <noun>;                           
+ doge      : /^

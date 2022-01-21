@@ -1,0 +1,8 @@
+ exNresson : <product> (('+' | '-') <product>)*; 
+ product : <value>   (('*' | '/')   <value>)*;
+ value : /[0-9]+/ | '(' <expression> ')'; ession : <product> (('+' | '-') <product>)*; 
+ product : <value>   (('*' | '/')   <value>)*;
+ value : /[0-9]+/ | '(' <expression> ')';  exPression : <product> (('+' | '-' <product>)*; 
+ prodon : <product> (('+' | '-') <product>)*; 
+ product : <value>   (('*' | '/')   <value>)*;
+ value : /[0-9]+/ | '(' <expression> ')';  expression : <product> (('+' | '-') <product>)*

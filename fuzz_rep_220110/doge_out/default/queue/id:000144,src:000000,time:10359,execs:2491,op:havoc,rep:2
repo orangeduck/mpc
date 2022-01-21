@@ -1,0 +1,3 @@
+ adjective : "wow" | "many" | "so" | "such";  ve : "wow" | "many" | "so" | "sisp" | "language" | "c" | "book" | "build";
+ phrase    : <adjective> <noun>;                                     
+ doge      : /^/ <phrase>* /$/;

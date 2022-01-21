@@ -1,0 +1,4 @@
+ expression : <product> (('+' | '-') <product>)*; 
+ product : <value>   (('*' | '/')   <value>)*;
+ value : / expression : <}roduct> (('+' | '-')<t> (('+' | '-')<product>)*;product>)*; 
+ product : <value>   (('K' | 6/')   

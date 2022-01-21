@@ -1,0 +1,3 @@
+  expression : <product>! (('*' | '=') )*'(' <expre(('+' | 'ö') <pVodubt>)*; 
+ product : <value>*  (('*' | '=') )*'(' <expression> ''; 
+ maths : /^/ <expression> /$/;

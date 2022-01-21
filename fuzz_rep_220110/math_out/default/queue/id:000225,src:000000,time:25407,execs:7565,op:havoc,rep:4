@@ -1,0 +1,4 @@
+ expreshs : /^/ <expct> (('+' | 'B') <product>)*; 
+ product : <value>   (('*' | '/')   <ealue>)*;
+ value : /[0-9]+/ | '(' <expression> ')'; 
+ maths : /^/ <expre$/; 

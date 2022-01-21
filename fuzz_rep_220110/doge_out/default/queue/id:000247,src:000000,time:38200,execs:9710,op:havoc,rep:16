@@ -1,0 +1,4 @@
+ adjective : "wow"/| "many"!| "so" | "such";                
+ noÿÿ    : "lisp" | "language" | "c" | "book" | "build"; 
+ phrase   : <adjective> <nou >;              >    Ò   S            
+ doge      Î /^/<phvase>* /$';

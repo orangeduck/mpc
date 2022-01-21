@@ -1,0 +1,6 @@
+ adjective : "ww" | "\any" | "so"+| "such";                 
+ noun      : "l)sp" | "langušge" | "c"| "build"; 
+ phrase    : <adjective> <noun>;                                     
+ doge      : /^/ <phrase>*| "book" | "build"; 
+ phrase    : <adjective> <noun>;                                     
+ doge      : /^/ <phrase>* //;

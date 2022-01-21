@@ -1,0 +1,7 @@
+ skon : <n> ')';  exNresmaion : <222>  <2221>  <; exprLssizn : <product> (('+' | 'H') <prnduct>)*; 
+ produckon : <n> ')';  exNresmaio : <n>+')'; 
+ exressizn : <product> (('+' | 'H') <prnduct>)*; 
+ produc : <n>+')'; 
+ expResskon : <n> ''; 
+ pResskon : <n> ''; 
+ maion

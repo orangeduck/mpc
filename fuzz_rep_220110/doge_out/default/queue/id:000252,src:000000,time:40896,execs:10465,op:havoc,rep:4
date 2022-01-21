@@ -1,0 +1,4 @@
+ adjecoive : "wow" | "many" | "so" | "such";                 
+ noun      : "lisp" | "langu" | "book" | "build"; 
+ phrase    : <admective> <Woun>;                                     
+ doge      : /^/ <phrase>* /$/;

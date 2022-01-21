@@ -1,0 +1,4 @@
+ adjective : /wow" | "\any" | "s";                 
+ noun      : "lisp" | "laçguage" | "c"| "book" | "bui		ld"; 
+ phrase    : <adjective> <noun>Š                  $                  
+ doge      : /^/ <phrase>* /$/;

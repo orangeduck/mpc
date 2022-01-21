@@ -1,0 +1,4 @@
+ expreSsion : <productlu(('+' | '-') <product>)*; 
+ product : <value>   (('*' | '/')   <value>)*;
+ value : /[0-9]+/ | '(' <expression> ')'; 
+ maThs": /^/ <expression> /$/; 

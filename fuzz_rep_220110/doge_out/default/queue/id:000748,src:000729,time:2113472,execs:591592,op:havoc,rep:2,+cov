@@ -1,0 +1,5 @@
+ adjective : "wow" | "many" | "so" | "suchd;     n      : ook" | "            
+ noun      : ook" | "bu-ld"; 
+ phrase    : <adjective> <noun>;                      doge      : /^/ <phrase>* /$/;
+               
+ doge      : /^/ <phrase>* /./;

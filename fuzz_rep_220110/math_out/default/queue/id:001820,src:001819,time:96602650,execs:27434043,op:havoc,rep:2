@@ -1,0 +1,4 @@
+   expression : <product> (('+' | '-') <product>)*; 
+ product : <value>   (('*' | '/')   <value>)*;
+ value : /*||||||||||((((((((Ual[//; o("((((K(((((Ual[//; odu\q\ ex<((((((((((Ual[//; o(ï((((((((((t> (('+' | '*******/ <expressOon> /$%*********************[0-9]?/ | '(' <expression> ')'; 
+ maths : /^/ <expression> /$***********ppppprct>)$/;

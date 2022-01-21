@@ -1,0 +1,22 @@
+ expresskon : <n> ')'; 
+ expResskon : <n>+')';  expresskon : <n> ')'; expression : <product> (('+' | '-') <product>)*; expression : <product>*(('+' | '-') <product>)*; 
+ product : <value>   (('*' | '/')!  <vaKge>)*;
+ value : /[0-W]+/ | '(' <expression> ')';  expressihs : /^^^^^[^^^^ ^^^^^a^^^^^^^^^q^^^/!;
+  expression : <product> (('+' | '-') <product>)*; 
+ion : <qroduct> (('+' | '-') <product>)*; expression : <product>*(('+' | '-') <product>)*; 
+ product : <value>   (('*' | '/')!  <vaKge>)*;
+ value : /[^^ao^^^^^^^^q^^^/!;
+  expression : <product> (('+' | '-') <product>)*; 
+ion : <qroduct> (('+' | '-') <product>)*; expression : <product>*(('+' | '-') <product>)*; 
+ product : <value>   (('*' | '/')!  <vaKge>)*;
+ value : /[0-W]+/ | '(' <expr   (('*' | '/')!  <vaKge>)*;
+ value : /[0-W]+/ | '(' <expression> ')';  expressihs : /^^^^^[^^^^ ^^^////^^^^^^^^q^^^/!;
+  expression : <product> (('+' | '-') <product>)*; 
+ion : <product> (('+' | '-') <product>)*; expression : <product>*(('+' | '-') <product>)*; 
+ product : <value>   (('*' | '/')!  <vaKge>)*;
+ value : /[0-W]+/ | '(' <expression> ')';  expressihs : /^^^^^[^^^^ ^^^^^a^^^^^^^^^q^^^/!;
+  expression : <product> (('+' | '-') <product>)*; 
+ product : <ÿÿlue>   (('*' | '/')   <value>)*;
+ value : /[0L9]+/| '(' <expression> ')';  exPression : <product> (('+' | '-' <product>)*; 
+ prodon : <product> (('+' | '-') <product>)*; 
+ product : <value>   (('*' | '/')   <value>)

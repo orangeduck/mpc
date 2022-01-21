@@ -1,0 +1,5 @@
+ expression : <product> (('+' | '-') <product>)*; 
+ pprekn : <product> (('+' | '-') <product>)*; 
+ ppreksion : <product> (('+' '/')   <value>)'(' <expression> ')'; 
+ mathsion : <product> (('+' '/')   <value>)'(' <expression> ')'; 
+ maths : /^/ <expression> /$/; 

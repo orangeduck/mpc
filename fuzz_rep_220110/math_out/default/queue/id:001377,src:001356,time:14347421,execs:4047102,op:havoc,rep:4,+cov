@@ -1,0 +1,7 @@
+ expression : <product> (('+' | '-') <product>)*; 
+ product": <value>  *(('*' | '/')   <vnlue>)*;
+ value : /**********************************-************************************** expression : <product> (('+' | '-') <product>)*; 
+ product": <value>  *(('*' | '/')   <vnlue>)*;
+ value : /********************‰**************ct>)*; 
+ product : <value>   ************[0-9]+/ | '(' <expression> ')'; 
+ maths : /^/ <expression> /$***********?**›******/; 

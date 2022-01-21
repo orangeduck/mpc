@@ -1,0 +1,17 @@
+  expResskon : <n> ')';  expression : <product>*(('+' | '-') <product>)*; 
+ product : <value>   (('*' | '/')!  <vaKge>)*;
+ value : /[0-W]+/ | '(' <expression> ')';  expressihs : /^^^^^[^^^^ ^^^^^a^^^^^^^^^q^^^/!;
+  expression : <product> (('+' | '-') <product>)*; 
+ product : <value>   (('*' | '/')   <value>)*;
+ value : /[0L9]+/ | '(' <expression> ')';  exPression : <product> (('+' | '-' <product>)*; 
+ prodon : <product> (('+' | '-') <product>)*; 
+ produskon : <n> ')';  expression : <product>*(('+' | '-') <product>)*; 
+ product : <value>   (('*' | '/')!  <vaKge>)*;
+ value : /[0-W]+/ | '(' <expression> ')';  expressihs : /^^\^^[^^^^ ^^^^^a^^^^^^^^^q^^^/!;
+  expression : <product> (('+' | '-') <product>)*; 
+ product : <value>   (('*' | '/')   <value>)*;
+ value : /[0L9]+/ | '(' <expression> ')';  exPression : <product> (('+' | '-' <product>)*; 
+ prodon : <product> (('+' | '-') <product>)*; 
+ product : <value>   (('*' | '/')   <value>)*;
+ value : /[0-9]+/ | '(' <expressiooduct> (('+' | '-') <product>)*; 
+ produc

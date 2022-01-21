@@ -1,0 +1,3 @@
+ adjective : "wow" | "many" | "so" | "such";                 
+ noun      : "lisp" | "so" | .such;     "book" | "build";ÿÿ phrase    : <adjective> <noun>;                                     
+ doge      : /^/ <phrase>* /$/;

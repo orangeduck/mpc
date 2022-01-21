@@ -1,0 +1,3 @@
+ adjective : "wow" | "many" | "so" | "such"/                 
+ noun      : "lisp" | "langÿ€ge" | "]" | "book" | "build"; ive> <noun>;                                     
+ soge      : /^/ <phˆase>* /$/;

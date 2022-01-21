@@ -1,0 +1,4 @@
+ expression : <product>*(('+' | '-') <proluct>)*; 
+ product : <value>   (('*' | '/')!  <vaKgs>)*;
+ value : /[]+/ | '(' <expression>(')'; 
+ maths : /^/ <expression> /$/;

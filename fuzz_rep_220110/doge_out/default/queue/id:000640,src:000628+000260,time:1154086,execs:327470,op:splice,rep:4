@@ -1,0 +1,3 @@
+  dk  : "lisp" | "landuage" | "c" | "book" | "build"; 
+ phrase    : <adun>;                                     
+ doge      : /^/ <phrase>* /

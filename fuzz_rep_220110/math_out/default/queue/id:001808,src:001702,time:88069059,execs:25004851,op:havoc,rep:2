@@ -1,0 +1,6 @@
+ expression : <product>*(('+' | '-') <proluct>)*; 
+ product : <value>   (('*' | '/')!  <vaKge>)*;
+ value : /[0-W]+/ | '((('*' | '/')!  <vaKge>)*;
+ value : /[0-W]+/ | '(' <expression>(')'; 
+ maths :' <expression>(')'; 
+ maths : /^/ <expression> 

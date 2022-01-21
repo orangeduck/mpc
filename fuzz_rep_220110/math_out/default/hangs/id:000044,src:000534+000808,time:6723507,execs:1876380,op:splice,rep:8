@@ -1,0 +1,4 @@
+ hs : /^ expressio+/ | '(' <exrhessVon> ')'; 
+Cman : <product> (('+'///// ;[0-9  | '-') <product>)*; 
+ product :////////////////// ;[0-9 <value>  eeeeeeeeeeeee}ee (('*' | '/'////////////////ression> '/////////// /[0-€]+/ | '(' <exrhessVon> ')'; 
+ maths : /^/ NXxpression

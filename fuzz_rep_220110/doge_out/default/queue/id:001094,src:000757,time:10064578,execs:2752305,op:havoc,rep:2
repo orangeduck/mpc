@@ -1,0 +1,5 @@
+ adjective : ////////////////////| "so" | "suchd;           $     
+ noun      : oVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVok" | "bu-ld"; 
+ phrase    : <adjective> <noun>;                      doge      : /^/ <phrase>* /$/;
+               
+ doge      : /^/ <phrase>* /$/;

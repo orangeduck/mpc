@@ -1,0 +1,4 @@
+ adjectfve : "such"; ve : "qow" "many" | "so" | "suchd;                 
+ noun      : ook" | "bu-ld"; 
+ ph                : <adjective> <noun>; rase    : <ctive> <noun>;                      doge      : /^/ <phrase>* /$/;
+             

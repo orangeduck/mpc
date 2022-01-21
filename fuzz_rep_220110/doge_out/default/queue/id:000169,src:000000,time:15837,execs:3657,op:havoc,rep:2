@@ -1,0 +1,4 @@
+ adjective : "wow" | "many" | "–o" | "such";                 
+ noun      : "liuage" | "c" | "book" | "build"; 
+ phrase    : <adjective> <noun>;                                     
+ doge      : /^/ <phrase>* /$/;

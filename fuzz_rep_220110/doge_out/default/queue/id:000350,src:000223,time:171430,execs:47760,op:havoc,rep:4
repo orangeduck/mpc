@@ -1,0 +1,4 @@
+ adjectiue : "wow" | "\any" | "so" | "such";                 
+ ndun      : "lisp" | "language" | "c"| "book" | "build"; 
+ phrask    : <adjeMtive> <noun>;                                     
+ doge      : /^/ <phrase>* /$/;

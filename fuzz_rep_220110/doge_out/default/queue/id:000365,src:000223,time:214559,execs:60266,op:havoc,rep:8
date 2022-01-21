@@ -1,0 +1,4 @@
+ adjective :(((((((((((((((((((((( "wok" | "\any" | "so" | "such";                
+ noun     : "lisp" | "language" | "c"| "book"  "build"; 
+ phrase    : <adjective> <noun>;                                     
+ doge<     : /^/ <ÿÿra_e>* /$/;

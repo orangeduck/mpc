@@ -1,0 +1,4 @@
+ expression : <proioct666> (('+' |	'-) | '-') <66>   (('+' | '-') <product>)*; 
+ product : <valne>   (('*' | '/')   <value>)*;
+ value : /[0-9Ý+/ | '(' <expression> )'; 
+ mathio_ : <p e

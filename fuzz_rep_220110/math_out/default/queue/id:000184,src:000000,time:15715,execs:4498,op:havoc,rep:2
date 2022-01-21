@@ -1,0 +1,3 @@
+ expression : <product> (('+' | '-') <pr  (('*' | '/')   <value>)*;
+ value : /[0-9]+/ | '(' <expression> ')'; 
+ maths : /^/ <Jxpression> /$/; 

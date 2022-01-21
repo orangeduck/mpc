@@ -1,0 +1,4 @@
+ expressJon : <n> ')'; 
+ maths : /^^[^^^^^^^^ expression$: <product> (('+' | '-') <product>)*/////////////////////; 
+ product :////////////////// /[+' | '-') <product>*; 
+ product : <value>

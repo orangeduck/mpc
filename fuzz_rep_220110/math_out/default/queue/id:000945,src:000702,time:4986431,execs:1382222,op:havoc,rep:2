@@ -1,0 +1,4 @@
+ nxpression : <product> (('+' '-') <profuct>)*; 
+ prodUct : <value>   (('*' | '/')   <value>)*;
+ value : /[0-9]+/ | '(' <expression> ')'; 
+ maths : /^t Z <v||||alue>/ <exprmssion> /$/; 

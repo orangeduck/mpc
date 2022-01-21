@@ -1,0 +1,16 @@
+ expresskon : <n> ')'; 
+ maths : /^^^^^[^^^^ ^6^^^a^^^^^^^^^^^^^/!;
+  expresskon : <n> ')'; 
+ maths : /^^^^^[^^^^ ^^^^^a^^^^^^^^^q^^^/!;
+  exprpresskon : <n> ')'; 
+ maths : /^^^^^[^^^^ ^^^^^a^^^^^^^^^^^^^/!;
+  expresskon : <n> ')'; 
+ maths : /^^^^^[^^^^ ^^^^^a^^^^^^^^^q^^^/!;
+  expression : <product> (('+' | '-') <product>)*; 
+ product : <value>   (('*' | '/')   <value>)*;
+ value : /[0-9]+/ | '(' <expression> ')'; ession : <product> (('+' | '-') <product>)*; 
+ product : <value>   (('*' | '/')   <value>)*;
+ value : /[0-9]+/ | '(' <expression> ')';  exPression : <product> (('+' | '-' <product>)*; 
+ prodon : <product> (('+' | '-') <product>)*; 
+ product : <value>   (('*' | '/')   <value>)*;
+ value : /[0-9]+/ | '(' <expression> ')';  expression : <product> (('+' | '-') <product>)*; uct : <

@@ -1,0 +1,2 @@
+ expression : <product> (/[0-9]+/ | ''' ('+' | '-') <product>)*;
+ p

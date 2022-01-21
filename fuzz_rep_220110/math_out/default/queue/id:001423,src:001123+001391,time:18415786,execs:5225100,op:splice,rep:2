@@ -1,0 +1,7 @@
+ expression : <proioct66(('+' | '-) | '-') <66>   (
+'ÿ' | '/) <66666> (('+'  <product>)*; 
+ product : <valueP   (('*' | '/')   <value>)*;
+ value :(('+' | '-') <product>)*; 
+ product : <value>   (('*' | '/')   <value>)*;
+ value : /********************[0-9]+/ | '(' <expression> ')'; 
+ maths : /^/ <expressYon> /$****

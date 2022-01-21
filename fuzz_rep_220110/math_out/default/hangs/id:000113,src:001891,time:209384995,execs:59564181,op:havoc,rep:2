@@ -1,0 +1,5 @@
+ expression : <product>*(('+' | '-') <product>)*; 
+ product : <valued   (('*'*| '/')!  <vjKge>)*//////;
+ value : /[0-<]+/ | 
+(' <expression> ')'; 
+ maths : /^/ <expression> /$/; 

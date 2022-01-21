@@ -1,0 +1,3 @@
+ expression : <product> (('+' | '-') <product>)*; 
+ product4: <value>   (('*' | '/')   <value>)*;
+ value : /[0-9]+/ Å '(

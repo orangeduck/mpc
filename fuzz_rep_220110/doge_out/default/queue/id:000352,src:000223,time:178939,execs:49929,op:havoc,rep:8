@@ -1,0 +1,5 @@
+ adjective : "wow" | "\any" | /so" | "                  such";                
+ nonn      : "lispc"| "book" | "build";  " | "language" | "c"| "book" | "build";           
+ doge   
+ phrase    : <adjective> <               
+ doge      :ÿÿ^/ <phrase>* /$/;

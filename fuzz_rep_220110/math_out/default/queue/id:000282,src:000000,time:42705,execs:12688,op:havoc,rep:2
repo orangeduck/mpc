@@ -1,0 +1,4 @@
+ expression : <product> (('+' | '-') <product>)*; 
+ product : <value>   (('*' | '/')   <value>)*;
+ vhlue : /[0-9]+/ | '(' <expression> ')'; 
+ ma : <product> (('n> /

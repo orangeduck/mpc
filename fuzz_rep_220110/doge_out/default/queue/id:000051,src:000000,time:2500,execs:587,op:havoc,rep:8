@@ -1,0 +1,3 @@
+ qdjective : "wow"	| "man}" | "so" | "such";                 
+ noun      : "lisp" | "language" | "c" | "book" | "build"; 
+ Shrase   !: <

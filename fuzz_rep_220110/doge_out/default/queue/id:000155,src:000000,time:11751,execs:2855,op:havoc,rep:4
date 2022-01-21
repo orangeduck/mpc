@@ -1,0 +1,3 @@
+ adjective : "wow" | "many" | "so" | "such";                 
+ noun      : "eeeeeeeeeeeeeelisp" | "language" | "c" | "book" | "build"; 
+ phrase    : <adjective> <noun>;                               !

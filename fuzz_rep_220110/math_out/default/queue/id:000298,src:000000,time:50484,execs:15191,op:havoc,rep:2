@@ -1,0 +1,3 @@
+ expression : <product> (('+' | '-') <product>)*; 
+ ppression : <product> (('+' '/')   <value>)'(' <expression> ')'; 
+ maths : /^/ <expression> /$/; 
