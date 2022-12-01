@@ -1,8 +1,0 @@
-libdir=${prefix}/lib
-includedir=${prefix}/include
-
-Name: mpc
-Description: Library for creating parser combinators
-Version: 0.9.0
-Libs: -L${libdir} -lmpc
-Cflags: -I${includedir}
