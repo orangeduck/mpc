@@ -3275,11 +3275,11 @@ mpc_parser_t *mpca_state(mpc_parser_t *a) {
   return mpc_and(2, mpcf_state_ast, mpc_state(), a, free);
 }
 
-mpc_parser_t *mpca_tag(mpc_parser_t *a, const char *t) {
+mpc_parser_t *mpca_tag(mpc_parser_t *a, char *t) {
   return mpc_apply_to(a, (mpc_apply_to_t)mpc_ast_tag, (void*)t);
 }
 
-mpc_parser_t *mpca_add_tag(mpc_parser_t *a, const char *t) {
+mpc_parser_t *mpca_add_tag(mpc_parser_t *a, char *t) {
   return mpc_apply_to(a, (mpc_apply_to_t)mpc_ast_add_tag, (void*)t);
 }
 

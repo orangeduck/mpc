@@ -335,8 +335,8 @@ mpc_val_t *mpcf_fold_ast(int n, mpc_val_t **as);
 mpc_val_t *mpcf_str_ast(mpc_val_t *c);
 mpc_val_t *mpcf_state_ast(int n, mpc_val_t **xs);
 
-mpc_parser_t *mpca_tag(mpc_parser_t *a, const char *t);
-mpc_parser_t *mpca_add_tag(mpc_parser_t *a, const char *t);
+mpc_parser_t *mpca_tag(mpc_parser_t *a, char *t);
+mpc_parser_t *mpca_add_tag(mpc_parser_t *a, char *t);
 mpc_parser_t *mpca_root(mpc_parser_t *a);
 mpc_parser_t *mpca_state(mpc_parser_t *a);
 mpc_parser_t *mpca_total(mpc_parser_t *a);
