@@ -33,6 +33,25 @@ void test_ident(void) {
 
 }
 
+static mpc_val_t *mpcf_maths(int n, mpc_val_t **xs) {
+  int **vs = (int**)xs;
+  (void) n;
+
+  switch(((char*)xs[1])[0])
+  {
+    case '*': { *vs[0] *= *vs[2]; }; break;
+    case '/': { *vs[0] /= *vs[2]; }; break;
+    case '%': { *vs[0] %= *vs[2]; }; break;
+    case '+': { *vs[0] += *vs[2]; }; break;
+    case '-': { *vs[0] -= *vs[2]; }; break;
+    default: break;
+  }
+
+  free(xs[1]); free(xs[2]);
+
+  return xs[0];
+}
+
 void test_maths(void) {
 
   mpc_parser_t *Expr, *Factor, *Term, *Maths;
@@ -44,12 +63,12 @@ void test_maths(void) {
   Maths  = mpc_new("maths");
 
   mpc_define(Expr, mpc_or(2,
-    mpc_and(3, mpcf_maths, Factor, mpc_oneof("*/"), Factor, free, free),
+    mpc_and(3, mpcf_maths, Factor, mpc_oneof("+-"), Factor, free, free),
     Factor
   ));
 
   mpc_define(Factor, mpc_or(2,
-    mpc_and(3, mpcf_maths, Term, mpc_oneof("+-"), Term, free, free),
+    mpc_and(3, mpcf_maths, Term, mpc_oneof("*/"), Term, free, free),
     Term
   ));
 
@@ -63,6 +82,7 @@ void test_maths(void) {
   PT_ASSERT(mpc_test_pass(Maths, "1", &r0, int_eq, free, int_print));
   PT_ASSERT(mpc_test_pass(Maths, "(5)", &r1, int_eq, free, int_print));
   PT_ASSERT(mpc_test_pass(Maths, "(4*2)+5", &r2, int_eq, free, int_print));
+  PT_ASSERT(mpc_test_pass(Maths, "4*2+5", &r2, int_eq, free, int_print));
   PT_ASSERT(mpc_test_fail(Maths, "a", &r3, int_eq, free, int_print));
   PT_ASSERT(mpc_test_fail(Maths, "2b+4", &r4, int_eq, free, int_print));
 

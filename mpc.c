@@ -2671,25 +2671,6 @@ mpc_val_t *mpcf_strfold(int n, mpc_val_t **xs) {
   return xs[0];
 }
 
-mpc_val_t *mpcf_maths(int n, mpc_val_t **xs) {
-  int **vs = (int**)xs;
-  (void) n;
-
-  switch(((char*)xs[1])[0])
-  {
-    case '*': { *vs[0] *= *vs[2]; }; break;
-    case '/': { *vs[0] /= *vs[2]; }; break;
-    case '%': { *vs[0] %= *vs[2]; }; break;
-    case '+': { *vs[0] += *vs[2]; }; break;
-    case '-': { *vs[0] -= *vs[2]; }; break;
-    default: break;
-  }
-
-  free(xs[1]); free(xs[2]);
-
-  return xs[0];
-}
-
 /*
 ** Printing
 */
