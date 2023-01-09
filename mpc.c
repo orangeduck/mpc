@@ -601,9 +601,7 @@ static void mpc_err_string_cat(char *buffer, int *pos, int *max, char const *fmt
   va_end(va);
 }
 
-static char char_unescape_buffer[4];
-
-static const char *mpc_err_char_unescape(char c) {
+static const char *mpc_err_char_unescape(char c, char char_unescape_buffer[4]) {
 
   char_unescape_buffer[0] = '\'';
   char_unescape_buffer[1] = ' ';
@@ -633,6 +631,7 @@ char *mpc_err_string(mpc_err_t *x) {
   int pos = 0;
   int max = 1023;
   char *buffer = calloc(1, 1024);
+  char char_unescape_buffer[4];
 
   if (x->failure) {
     mpc_err_string_cat(buffer, &pos, &max,
@@ -657,7 +656,7 @@ char *mpc_err_string(mpc_err_t *x) {
   }
 
   mpc_err_string_cat(buffer, &pos, &max, " at ");
-  mpc_err_string_cat(buffer, &pos, &max, mpc_err_char_unescape(x->received));
+  mpc_err_string_cat(buffer, &pos, &max, mpc_err_char_unescape(x->received, char_unescape_buffer));
   mpc_err_string_cat(buffer, &pos, &max, "\n");
 
   return realloc(buffer, strlen(buffer) + 1);
