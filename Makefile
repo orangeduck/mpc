@@ -15,7 +15,7 @@ EXAMPLESEXE = $(EXAMPLES:.c=)
 
 .PHONY: all check clean libs $(DIST)/$(PROJ).pc
 
-all: $(EXAMPLESEXE) check
+all: $(EXAMPLESEXE) check libs $(DIST)/$(PROJ).pc
 
 $(DIST):
 	$(MKDIR) $(DIST)
@@ -65,7 +65,8 @@ install: all
 	install -m755 -t $(DESTDIR)$(PREFIX)/lib $(DIST)/lib*
 	install -m644 -t $(DESTDIR)$(PREFIX)/share/$(PROJ) $(PROJ).c $(PROJ).h
 	install -m644 $(PROJ).h $(DESTDIR)$(PREFIX)/include/$(PROJ).h
-	install -m644 $(PROJ).pc $(DESTDIR)$(PREFIX)/lib/pkgconfig/$(PROJ).pc
+	install -m644 $(DIST)/$(PROJ).pc \
+	  $(DESTDIR)$(PREFIX)/lib/pkgconfig/$(PROJ).pc
 
 uninstall:
 	rm -rf -- \
