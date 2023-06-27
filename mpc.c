@@ -1649,11 +1649,15 @@ mpc_parser_t *mpc_failf(const char *fmt, ...) {
   char *buffer;
 
   mpc_parser_t *p = mpc_undefined();
+  if (!p) {
+    return NULL;
+  }
   p->type = MPC_TYPE_FAIL;
 
   va_start(va, fmt);
   buffer = malloc(2048);
   if (!buffer) {
+    mpc_delete(p);
     return NULL;
   }
   vsprintf(buffer, fmt, va);
@@ -1661,6 +1665,10 @@ mpc_parser_t *mpc_failf(const char *fmt, ...) {
 
   buffer = realloc(buffer, strlen(buffer) + 1);
   p->data.fail.m = buffer;
+  if (!buffer) {
+    mpc_delete(p);
+    return NULL;
+  }
   return p;
 
 }
