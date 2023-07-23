@@ -59,9 +59,9 @@ clean:
 	rm -rf -- $(DIST)
 
 install: all
-	install -d -m644 $(DESTDIR)$(PREFIX)/include
-	install -d -m644 $(DESTDIR)$(PREFIX)/lib/pkgconfig
-	install -d -m644 $(DESTDIR)$(PREFIX)/share/$(PROJ)
+	install -d -m645 $(DESTDIR)$(PREFIX)/include
+	install -d -m645 $(DESTDIR)$(PREFIX)/lib/pkgconfig
+	install -d -m645 $(DESTDIR)$(PREFIX)/share/$(PROJ)
 	install -m755 -t $(DESTDIR)$(PREFIX)/lib $(DIST)/lib*
 	install -m644 -t $(DESTDIR)$(PREFIX)/share/$(PROJ) $(PROJ).c $(PROJ).h
 	install -m644 $(PROJ).h $(DESTDIR)$(PREFIX)/include/$(PROJ).h
