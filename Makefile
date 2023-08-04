@@ -37,7 +37,7 @@ $(DIST)/test-static: $(TESTS) $(DIST)/lib$(PROJ).a $(PROJ).h tests/ptest.h
 	$(CC) $(filter-out -Werror, $(CFLAGS)) $(TESTS) -lm -L$(DIST) -l$(PROJ) -static -o $(DIST)/test-static
 
 examples/%: $(DIST)/.dirstamp examples/%.c $(PROJ).c $(PROJ).h
-	$(CC) $(CFLAGS) $(filter-out $(DIST) $(PROJ).h, $^) -lm -o $(DIST)/$@
+	$(CC) $(CFLAGS) $(filter-out $(DIST)/.dirstamp $(PROJ).h, $^) -lm -o $(DIST)/$@
 
 $(DIST)/lib$(PROJ).so: $(DIST)/.dirstamp $(PROJ).c $(PROJ).h
 ifneq ($(OS),Windows_NT)
