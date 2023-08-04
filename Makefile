@@ -17,11 +17,12 @@ EXAMPLESEXE = $(EXAMPLES:.c=)
 
 all: $(EXAMPLESEXE) check libs $(DIST)/$(PROJ).pc
 
-$(DIST):
+$(DIST)/.dirstamp:
 	$(MKDIR) $(DIST)
 	$(MKDIR) $(DIST)/examples
+	touch $@
 
-check: $(DIST) $(DIST)/test-file $(DIST)/test-static $(DIST)/test-dynamic
+check: $(DIST)/.dirstamp $(DIST)/test-file $(DIST)/test-static $(DIST)/test-dynamic
 	./$(DIST)/test-file
 	./$(DIST)/test-static
 	LD_LIBRARY_PATH=$(DIST) ./$(DIST)/test-dynamic
@@ -35,23 +36,23 @@ $(DIST)/test-dynamic: $(TESTS) $(DIST)/lib$(PROJ).so $(PROJ).h tests/ptest.h
 $(DIST)/test-static: $(TESTS) $(DIST)/lib$(PROJ).a $(PROJ).h tests/ptest.h
 	$(CC) $(filter-out -Werror, $(CFLAGS)) $(TESTS) -lm -L$(DIST) -l$(PROJ) -static -o $(DIST)/test-static
 
-examples/%: $(DIST) examples/%.c $(PROJ).c $(PROJ).h
-	$(CC) $(CFLAGS) $(filter-out $(DIST) $(PROJ).h, $^) -lm -o $(DIST)/$@
+examples/%: $(DIST)/.dirstamp examples/%.c $(PROJ).c $(PROJ).h
+	$(CC) $(CFLAGS) $(filter-out $(DIST)/.dirstamp $(PROJ).h, $^) -lm -o $(DIST)/$@
 
-$(DIST)/lib$(PROJ).so: $(DIST) $(PROJ).c $(PROJ).h
+$(DIST)/lib$(PROJ).so: $(DIST)/.dirstamp $(PROJ).c $(PROJ).h
 ifneq ($(OS),Windows_NT)
 	$(CC) $(CFLAGS) -fPIC -shared $(PROJ).c -o $(DIST)/lib$(PROJ).so
 else
 	$(CC) $(CFLAGS) -shared $(PROJ).c -o $(DIST)/lib$(PROJ).so
 endif
 
-$(DIST)/lib$(PROJ).a: $(DIST) $(PROJ).c $(PROJ).h
+$(DIST)/lib$(PROJ).a: $(DIST)/.dirstamp $(PROJ).c $(PROJ).h
 	$(CC) $(CFLAGS) -c $(PROJ).c -o $(DIST)/$(PROJ).o
 	$(AR) rcs $(DIST)/lib$(PROJ).a $(DIST)/$(PROJ).o
 
 libs: $(DIST)/lib$(PROJ).so $(DIST)/lib$(PROJ).a
 
-$(DIST)/$(PROJ).pc: $(DIST) $(PROJ).pc
+$(DIST)/$(PROJ).pc: $(DIST)/.dirstamp $(PROJ).pc
 	cp $(PROJ).pc $(DIST)/$(PROJ).pc
 	sed -i '1i\prefix=$(PREFIX)/' $(DIST)/$(PROJ).pc
 
