@@ -220,6 +220,8 @@ mpc_parser_t *mpc_tok_braces(mpc_parser_t *a, mpc_dtor_t ad);
 mpc_parser_t *mpc_tok_brackets(mpc_parser_t *a, mpc_dtor_t ad);
 mpc_parser_t *mpc_tok_squares(mpc_parser_t *a, mpc_dtor_t ad);
 
+mpc_parser_t *mpc_sepby1(mpc_fold_t f, mpc_parser_t *sep, mpc_parser_t *a);
+
 /*
 ** Common Function Parameters
 */

@@ -357,6 +357,14 @@ Runs `a` one or more times until it fails. Results are combined with fold functi
 * * *
 
 ```c
+mpc_parser_t *mpc_sepby1(mpc_fold_t f, mpc_parser_t *sep, mpc_parser_t *a);
+```
+
+Runs `a` one or more times, separated by `sep`. Results are combined with fold function `f`.
+
+* * *
+
+```c
 mpc_parser_t *mpc_count(int n, mpc_fold_t f, mpc_parser_t *a, mpc_dtor_t da);
 ```
 
