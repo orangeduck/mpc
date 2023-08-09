@@ -2120,6 +2120,12 @@ mpc_parser_t *mpc_tok_braces(mpc_parser_t *a, mpc_dtor_t ad)   { return mpc_tok_
 mpc_parser_t *mpc_tok_brackets(mpc_parser_t *a, mpc_dtor_t ad) { return mpc_tok_between(a, ad, "{", "}"); }
 mpc_parser_t *mpc_tok_squares(mpc_parser_t *a, mpc_dtor_t ad)  { return mpc_tok_between(a, ad, "[", "]"); }
 
+mpc_parser_t *mpc_sepby1(mpc_fold_t f, mpc_parser_t *sep, mpc_parser_t *a) {
+  return mpc_and(2, f,
+    a, mpc_many(f, mpc_and(2, mpcf_snd_free, sep, mpc_copy(a), free)),
+    free);
+}
+
 /*
 ** Regular Expression Parsers
 */

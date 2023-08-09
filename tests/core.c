@@ -242,6 +242,18 @@ void test_eoi(void) {
 
 }
 
+void test_sepby(void) {
+  mpc_parser_t* CommaSepIdent = mpc_sepby1(mpcf_strfold, mpc_char(','), mpc_ident());
+
+  PT_ASSERT(mpc_test_fail(CommaSepIdent, "", "", streq, free, strprint));
+  PT_ASSERT(mpc_test_pass(CommaSepIdent, "one", "one", streq, free, strprint));
+  PT_ASSERT(mpc_test_pass(CommaSepIdent, "one,", "one", streq, free, strprint));
+  PT_ASSERT(mpc_test_pass(CommaSepIdent, "one,two,", "onetwo", streq, free, strprint));
+  PT_ASSERT(mpc_test_pass(CommaSepIdent, "one,two,three", "onetwothree", streq, free, strprint));
+
+  mpc_delete(CommaSepIdent);
+}
+
 void suite_core(void) {
   pt_add_test(test_ident,  "Test Ident",  "Suite Core");
   pt_add_test(test_maths,  "Test Maths",  "Suite Core");
@@ -251,4 +263,5 @@ void suite_core(void) {
   pt_add_test(test_reader, "Test Reader", "Suite Core");
   pt_add_test(test_tokens, "Test Tokens", "Suite Core");
   pt_add_test(test_eoi,    "Test EOI",    "Suite Core");
+  pt_add_test(test_sepby,  "Test SepBy",  "Suite Core");
 }
