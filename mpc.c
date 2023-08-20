@@ -1046,7 +1046,7 @@ enum {
 
 #define MPC_MAX_RECURSION_DEPTH 1000
 
-static mpc_result_t *grow_results(mpc_input_t *i, int j, mpc_result_t *results_stk, mpc_result_t *results){
+static mpc_result_t *mpc_grow_results(mpc_input_t *i, int j, mpc_result_t *results_stk, mpc_result_t *results){
   mpc_result_t *tmp_results = results;
 
   if (j == MPC_PARSE_STACK_MIN) {
@@ -1190,7 +1190,7 @@ static int mpc_parse_run(mpc_input_t *i, mpc_parser_t *p, mpc_result_t *r, mpc_e
 
       while (mpc_parse_run(i, p->data.repeat.x, &results[j], e, depth+1)) {
         j++;
-        results = grow_results(i, j, results_stk, results);
+        results = mpc_grow_results(i, j, results_stk, results);
       }
 
       *e = mpc_err_merge(i, *e, results[j].error);
@@ -1205,7 +1205,7 @@ static int mpc_parse_run(mpc_input_t *i, mpc_parser_t *p, mpc_result_t *r, mpc_e
 
       while (mpc_parse_run(i, p->data.repeat.x, &results[j], e, depth+1)) {
         j++;
-        results = grow_results(i, j, results_stk, results);
+        results = mpc_grow_results(i, j, results_stk, results);
       }
 
       if (j == 0) {
