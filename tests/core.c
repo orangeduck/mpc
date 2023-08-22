@@ -8,6 +8,11 @@ static int int_eq(const void* x, const void* y) { return (*(int*)x == *(int*)y);
 static void int_print(const void* x) { printf("'%i'", *((int*)x)); }
 static int streq(const void* x, const void* y) { return (strcmp(x, y) == 0); }
 static void strprint(const void* x) { printf("'%s'", (char*)x); }
+static mpc_val_t *fold_vals(int n, mpc_val_t **xs) {
+  char** vals = malloc(sizeof(char*) * n);
+  memcpy(vals, xs, sizeof(char*) * n);
+  return vals;
+}
 
 void test_ident(void) {
 
@@ -252,6 +257,19 @@ void test_sepby(void) {
   PT_ASSERT(mpc_test_pass(CommaSepIdent, "one,two,three", "onetwothree", streq, free, strprint));
 
   mpc_delete(CommaSepIdent);
+
+  mpc_parser_t* CommaSepIdent1 = mpc_sepby1(fold_vals, mpc_char(','), mpc_ident());
+  mpc_result_t r;
+
+  mpc_parse("<test>", "uno,dos,tres,cuatro", CommaSepIdent1, &r);
+  char **vals = r.output;
+  PT_ASSERT(strcmp("uno",    vals[0]) == 0);
+  PT_ASSERT(strcmp("dos",    vals[1]) == 0);
+  PT_ASSERT(strcmp("tres",   vals[2]) == 0);
+  PT_ASSERT(strcmp("cuatro", vals[3]) == 0);
+
+  free(vals);
+  mpc_delete(CommaSepIdent1);
 }
 
 void suite_core(void) {
