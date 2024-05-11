@@ -1,9 +1,6 @@
 #!/bin/bash
-for file in "mpc.c"; do
-  $CC $CFLAGS -c ${file}
-done
 
-rm -f ./test*.o
+$CC $CFLAGS -c mpc.c
 llvm-ar rcs libfuzz.a *.o
 
 

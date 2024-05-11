@@ -1,11 +1,5 @@
-// Heuristic: FuzzerGenHeuristic6 :: Target: mpca_grammar
-#include <stdlib.h>
 #include <stdint.h>
-#include <stdio.h>
-#include <string.h>
-
 #include "mpc.h"
-#include "ptest.h"
 
 int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     if (size < 1) {
@@ -28,4 +22,3 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
 
     return 0;
 }
-  
