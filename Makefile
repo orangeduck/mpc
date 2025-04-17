@@ -12,10 +12,13 @@ CFLAGS ?= $(STD) -pedantic -O3 -g -Wall -Werror -Wextra -Wformat=2 -Wshadow \
 TESTS = $(wildcard tests/*.c)
 EXAMPLES = $(wildcard examples/*.c)
 EXAMPLESEXE = $(EXAMPLES:.c=)
+DEPFILES = $(DIST)/$(PROJ).d
 
 .PHONY: all check clean libs $(DIST)/$(PROJ).pc
 
 all: $(EXAMPLESEXE) check libs $(DIST)/$(PROJ).pc
+
+-include $(DEPFILES)
 
 $(DIST)/.dirstamp:
 	$(MKDIR) $(DIST)
@@ -46,9 +49,11 @@ else
 	$(CC) $(CFLAGS) -shared $(PROJ).c -o $(DIST)/lib$(PROJ).so
 endif
 
-$(DIST)/lib$(PROJ).a: $(DIST)/.dirstamp $(PROJ).c $(PROJ).h
-	$(CC) $(CFLAGS) -c $(PROJ).c -o $(DIST)/$(PROJ).o
-	$(AR) rcs $(DIST)/lib$(PROJ).a $(DIST)/$(PROJ).o
+$(DIST)/$(PROJ).o: $(PROJ).c $(PROJ).h $(DIST)/.dirstamp
+	$(CC) $(CFLAGS) -MMD -MT $@ -MF $(DIST)/$(PROJ).d -c $< -o $@ 
+
+$(DIST)/lib$(PROJ).a: $(DIST)/$(PROJ).o
+	$(AR) rcs $@ $^
 
 libs: $(DIST)/lib$(PROJ).so $(DIST)/lib$(PROJ).a
 
