@@ -358,12 +358,19 @@ enum {
   MPCA_LANG_WHITESPACE_SENSITIVE = 2
 };
 
+typedef struct {
+  mpc_parser_t  **parsers;
+  unsigned int  parsers_num;
+} mpc_auto_parsers_t;
+
 mpc_parser_t *mpca_grammar(int flags, const char *grammar, ...);
 
 mpc_err_t *mpca_lang(int flags, const char *language, ...);
 mpc_err_t *mpca_lang_file(int flags, FILE *f, ...);
 mpc_err_t *mpca_lang_pipe(int flags, FILE *f, ...);
 mpc_err_t *mpca_lang_contents(int flags, const char *filename, ...);
+mpc_err_t	*mpca_lang_auto(int flags, const char *language, mpc_auto_parsers_t **parser_refs);
+mpc_err_t	*mpca_lang_auto_files(int flags, unsigned long amount, char **files, mpc_auto_parsers_t **parser_refs);
 
 /*
 ** Misc
@@ -383,6 +390,8 @@ int mpc_test_fail(mpc_parser_t *p, const char *s, const void *d,
   int(*tester)(const void*, const void*),
   mpc_dtor_t destructor,
   void(*printer)(const void*));
+int mpc_auto_find_parser(char *name, mpc_auto_parsers_t	*autoparser, mpc_parser_t **parser_ref);
+void mpc_auto_delete(mpc_auto_parsers_t *autoparser);
 
 #ifdef __cplusplus
 }
