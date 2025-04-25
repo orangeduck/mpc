@@ -834,15 +834,16 @@ This opens and reads in the contents of the file given by `filename` and passes 
 
 * * *
 
-Automatic parser generating functions:
-
-* * *
-
+### Automatic parsing
+These functions rely on the following struct:
 ```c
-mpc_err_t	*mpca_lang_auto(int flags, const char *language, mpc_auto_parsers_t **parser_refs);
+typedef struct {
+  mpc_parser_t  **parsers;
+  unsigned int  parsers_num;
+} mpc_auto_parsers_t;
 ```
 
-This creates a `mpc_auto_parsers_t` struct from a single language string, which holds all the parsers. Parsers can be retrieved by `mpc_auto_find_parser` and freed via `mpc_auto_delete`. This means that the above example can be rewritten in a much more concise way:
+The idea is that you don't have to declare parsers yourself, saving you a lot of boilerplate and cleanup. This means that the above example can be rewritten in a much more concise way:
 
 ```c
 mpc_auto_parsers_t *parsers;
@@ -867,6 +868,16 @@ if (mpc_auto_find_parser("maths", parsers, &entrypoint))
 }
 mpc_auto_delete(parsers);
 ```
+
+This gets especially visibile when you areworking with many parsers at once.
+
+* * *
+
+```c
+mpc_err_t	*mpca_lang_auto(int flags, const char *language, mpc_auto_parsers_t **parser_refs);
+```
+
+This creates a `mpc_auto_parsers_t` struct from a single language string, which holds all the parsers. Parsers can be retrieved by `mpc_auto_find_parser` and freed via `mpc_auto_delete`.
 
 * * *
 
