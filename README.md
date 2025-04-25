@@ -832,6 +832,66 @@ mpc_err_t *mpca_lang_contents(int flags, const char *filename, ...);
 
 This opens and reads in the contents of the file given by `filename` and passes it to `mpca_lang`.
 
+* * *
+
+Automatic parser generating functions:
+
+* * *
+
+```c
+mpc_err_t	*mpca_lang_auto(int flags, const char *language, mpc_auto_parsers_t **parser_refs);
+```
+
+This creates a `mpc_auto_parsers_t` struct from a single language string, which holds all the parsers. Parsers can be retrieved by `mpc_auto_find_parser` and freed via `mpc_auto_delete`. This means that the above example can be rewritten in a much more concise way:
+
+```c
+mpc_auto_parsers_t *parsers;
+mpca_lang_auto(MPCA_LANG_DEFAULT,
+  " expression : <product> (('+' | '-') <product>)*; "
+  " product    : <value>   (('*' | '/')   <value>)*; "
+  " value      : /[0-9]+/ | '(' <expression> ')';    "
+  " maths      : /^/ <expression> /$/;               ",
+  &parsers);
+
+mpc_parser_t       *entrypoint;
+if (mpc_auto_find_parser("maths", parsers, &entrypoint))
+{
+  mpc_result_t r;
+  if (mpc_parse("input", input, entrypoint, &r)) {
+    mpc_ast_print(r.output);
+    mpc_ast_delete(r.output);
+  } else {
+    mpc_err_print(r.error);
+    mpc_err_delete(r.error);
+  }
+}
+mpc_auto_delete(parsers);
+```
+
+* * *
+
+```C
+mpc_err_t	*mpca_lang_auto_files(int flags, unsigned long amount, char **files, mpc_auto_parsers_t **parser_refs);
+```
+
+This takes in an array of files as well as the amount of files, opens them and creates a concatenated mpca grammar string that gets parsed into an `mpc_auto_parsers_t` struct. Parsers can be retrieved by `mpc_auto_find_parser` and freed via `mpc_auto_delete`.
+
+* * *
+
+```C
+int mpc_auto_find_parser(char *name, mpc_auto_parsers_t	*autoparser, mpc_parser_t **parser_ref);
+```
+
+Searches the `mpc_auto_parsers_t` struct created either by `mpca_lang_auto` or `mpca_lang_auto_files` for a given parser by name and places it in `parser_ref`. Returns 1 if found, 0 if not.
+
+* * *
+
+```C
+void mpc_auto_delete(mpc_auto_parsers_t *autoparser);
+```
+
+Frees all the data inside the `mpc_auto_parsers_t` struct. This includes every parser, the internal array as well as the struct itself.
+
 Case Study - Tokenizer
 ======================
 
