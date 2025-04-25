@@ -3505,6 +3505,16 @@ static int is_number(const char* s) {
   return 1;
 }
 
+static mpc_parser_t *mpca_parser_on_the_fly(char *x, mpca_grammar_st_t *st) {
+  mpc_parser_t  *p;
+
+  p = mpc_new(x);
+  st->parsers_num++;
+  st->parsers = realloc(st->parsers, sizeof(mpc_parser_t*) * st->parsers_num);
+  st->parsers[st->parsers_num - 1] = p;
+  return p;
+}
+
 static mpc_parser_t *mpca_grammar_find_parser(char *x, mpca_grammar_st_t *st) {
 
   int i;
@@ -3537,21 +3547,20 @@ static mpc_parser_t *mpca_grammar_find_parser(char *x, mpca_grammar_st_t *st) {
     }
 
     /* Search New Parsers */
-    while (1) {
-
-      p = va_arg(*st->va, mpc_parser_t*);
-
+    if (!st->va)
+      return (mpca_parser_on_the_fly(x, st));
+    p = va_arg(*st->va, mpc_parser_t*);
+    while (p) {
       st->parsers_num++;
       st->parsers = realloc(st->parsers, sizeof(mpc_parser_t*) * st->parsers_num);
-      st->parsers[st->parsers_num-1] = p;
-
-      if (p == NULL || p->name == NULL) { return mpc_failf("Unknown Parser '%s'!", x); }
-      if (p->name && strcmp(p->name, x) == 0) { return p; }
-
+      st->parsers[st->parsers_num - 1] = p;
+      if (p == NULL || p->name == NULL)
+        return mpc_failf("Unknown Parser '%s'!", x);
+      if (p->name && strcmp(p->name, x) == 0)
+        return p;
+      p = va_arg(*st->va, mpc_parser_t*);
     }
-
   }
-
 }
 
 static mpc_val_t *mpcaf_grammar_id(mpc_val_t *x, void *s) {
@@ -3857,6 +3866,103 @@ mpc_err_t *mpca_lang(int flags, const char *language, ...) {
   free(st.parsers);
   va_end(va);
   return err;
+}
+
+
+mpc_err_t	*mpca_lang_auto(int flags, const char *language, mpc_auto_parsers_t	**parser_refs) {
+  mpca_grammar_st_t st;
+  mpc_input_t       *i;
+  mpc_err_t         *err;
+
+  st.va = NULL;
+  st.parsers_num = 0;
+  st.parsers = NULL;
+  st.flags = flags;
+  i = mpc_input_new_string("<mpca_lang_auto>", language);
+  err = mpca_lang_st(i, &st);
+  mpc_input_delete(i);
+  *parser_refs = malloc(sizeof (mpc_auto_parsers_t));
+  (*parser_refs)->parsers = st.parsers;
+  (*parser_refs)->parsers_num = st.parsers_num;
+  return err;
+}
+
+mpc_err_t	*mpca_lang_auto_files(int flags, unsigned long amount, char **files, mpc_auto_parsers_t	**parser_refs) {
+  mpca_grammar_st_t st;
+  mpc_input_t       *input;
+  mpc_err_t         *err;
+  int               i;
+  int               *fd_array;
+  unsigned long     size;
+  unsigned long     offset;
+  char              *language;
+
+  st.va = NULL;
+  st.parsers_num = 0;
+  st.parsers = NULL;
+  st.flags = flags;
+  fd_array = calloc(sizeof (int), amount);
+  size = 0;
+  for (i = 0; i < amount; i++)
+  {
+    fd_array[i] = open(files[i], O_RDONLY);
+    size += lseek(fd_array[i], 0, SEEK_END);
+  }
+  language = malloc (sizeof (char) * (size + amount + 1));
+  offset = 0;
+  for (i = 0; i < amount; i++)
+  {
+    size = lseek(fd_array[i], 0, SEEK_CUR);
+    lseek(fd_array[i], 0, SEEK_SET);
+    read(fd_array[i], language + offset, size);
+    offset += size;
+    language[offset] = '\n';
+    offset += 1;
+  }
+  language[offset] = 0;
+  free(fd_array);
+  input = mpc_input_new_string("<mpca_lang_auto_files>", language);
+  err = mpca_lang_st(input, &st);
+  mpc_input_delete(input);
+  free(language);
+  *parser_refs = malloc(sizeof (mpc_auto_parsers_t));
+  (*parser_refs)->parsers = st.parsers;
+  (*parser_refs)->parsers_num = st.parsers_num;
+  return err;
+}
+
+int mpc_auto_find_parser(char *name, mpc_auto_parsers_t	*autoparser, mpc_parser_t **parser_ref) {
+  unsigned long i;
+
+  i = 0;
+  while (i < autoparser->parsers_num)
+  {
+    if (strcmp(autoparser->parsers[i]->name, name) == 0)
+    {
+      *parser_ref = autoparser->parsers[i];
+      return 1;
+    }
+    i++;
+  }
+  return 0;
+}
+
+void  mpc_auto_delete(mpc_auto_parsers_t	*autoparser) {
+  unsigned long i;
+
+  i = 0;
+  while (i < autoparser->parsers_num)
+  {
+    mpc_undefine(autoparser->parsers[i]);
+    i++;
+  }
+  while (i > 0)
+  {
+    i--;
+    mpc_delete(autoparser->parsers[i]);
+  }
+  free(autoparser->parsers);
+  free(autoparser);
 }
 
 mpc_err_t *mpca_lang_contents(int flags, const char *filename, ...) {
