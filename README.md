@@ -869,7 +869,7 @@ if (mpc_auto_find_parser("maths", parsers, &entrypoint))
 mpc_auto_delete(parsers);
 ```
 
-This gets especially visibile when you areworking with many parsers at once.
+This gets especially visible when you are working with many parsers at once.
 
 * * *
 
@@ -882,7 +882,7 @@ This creates a `mpc_auto_parsers_t` struct from a single language string, which 
 * * *
 
 ```C
-mpc_err_t	*mpca_lang_auto_files(int flags, unsigned long amount, char **files, mpc_auto_parsers_t **parser_refs);
+mpc_err_t	*mpca_lang_auto_files(int flags, int amount, char **files, mpc_auto_parsers_t **parser_refs);
 ```
 
 This takes in an array of files as well as the amount of files, opens them and creates a concatenated mpca grammar string that gets parsed into an `mpc_auto_parsers_t` struct. Parsers can be retrieved by `mpc_auto_find_parser` and freed via `mpc_auto_delete`.
@@ -890,7 +890,7 @@ This takes in an array of files as well as the amount of files, opens them and c
 * * *
 
 ```C
-int mpc_auto_find_parser(char *name, mpc_auto_parsers_t	*autoparser, mpc_parser_t **parser_ref);
+int mpc_auto_find_parser(const char *name, mpc_auto_parsers_t	*autoparser, mpc_parser_t **parser_ref);
 ```
 
 Searches the `mpc_auto_parsers_t` struct created either by `mpca_lang_auto` or `mpca_lang_auto_files` for a given parser by name and places it in `parser_ref`. Returns 1 if found, 0 if not.

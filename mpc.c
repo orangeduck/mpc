@@ -3869,7 +3869,7 @@ mpc_err_t *mpca_lang(int flags, const char *language, ...) {
 }
 
 
-mpc_err_t	*mpca_lang_auto(int flags, const char *language, mpc_auto_parsers_t	**parser_refs) {
+mpc_err_t *mpca_lang_auto(int flags, const char *language, mpc_auto_parsers_t **parser_refs) {
   mpca_grammar_st_t st;
   mpc_input_t       *i;
   mpc_err_t         *err;
@@ -3887,7 +3887,7 @@ mpc_err_t	*mpca_lang_auto(int flags, const char *language, mpc_auto_parsers_t	**
   return err;
 }
 
-mpc_err_t	*mpca_lang_auto_files(int flags, unsigned long amount, char **files, mpc_auto_parsers_t	**parser_refs) {
+mpc_err_t *mpca_lang_auto_files(int flags, int amount, char **files, mpc_auto_parsers_t **parser_refs) {
   mpca_grammar_st_t st;
   mpc_input_t       *input;
   mpc_err_t         *err;
@@ -3931,7 +3931,7 @@ mpc_err_t	*mpca_lang_auto_files(int flags, unsigned long amount, char **files, m
   return err;
 }
 
-int mpc_auto_find_parser(char *name, mpc_auto_parsers_t	*autoparser, mpc_parser_t **parser_ref) {
+int mpc_auto_find_parser(const char *name, mpc_auto_parsers_t *autoparser, mpc_parser_t **parser_ref) {
   unsigned long i;
 
   i = 0;
@@ -3947,7 +3947,7 @@ int mpc_auto_find_parser(char *name, mpc_auto_parsers_t	*autoparser, mpc_parser_
   return 0;
 }
 
-void  mpc_auto_delete(mpc_auto_parsers_t	*autoparser) {
+void  mpc_auto_delete(mpc_auto_parsers_t *autoparser) {
   unsigned long i;
 
   i = 0;
