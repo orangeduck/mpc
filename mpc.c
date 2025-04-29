@@ -3640,7 +3640,6 @@ static int mpc_unroll_va(mpc_parser_t ***p_refs, va_list va)
   va_list       backup_va;
   mpc_parser_t  *p;
 
-  printf("Start unrolling...\n");
   if (!p_refs)
     return 0;
   va_copy(backup_va, va);
@@ -3652,7 +3651,6 @@ static int mpc_unroll_va(mpc_parser_t ***p_refs, va_list va)
     p = va_arg(backup_va, mpc_parser_t *);
   }
   va_end(backup_va);
-  printf("First pass value: %i\n", i);
   *p_refs = malloc(sizeof (mpc_parser_t *) * i);
   if (!*p_refs)
     return 0;
@@ -3927,11 +3925,13 @@ mpc_err_t *mpca_lang_auto_files(int flags, int amount, char **files, mpc_auto_pa
   mpc_err_t         *err;
   int               i;
   int               *fd_array;
+  unsigned long     tmp;
   unsigned long     size;
   unsigned long     offset;
   char              *language;
 
 
+  printf("Test: %s", files[0]);
   if (!*parser_refs)
     mpc_make_auto_parser(parser_refs, NULL);
   st.create_new = 1;
@@ -3943,7 +3943,14 @@ mpc_err_t *mpca_lang_auto_files(int flags, int amount, char **files, mpc_auto_pa
   for (i = 0; i < amount; i++)
   {
     fd_array[i] = open(files[i], O_RDONLY);
-    size += lseek(fd_array[i], 0, SEEK_END);
+    tmp = lseek(fd_array[i], 0, SEEK_END);
+    if (tmp == (unsigned long) -1)
+      return mpc_err_file(files[i], "Unable to open file!");
+    size += tmp;
+    printf("\nHello %li\n", size);
+    /*
+    printf("%s size: %li\n", files[i], size);
+    */
   }
   language = malloc (sizeof (char) * (size + amount + 1));
   offset = 0;
@@ -3957,6 +3964,8 @@ mpc_err_t *mpca_lang_auto_files(int flags, int amount, char **files, mpc_auto_pa
     offset += 1;
   }
   language[offset] = 0;
+  printf("Language: '%s'\n", language);
+  return NULL;
   free(fd_array);
   input = mpc_input_new_string("<mpca_lang_auto_files>", language);
   err = mpca_lang_st(input, &st);

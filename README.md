@@ -846,7 +846,7 @@ typedef struct {
 The idea is that you don't have to declare parsers yourself, saving you a lot of boilerplate and cleanup. This means that the above example can be rewritten in a much more concise way:
 
 ```c
-mpc_auto_parsers_t *parsers;
+mpc_auto_parsers_t *parsers = NULL;
 mpca_lang_auto(MPCA_LANG_DEFAULT,
   " expression : <product> (('+' | '-') <product>)*; "
   " product    : <value>   (('*' | '/')   <value>)*; "
@@ -877,7 +877,7 @@ This gets especially visible when you are working with many parsers at once. Mix
 mpc_err_t	*mpca_lang_auto(int flags, const char *language, mpc_auto_parsers_t **parser_refs);
 ```
 
-This creates a `mpc_auto_parsers_t` struct from a single language string, which holds all the parsers. Parsers can be retrieved by `mpc_auto_find_parser` and freed via `mpc_auto_delete`.
+This creates a `mpc_auto_parsers_t` struct from a single language string, which holds all the parsers. The given `parser_refs` struct ref has to be either set to NULL or created by `mpc_auto_find_parser`. Parsers can be retrieved by `mpc_auto_find_parser` and freed via `mpc_auto_delete`.
 
 * * *
 
@@ -885,7 +885,7 @@ This creates a `mpc_auto_parsers_t` struct from a single language string, which 
 mpc_err_t	*mpca_lang_auto_files(int flags, int amount, char **files, mpc_auto_parsers_t **parser_refs);
 ```
 
-This takes in an array of files as well as the amount of files, opens them and creates a concatenated mpca grammar string that gets parsed into an `mpc_auto_parsers_t` struct. Parsers can be retrieved by `mpc_auto_find_parser` and freed via `mpc_auto_delete`.
+This takes in an array of files as well as the amount of files, opens them and creates a concatenated mpca grammar string that gets parsed into an `mpc_auto_parsers_t` struct. The given `parser_refs` struct ref has to be either set to NULL or created by `mpc_auto_find_parser`. Parsers can be retrieved by `mpc_auto_find_parser` and freed via `mpc_auto_delete`.
 
 * * *
 

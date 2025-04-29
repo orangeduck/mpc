@@ -1,0 +1,2 @@
+phrase    : <adjective> <noun>;
+doge      : /^/ <phrase>* /$/;

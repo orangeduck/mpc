@@ -400,8 +400,8 @@ void test_digits_file(void) {
   
 }
 
-void test_language_auto(void) {
-  mpc_auto_parsers_t *ap;
+void test_auto_language(void) {
+  mpc_auto_parsers_t *ap  = NULL;
 
   mpca_lang_auto(MPCA_LANG_DEFAULT,
     " expression : <product> (('+' | '-') <product>)*; "
@@ -413,29 +413,29 @@ void test_language_auto(void) {
 }
 
 void test_auto_doge(void) {
-  mpc_auto_parsers_t  *ap;
   mpc_parser_t        *Doge;
   mpc_ast_t           *t0;
+  mpc_auto_parsers_t  *ap     = NULL;
 
 	mpca_lang_auto(MPCA_LANG_DEFAULT,
-	  " adjective : \"wow\" | \"many\" | \"so\" | \"such\";                 "
-	  " noun      : \"lisp\" | \"language\" | \"c\" | \"book\" | \"build\"; "
-	  " phrase    : <adjective> <noun>;                                     "
-	  " doge      : /^/ <phrase>* /$/;                                      ",
-	  &ap);
-  mpc_auto_find_parser("Doge", ap, &Doge);
+    " adjective : \"wow\" | \"many\" | \"so\" | \"such\";                 "
+    " noun      : \"lisp\" | \"language\" | \"c\" | \"book\" | \"build\"; "
+    " phrase    : <adjective> <noun>;                                     "
+    " doge      : /^/ <phrase>* /$/;                                      ",
+    &ap);
+  mpc_auto_find_parser("doge", ap, &Doge);
 
-	t0 = 
-		mpc_ast_build(4, ">", 
+	t0 =
+		mpc_ast_build(4, ">",
 			mpc_ast_new("regex", ""),
-			mpc_ast_build(2, "phrase|>", 
-			  mpc_ast_new("adjective|string", "so"),
-			  mpc_ast_new("noun|string", "c")),
-			mpc_ast_build(2, "phrase|>", 
-			  mpc_ast_new("adjective|string", "so"),
-			  mpc_ast_new("noun|string", "c")),
+			mpc_ast_build(2, "phrase|>",
+        mpc_ast_new("adjective|string", "so"),
+        mpc_ast_new("noun|string", "c")),
+			mpc_ast_build(2, "phrase|>",
+        mpc_ast_new("adjective|string", "so"),
+        mpc_ast_new("noun|string", "c")),
 			mpc_ast_new("regex", "")
-		  );
+      );
 
 	PT_ASSERT(mpc_test_pass(Doge, "so c so c", t0, (int(*)(const void*,const void*))mpc_ast_eq, (mpc_dtor_t)mpc_ast_delete, (void(*)(const void*))mpc_ast_print));
 
@@ -444,15 +444,15 @@ void test_auto_doge(void) {
 	mpc_ast_delete(t0);
 
 	mpc_auto_delete(ap);
-
 }
 
-  void test_auto_qscript(void) {
-  mpc_auto_parsers_t  *ap;
+void test_auto_qscript(void) {
   mpc_parser_t        *Qscript;
   mpc_ast_t           *t0;
+  mpc_err_t *err;
+  mpc_auto_parsers_t  *ap       = NULL;
 
-  mpc_err_t *err = mpca_lang_auto(0,
+  err = mpca_lang_auto(0,
     "  qscript        : /^/ (<comment> | <resource>)* /$/ ;\n"
     "   comment     : '#' /[^\\n]*/ ;\n"
     "resource       : '[' (<rtype> <rname>) ']' <inner_block> ;\n"
@@ -512,7 +512,6 @@ void test_auto_doge(void) {
 
   mpc_ast_delete(t0);
   mpc_auto_delete(ap);
-
 }
 
 void test_auto_partial(void) {
@@ -555,6 +554,37 @@ void test_auto_partial(void) {
 
 }
 
+void test_split_auto_doge(void) {
+
+  mpc_ast_t           *t0;
+  mpc_auto_parsers_t  *ap;
+  mpc_parser_t        *Doge   = mpc_new("doge");
+  char                *files[2] = {"doge1.grammar", "doge2.grammar"};
+
+  mpc_make_auto_parser(&ap, Doge);
+  mpca_lang_auto_files(MPCA_LANG_DEFAULT, 2, files, &ap);
+  return;
+  t0 =
+      mpc_ast_build(4, ">",
+          mpc_ast_new("regex", ""),
+          mpc_ast_build(2, "phrase|>",
+            mpc_ast_new("adjective|string", "so"),
+            mpc_ast_new("noun|string", "c")),
+          mpc_ast_build(2, "phrase|>",
+            mpc_ast_new("adjective|string", "so"),
+            mpc_ast_new("noun|string", "c")),
+          mpc_ast_new("regex", "")
+        );
+
+  PT_ASSERT(mpc_test_pass(Doge, "so c so c", t0, (int(*)(const void*,const void*))mpc_ast_eq, (mpc_dtor_t)mpc_ast_delete, (void(*)(const void*))mpc_ast_print));
+
+  PT_ASSERT(mpc_test_fail(Doge, "so a so c", t0, (int(*)(const void*,const void*))mpc_ast_eq, (mpc_dtor_t)mpc_ast_delete, (void(*)(const void*))mpc_ast_print));
+
+  mpc_ast_delete(t0);
+
+  mpc_auto_delete(ap);
+}
+
 void suite_grammar(void) {
   pt_add_test(test_grammar, "Test Grammar", "Suite Grammar");
   pt_add_test(test_language, "Test Language", "Suite Grammar");
@@ -565,8 +595,9 @@ void suite_grammar(void) {
   pt_add_test(test_missingrule, "Test Missing Rule", "Suite Grammar");
   pt_add_test(test_regex_mode, "Test Regex Mode", "Suite Grammar");
   pt_add_test(test_digits_file, "Test Digits File", "Suite Grammar");
-  pt_add_test(test_digits_file, "Test Auto Language", "Suite Grammar");
-  pt_add_test(test_digits_file, "Test Auto Doge", "Suite Grammar");
-  pt_add_test(test_digits_file, "Test Auto QScript", "Suite Grammar");
+  pt_add_test(test_auto_language, "Test Auto Language", "Suite Grammar");
+  pt_add_test(test_auto_doge, "Test Auto Doge", "Suite Grammar");
+  pt_add_test(test_auto_qscript, "Test Auto QScript", "Suite Grammar");
   pt_add_test(test_auto_partial, "Test Auto Partial", "Suite Grammar");
+  pt_add_test(test_split_auto_doge, "Test Multifile Auto Doge", "Suite Grammar");
 }
