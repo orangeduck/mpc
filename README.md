@@ -869,7 +869,7 @@ if (mpc_auto_find_parser("maths", parsers, &entrypoint))
 mpc_auto_delete(parsers);
 ```
 
-This gets especially visible when you are working with many parsers at once.
+This gets especially visible when you are working with many parsers at once. Mixed declaration can also be done by first generating an `mpc_auto_parsers_t *` struct and filling it with `mpc_parser_t *` structs.
 
 * * *
 
@@ -886,6 +886,14 @@ mpc_err_t	*mpca_lang_auto_files(int flags, int amount, char **files, mpc_auto_pa
 ```
 
 This takes in an array of files as well as the amount of files, opens them and creates a concatenated mpca grammar string that gets parsed into an `mpc_auto_parsers_t` struct. Parsers can be retrieved by `mpc_auto_find_parser` and freed via `mpc_auto_delete`.
+
+* * *
+
+```C
+int mpc_make_auto_parser(mpc_auto_parsers_t **parser_refs, ..., NULL);
+```
+
+A variadic function which takes in a reference to an empty `mpc_auto_parsers_t *` struct, followed by any amount of `mpc_parser_t *` structs and a `NULL` pointer to finish the function. If `parser_refs` is `NULL`: creates a new `mpc_auto_parsers_t *` struct holding the `mpc_parser_t *` structs. Else, extends the given `mpc_auto_parsers_t *` with the given `mpc_parser_t *` structs. Returns 1 if the memory allocation was successful, 0 if not.
 
 * * *
 

@@ -417,7 +417,7 @@ void test_auto_doge(void) {
   mpc_parser_t        *Doge;
   mpc_ast_t           *t0;
 
-	mpca_auto_lang(MPCA_LANG_DEFAULT,
+	mpca_lang_auto(MPCA_LANG_DEFAULT,
 	  " adjective : \"wow\" | \"many\" | \"so\" | \"such\";                 "
 	  " noun      : \"lisp\" | \"language\" | \"c\" | \"book\" | \"build\"; "
 	  " phrase    : <adjective> <noun>;                                     "
@@ -475,7 +475,7 @@ void test_auto_doge(void) {
     "   float       : /[-+]?[0-9]+\\.[0-9]+/ ;\n"
     "   int         : /[-+]?[0-9]+/ ;\n",
   &ap);
-  mpc_auto_find_parser("qscript", ap, &Qscript)
+  mpc_auto_find_parser("qscript", ap, &Qscript);
 
   PT_ASSERT(err == NULL);
 
@@ -515,6 +515,46 @@ void test_auto_doge(void) {
 
 }
 
+void test_auto_partial(void) {
+
+  mpc_ast_t           *t0;
+  mpc_err_t           *err;
+  mpc_auto_parsers_t  *ap;
+  mpc_parser_t        *entrypoint;
+  mpc_parser_t        *Line = mpc_new("line");
+
+  mpc_define(Line, mpca_tag(mpc_apply(mpc_sym("#line"), mpcf_str_ast), "string"));
+  mpc_make_auto_parser(&ap, Line, NULL);
+  err = mpca_lang_auto(MPCA_LANG_PREDICTIVE,
+    "number        : /[0-9]+/ ;\n"
+    "quoted_string : /\"(\\.|[^\"])*\"/ ;\n"
+    "linepragma    : <line> <number> <quoted_string>;\n"
+    "parser        : /^/ (<linepragma>)* /$/ ;\n",
+    &ap);
+  return ;
+
+  PT_ASSERT(err == NULL);
+
+  t0 = mpc_ast_build(3, ">",
+          mpc_ast_new("regex", ""),
+          mpc_ast_build(3, "linepragma|>",
+            mpc_ast_new("line|string", "#line"),
+            mpc_ast_new("number|regex", "10"),
+            mpc_ast_new("quoted_string|regex", "\"test\"")),
+          mpc_ast_new("regex", ""));
+
+  mpc_auto_find_parser("parser", ap, &entrypoint);
+  PT_ASSERT(mpc_test_pass(entrypoint, "#line 10 \"test\"", t0,
+    (int(*)(const void*,const void*))mpc_ast_eq,
+    (mpc_dtor_t)mpc_ast_delete,
+    (void(*)(const void*))mpc_ast_print));
+
+  mpc_ast_delete(t0);
+
+  mpc_auto_delete(ap);
+
+}
+
 void suite_grammar(void) {
   pt_add_test(test_grammar, "Test Grammar", "Suite Grammar");
   pt_add_test(test_language, "Test Language", "Suite Grammar");
@@ -528,4 +568,5 @@ void suite_grammar(void) {
   pt_add_test(test_digits_file, "Test Auto Language", "Suite Grammar");
   pt_add_test(test_digits_file, "Test Auto Doge", "Suite Grammar");
   pt_add_test(test_digits_file, "Test Auto QScript", "Suite Grammar");
+  pt_add_test(test_auto_partial, "Test Auto Partial", "Suite Grammar");
 }

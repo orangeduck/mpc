@@ -21,6 +21,8 @@ extern "C" {
 #include <math.h>
 #include <errno.h>
 #include <ctype.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 /*
 ** State Type
@@ -390,8 +392,11 @@ int mpc_test_fail(mpc_parser_t *p, const char *s, const void *d,
   int(*tester)(const void*, const void*),
   mpc_dtor_t destructor,
   void(*printer)(const void*));
-int mpc_auto_find_parser(char *name, mpc_auto_parsers_t *autoparser, mpc_parser_t **parser_ref);
+
+int mpc_make_auto_parser(mpc_auto_parsers_t **parser_refs, ...);
+int mpc_auto_find_parser(const char *name, mpc_auto_parsers_t *autoparser, mpc_parser_t **parser_ref);
 void mpc_auto_delete(mpc_auto_parsers_t *autoparser);
+void mpc_auto_analyze(mpc_auto_parsers_t *ap);
 
 #ifdef __cplusplus
 }
