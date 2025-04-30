@@ -5,16 +5,13 @@
 extern "C" {
 # endif
 
-# include "../mpc.h"
 # include <stdlib.h>
-# include <stdio.h>
 # include <stdarg.h>
 # include <string.h>
-# include <math.h>
-# include <errno.h>
 # include <ctype.h>
 # include <fcntl.h>
 # include <unistd.h>
+# include "../mpc.h"
 
 # ifndef va_copy
 #  ifndef __va_copy
