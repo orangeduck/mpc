@@ -1,4 +1,5 @@
 #include "../mpc.h"
+#include <stdlib.h>
 
 static void* read_line(void* line) {
   printf("Reading Line: %s", (char*)line);
