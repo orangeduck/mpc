@@ -1,2 +1,2 @@
-adjective : \"wow\" | \"many\" | \"so\" | \"such\";
-noun      : \"lisp\" | \"language\" | \"c\" | \"book\" | \"build\";
+adjective : "wow" | "many" | "so" | "such";
+noun      : "lisp" | "language" | "c" | "book" | "build";
