@@ -3768,8 +3768,6 @@ mpc_err_t *mpca_lang_auto_files(int flags, int amount, char **files, mpc_auto_pa
   unsigned long     offset;
   char              *language;
 
-
-  printf("Test: %s", files[0]);
   if (!*parser_refs)
     mpc_make_auto_parser(parser_refs, NULL);
   st.create_new = 1;
@@ -3785,10 +3783,6 @@ mpc_err_t *mpca_lang_auto_files(int flags, int amount, char **files, mpc_auto_pa
     if (tmp == (unsigned long) -1)
       return mpc_err_file(files[i], "Unable to open file!");
     size += tmp;
-    printf("\nHello %li\n", size);
-    /*
-    printf("%s size: %li\n", files[i], size);
-    */
   }
   language = malloc (sizeof (char) * (size + amount + 1));
   offset = 0;
@@ -3802,11 +3796,10 @@ mpc_err_t *mpca_lang_auto_files(int flags, int amount, char **files, mpc_auto_pa
     offset += 1;
   }
   language[offset] = 0;
-  printf("Language: '%s'\n", language);
-  return NULL;
   free(fd_array);
   input = mpc_input_new_string("<mpca_lang_auto_files>", language);
   err = mpca_lang_st(input, &st);
+
   mpc_input_delete(input);
   free(language);
   *parser_refs = malloc(sizeof (mpc_auto_parsers_t));

@@ -558,12 +558,18 @@ void test_split_auto_doge(void) {
 
   mpc_ast_t           *t0;
   mpc_auto_parsers_t  *ap;
-  mpc_parser_t        *Doge   = mpc_new("doge");
-  char                *files[2] = {"doge1.grammar", "doge2.grammar"};
+  mpc_parser_t        *Doge;
+  mpc_err_t           *error;
+  char                *files[2] = {"./tests/doge1.grammar", "./tests/doge2.grammar"};
 
-  mpc_make_auto_parser(&ap, Doge);
-  mpca_lang_auto_files(MPCA_LANG_DEFAULT, 2, files, &ap);
-  return;
+  ap = NULL;
+  error = mpca_lang_auto_files(MPCA_LANG_DEFAULT, 2, files, &ap);
+  if (error)
+  {
+    mpc_err_print(error);
+    mpc_err_delete(error);
+  }
+  mpc_auto_find_parser("doge", ap, &Doge);
   t0 =
       mpc_ast_build(4, ">",
           mpc_ast_new("regex", ""),
