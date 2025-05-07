@@ -1,7 +1,9 @@
 Micro Parser Combinators
 ========================
 
-Version 0.9.0
+Version 0.10.0
+
+⚠️ *If you wish to update from 0.9.x or below, you need to link the standard libraries like `stdio.h`, `stdib.h` etc. in your own project: MPC has begun cleaning up its namespace*
 
 
 About
