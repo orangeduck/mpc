@@ -1,0 +1,50 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+cc_library(
+    name = "mpc",
+    srcs = [
+        "mpc.c",
+    ],
+    hdrs = [
+        "mpc.h",
+    ],
+    copts = [
+        "-ansi",
+        "-pedantic",
+        "-O3",
+        "-g",
+        "-Wall",
+        "-Werror",
+        "-Wextra",
+        "-Wformat=2",
+        "-Wshadow",
+        "-Wno-long-long",
+        "-Wno-overlength-strings",
+        "-Wno-format-nonliteral",
+        "-Wcast-align",
+        "-Wwrite-strings",
+        "-Wstrict-prototypes",
+        "-Wold-style-definition",
+        "-Wredundant-decls",
+        "-Wnested-externs",
+        "-Wmissing-include-dirs",
+        "-Wswitch-default",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+cc_test(
+    name = "mpc_test",
+    srcs = [
+        "tests/combinators.c",
+        "tests/core.c",
+        "tests/grammar.c",
+        "tests/ptest.c",
+        "tests/ptest.h",
+        "tests/regex.c",
+        "tests/test.c",
+    ],
+    deps = [
+        ":mpc",
+    ]
+)
