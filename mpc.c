@@ -1591,9 +1591,11 @@ mpc_parser_t *mpc_copy(mpc_parser_t *a) {
       for (i = 0; i < a->data.and.n; i++) {
         p->data.and.xs[i] = mpc_copy(a->data.and.xs[i]);
       }
-      p->data.and.dxs = malloc((a->data.and.n-1) * sizeof(mpc_dtor_t));
-      for (i = 0; i < a->data.and.n-1; i++) {
-        p->data.and.dxs[i] = a->data.and.dxs[i];
+      if (a->data.and.n > 0) {
+          p->data.and.dxs = malloc((a->data.and.n-1) * sizeof(mpc_dtor_t));
+          for (i = 0; i < a->data.and.n-1; i++) {
+            p->data.and.dxs[i] = a->data.and.dxs[i];
+          }
       }
     break;
 
