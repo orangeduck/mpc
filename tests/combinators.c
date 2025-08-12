@@ -1,5 +1,6 @@
 #include "ptest.h"
 #include "../mpc.h"
+#include <stdlib.h>
 
 static int check_is_a(mpc_val_t** x) {
   return strcmp(*x, "a") == 0;

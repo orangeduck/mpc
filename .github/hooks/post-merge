@@ -1,0 +1,4 @@
+#!/bin/bash
+
+echo -e "⚠️   WARNING: mpc v0.10 introduces breaking changes! Make sure to update your includes explicitly.\nAffected includes:"
+echo -e " - stdlib.h\n - stdarg.h\n - string.h\n - ctype.h\n - fcntl.h\n - unistd.h"
