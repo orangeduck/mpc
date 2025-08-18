@@ -248,8 +248,12 @@ void test_eoi(void) {
 }
 
 void test_sepby(void) {
-  mpc_parser_t* CommaSepIdent = mpc_sepby1(mpcf_strfold, mpc_char(','), mpc_ident());
+  mpc_parser_t* CommaSepIdent;
+  mpc_parser_t* CommaSepIdent1;
+  mpc_result_t r;
+  char **vals;
 
+  CommaSepIdent = mpc_sepby1(mpcf_strfold, mpc_char(','), mpc_ident());
   PT_ASSERT(mpc_test_fail(CommaSepIdent, "", "", streq, free, strprint));
   PT_ASSERT(mpc_test_pass(CommaSepIdent, "one", "one", streq, free, strprint));
   PT_ASSERT(mpc_test_pass(CommaSepIdent, "one,", "one", streq, free, strprint));
@@ -258,11 +262,10 @@ void test_sepby(void) {
 
   mpc_delete(CommaSepIdent);
 
-  mpc_parser_t* CommaSepIdent1 = mpc_sepby1(fold_vals, mpc_char(','), mpc_ident());
-  mpc_result_t r;
+  CommaSepIdent1 = mpc_sepby1(fold_vals, mpc_char(','), mpc_ident());
 
   mpc_parse("<test>", "uno,dos,tres,cuatro", CommaSepIdent1, &r);
-  char **vals = r.output;
+  vals = r.output;
   PT_ASSERT(strcmp("uno",    vals[0]) == 0);
   PT_ASSERT(strcmp("dos",    vals[1]) == 0);
   PT_ASSERT(strcmp("tres",   vals[2]) == 0);

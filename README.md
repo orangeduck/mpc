@@ -1,7 +1,7 @@
 Micro Parser Combinators
 ========================
 
-Version 0.9.0
+Version 0.9.1
 
 
 About
@@ -831,6 +831,85 @@ mpc_err_t *mpca_lang_contents(int flags, const char *filename, ...);
 ```
 
 This opens and reads in the contents of the file given by `filename` and passes it to `mpca_lang`.
+
+* * *
+
+### Automatic parsing
+These functions rely on the following struct:
+```c
+typedef struct {
+  mpc_parser_t  **parsers;
+  unsigned int  parsers_num;
+} mpc_auto_parsers_t;
+```
+
+The idea is that you don't have to declare parsers yourself, saving you a lot of boilerplate and cleanup. This means that the above example can be rewritten in a much more concise way:
+
+```c
+mpc_auto_parsers_t *parsers = NULL;
+mpca_lang_auto(MPCA_LANG_DEFAULT,
+  " expression : <product> (('+' | '-') <product>)*; "
+  " product    : <value>   (('*' | '/')   <value>)*; "
+  " value      : /[0-9]+/ | '(' <expression> ')';    "
+  " maths      : /^/ <expression> /$/;               ",
+  &parsers);
+
+mpc_parser_t       *entrypoint;
+if (mpc_auto_find_parser("maths", parsers, &entrypoint))
+{
+  mpc_result_t r;
+  if (mpc_parse("input", input, entrypoint, &r)) {
+    mpc_ast_print(r.output);
+    mpc_ast_delete(r.output);
+  } else {
+    mpc_err_print(r.error);
+    mpc_err_delete(r.error);
+  }
+}
+mpc_auto_delete(parsers);
+```
+
+This gets especially visible when you are working with many parsers at once. Mixed declaration can also be done by first generating an `mpc_auto_parsers_t *` struct and filling it with `mpc_parser_t *` structs.
+
+* * *
+
+```c
+mpc_err_t	*mpca_lang_auto(int flags, const char *language, mpc_auto_parsers_t **parser_refs);
+```
+
+This creates a `mpc_auto_parsers_t` struct from a single language string, which holds all the parsers. The given `parser_refs` struct ref has to be either set to NULL or created by `mpc_auto_find_parser`. Parsers can be retrieved by `mpc_auto_find_parser` and freed via `mpc_auto_delete`.
+
+* * *
+
+```C
+mpc_err_t	*mpca_lang_auto_files(int flags, int amount, char **files, mpc_auto_parsers_t **parser_refs);
+```
+
+This takes in an array of files as well as the amount of files, opens them and creates a concatenated mpca grammar string that gets parsed into an `mpc_auto_parsers_t` struct. The given `parser_refs` struct ref has to be either set to NULL or created by `mpc_auto_find_parser`. Parsers can be retrieved by `mpc_auto_find_parser` and freed via `mpc_auto_delete`.
+
+* * *
+
+```C
+int mpc_make_auto_parser(mpc_auto_parsers_t **parser_refs, ..., NULL);
+```
+
+A variadic function which takes in a reference to an empty `mpc_auto_parsers_t *` struct, followed by any amount of `mpc_parser_t *` structs and a `NULL` pointer to finish the function. If `parser_refs` is `NULL`: creates a new `mpc_auto_parsers_t *` struct holding the `mpc_parser_t *` structs. Else, extends the given `mpc_auto_parsers_t *` with the given `mpc_parser_t *` structs. Returns 1 if the memory allocation was successful, 0 if not.
+
+* * *
+
+```C
+int mpc_auto_find_parser(const char *name, mpc_auto_parsers_t	*autoparser, mpc_parser_t **parser_ref);
+```
+
+Searches the `mpc_auto_parsers_t` struct created either by `mpca_lang_auto` or `mpca_lang_auto_files` for a given parser by name and places it in `parser_ref`. Returns 1 if found, 0 if not.
+
+* * *
+
+```C
+void mpc_auto_delete(mpc_auto_parsers_t *autoparser);
+```
+
+Frees all the data inside the `mpc_auto_parsers_t` struct. This includes every parser, the internal array as well as the struct itself.
 
 Case Study - Tokenizer
 ======================

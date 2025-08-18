@@ -1,6 +1,7 @@
 *~
 *.exe
 *.dSYM
+.vscode
 test
 examples/doge
 examples/lispy

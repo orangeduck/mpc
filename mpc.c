@@ -1,4 +1,12 @@
 #include "mpc.h"
+#ifndef va_copy
+# ifndef __va_copy
+#  define va_copy(dest, src) memcpy(&(dest), &(src), sizeof(va_list))
+# else
+#  define va_copy __va_copy
+# endif
+#endif
+
 
 /*
 ** State Type
@@ -3428,7 +3436,7 @@ mpc_parser_t *mpca_total(mpc_parser_t *a) { return mpc_total(a, (mpc_dtor_t)mpc_
 */
 
 typedef struct {
-  va_list *va;
+  int create_new;
   int parsers_num;
   mpc_parser_t **parsers;
   int flags;
@@ -3507,24 +3515,26 @@ static int is_number(const char* s) {
   return 1;
 }
 
+static mpc_parser_t *mpca_parser_on_the_fly(char *x, mpca_grammar_st_t *st) {
+  mpc_parser_t  *p;
+
+  p = mpc_new(x);
+  st->parsers_num++;
+  st->parsers = realloc(st->parsers, sizeof(mpc_parser_t*) * st->parsers_num);
+  st->parsers[st->parsers_num - 1] = p;
+  return p;
+}
+
 static mpc_parser_t *mpca_grammar_find_parser(char *x, mpca_grammar_st_t *st) {
 
   int i;
-  mpc_parser_t *p;
 
   /* Case of Number */
   if (is_number(x)) {
 
     i = strtol(x, NULL, 10);
-
-    while (st->parsers_num <= i) {
-      st->parsers_num++;
-      st->parsers = realloc(st->parsers, sizeof(mpc_parser_t*) * st->parsers_num);
-      st->parsers[st->parsers_num-1] = va_arg(*st->va, mpc_parser_t*);
-      if (st->parsers[st->parsers_num-1] == NULL) {
-        return mpc_failf("No Parser in position %i! Only supplied %i Parsers!", i, st->parsers_num);
-      }
-    }
+    if (i > st->parsers_num || i < 0)
+      return mpc_failf("No Parser in position %i! Only supplied %i Parsers!", i, st->parsers_num);
 
     return st->parsers[st->parsers_num-1];
 
@@ -3534,26 +3544,16 @@ static mpc_parser_t *mpca_grammar_find_parser(char *x, mpca_grammar_st_t *st) {
     /* Search Existing Parsers */
     for (i = 0; i < st->parsers_num; i++) {
       mpc_parser_t *q = st->parsers[i];
-      if (q == NULL) { return mpc_failf("Unknown Parser '%s'!", x); }
-      if (q->name && strcmp(q->name, x) == 0) { return q; }
+      if (q == NULL || q->name == NULL)
+        return mpc_failf("Unknown Parser '%s'!", x);
+      if (q->name && strcmp(q->name, x) == 0)
+        return q;
     }
-
     /* Search New Parsers */
-    while (1) {
-
-      p = va_arg(*st->va, mpc_parser_t*);
-
-      st->parsers_num++;
-      st->parsers = realloc(st->parsers, sizeof(mpc_parser_t*) * st->parsers_num);
-      st->parsers[st->parsers_num-1] = p;
-
-      if (p == NULL || p->name == NULL) { return mpc_failf("Unknown Parser '%s'!", x); }
-      if (p->name && strcmp(p->name, x) == 0) { return p; }
-
-    }
-
+    if (st->create_new)
+      return (mpca_parser_on_the_fly(x, st));
   }
-
+  return mpc_failf("Unknown Parser '%s'!", x);
 }
 
 static mpc_val_t *mpcaf_grammar_id(mpc_val_t *x, void *s) {
@@ -3636,20 +3636,52 @@ mpc_parser_t *mpca_grammar_st(const char *grammar, mpca_grammar_st_t *st) {
 
 }
 
+static int mpc_unroll_va(mpc_parser_t ***p_refs, va_list va)
+{
+  unsigned int  i;
+  va_list       backup_va;
+  mpc_parser_t  *p;
+
+  if (!p_refs)
+    return 0;
+  va_copy(backup_va, va);
+  i = 0;
+  p = va_arg(backup_va, mpc_parser_t *);
+  while (p)
+  {
+    i++;
+    p = va_arg(backup_va, mpc_parser_t *);
+  }
+  va_end(backup_va);
+  *p_refs = malloc(sizeof (mpc_parser_t *) * i);
+  if (!*p_refs)
+    return 0;
+  va_copy(backup_va, va);
+  i = 0;
+  p = va_arg(backup_va, mpc_parser_t *);
+  while (p)
+  {
+    (*p_refs)[i] = p;
+    i++;
+    p = va_arg(backup_va, mpc_parser_t *);
+  }
+  va_end(backup_va);
+  return i;
+}
+
 mpc_parser_t *mpca_grammar(int flags, const char *grammar, ...) {
   mpca_grammar_st_t st;
   mpc_parser_t *res;
   va_list va;
-  va_start(va, grammar);
 
-  st.va = &va;
-  st.parsers_num = 0;
-  st.parsers = NULL;
+  st.create_new = 0;
+  va_start(va, grammar);
+  st.parsers_num = mpc_unroll_va(&st.parsers, va);
+  va_end(va);
   st.flags = flags;
 
   res = mpca_grammar_st(grammar, &st);
   free(st.parsers);
-  va_end(va);
   return res;
 }
 
@@ -3800,11 +3832,11 @@ mpc_err_t *mpca_lang_file(int flags, FILE *f, ...) {
   mpc_err_t *err;
 
   va_list va;
-  va_start(va, f);
 
-  st.va = &va;
-  st.parsers_num = 0;
-  st.parsers = NULL;
+  st.create_new = 0;
+  va_start(va, f);
+  st.parsers_num = mpc_unroll_va(&st.parsers, va);
+  va_end(va);
   st.flags = flags;
 
   i = mpc_input_new_file("<mpca_lang_file>", f);
@@ -3812,7 +3844,6 @@ mpc_err_t *mpca_lang_file(int flags, FILE *f, ...) {
   mpc_input_delete(i);
 
   free(st.parsers);
-  va_end(va);
   return err;
 }
 
@@ -3822,11 +3853,11 @@ mpc_err_t *mpca_lang_pipe(int flags, FILE *p, ...) {
   mpc_err_t *err;
 
   va_list va;
-  va_start(va, p);
 
-  st.va = &va;
-  st.parsers_num = 0;
-  st.parsers = NULL;
+  st.create_new = 0;
+  va_start(va, p);
+  st.parsers_num = mpc_unroll_va(&st.parsers, va);
+  va_end(va);
   st.flags = flags;
 
   i = mpc_input_new_pipe("<mpca_lang_pipe>", p);
@@ -3834,7 +3865,6 @@ mpc_err_t *mpca_lang_pipe(int flags, FILE *p, ...) {
   mpc_input_delete(i);
 
   free(st.parsers);
-  va_end(va);
   return err;
 }
 
@@ -3843,13 +3873,12 @@ mpc_err_t *mpca_lang(int flags, const char *language, ...) {
   mpca_grammar_st_t st;
   mpc_input_t *i;
   mpc_err_t *err;
-
   va_list va;
-  va_start(va, language);
 
-  st.va = &va;
-  st.parsers_num = 0;
-  st.parsers = NULL;
+  st.create_new = 0;
+  va_start(va, language);
+  st.parsers_num = mpc_unroll_va(&st.parsers, va);
+  va_end(va);
   st.flags = flags;
 
   i = mpc_input_new_string("<mpca_lang>", language);
@@ -3857,8 +3886,126 @@ mpc_err_t *mpca_lang(int flags, const char *language, ...) {
   mpc_input_delete(i);
 
   free(st.parsers);
-  va_end(va);
   return err;
+}
+
+int mpc_make_auto_parser(mpc_auto_parsers_t **parser_refs, ...)
+{
+  va_list       va;
+
+  *parser_refs = malloc(sizeof (mpc_auto_parsers_t));
+  if (!*parser_refs)
+    return 0;
+  va_start(va, parser_refs);
+  (*parser_refs)->parsers_num = mpc_unroll_va(&(*parser_refs)->parsers, va);
+  va_end(va);
+  return 1;
+}
+
+mpc_err_t *mpca_lang_auto(int flags, const char *language, mpc_auto_parsers_t **parser_refs) {
+  mpca_grammar_st_t st;
+  mpc_input_t       *i;
+  mpc_err_t         *err;
+
+  if (!*parser_refs)
+    mpc_make_auto_parser(parser_refs, NULL);
+  st.create_new = 1;
+  st.parsers_num = (*parser_refs)->parsers_num;
+  st.parsers = (*parser_refs)->parsers;
+  st.flags = flags;
+  i = mpc_input_new_string("<mpca_lang_auto>", language);
+  err = mpca_lang_st(i, &st);
+  (*parser_refs)->parsers_num = st.parsers_num;
+  (*parser_refs)->parsers = st.parsers;
+  mpc_input_delete(i);
+  return err;
+}
+
+mpc_err_t *mpca_lang_auto_files(int flags, int amount, char **files, mpc_auto_parsers_t **parser_refs) {
+  mpca_grammar_st_t st;
+  mpc_input_t       *input;
+  mpc_err_t         *err;
+  int               i;
+  int               *fd_array;
+  unsigned long     tmp;
+  unsigned long     size;
+  unsigned long     offset;
+  char              *language;
+
+  if (!*parser_refs)
+    mpc_make_auto_parser(parser_refs, NULL);
+  st.create_new = 1;
+  st.parsers_num = (*parser_refs)->parsers_num;
+  st.parsers = (*parser_refs)->parsers;
+  st.flags = flags;
+  fd_array = calloc(sizeof (int), amount);
+  size = 0;
+  for (i = 0; i < amount; i++)
+  {
+    fd_array[i] = open(files[i], O_RDONLY);
+    tmp = lseek(fd_array[i], 0, SEEK_END);
+    if (tmp == (unsigned long) -1)
+      return mpc_err_file(files[i], "Unable to open file!");
+    size += tmp;
+  }
+  language = malloc (sizeof (char) * (size + amount + 1));
+  offset = 0;
+  for (i = 0; i < amount; i++)
+  {
+    size = lseek(fd_array[i], 0, SEEK_CUR);
+    lseek(fd_array[i], 0, SEEK_SET);
+    read(fd_array[i], language + offset, size);
+    offset += size;
+    language[offset] = '\n';
+    offset += 1;
+  }
+  language[offset] = 0;
+  free(fd_array);
+  input = mpc_input_new_string("<mpca_lang_auto_files>", language);
+  err = mpca_lang_st(input, &st);
+
+  mpc_input_delete(input);
+  free(language);
+  *parser_refs = malloc(sizeof (mpc_auto_parsers_t));
+  (*parser_refs)->parsers = st.parsers;
+  (*parser_refs)->parsers_num = st.parsers_num;
+  return err;
+}
+
+int mpc_auto_find_parser(const char *name, mpc_auto_parsers_t *autoparser, mpc_parser_t **parser_ref) {
+  unsigned int i;
+
+  i = 0;
+  if (!autoparser || !parser_ref)
+    return 0;
+  while (i < autoparser->parsers_num)
+  {
+    if (strcmp(autoparser->parsers[i]->name, name) == 0)
+    {
+      *parser_ref = autoparser->parsers[i];
+      return 1;
+    }
+    i++;
+  }
+  return 0;
+}
+
+void  mpc_auto_delete(mpc_auto_parsers_t *autoparser) {
+  unsigned long i;
+
+  i = 0;
+  while (i < autoparser->parsers_num)
+  {
+    mpc_undefine(autoparser->parsers[i]);
+    i++;
+  }
+  while (i > 0)
+  {
+    i--;
+    mpc_delete(autoparser->parsers[i]);
+  }
+  free(autoparser->parsers);
+  free(autoparser);
 }
 
 mpc_err_t *mpca_lang_contents(int flags, const char *filename, ...) {
@@ -3876,11 +4023,10 @@ mpc_err_t *mpca_lang_contents(int flags, const char *filename, ...) {
     return err;
   }
 
+  st.create_new = 0;
   va_start(va, filename);
-
-  st.va = &va;
-  st.parsers_num = 0;
-  st.parsers = NULL;
+  st.parsers_num = mpc_unroll_va(&st.parsers, va);
+  va_end(va);
   st.flags = flags;
 
   i = mpc_input_new_file(filename, f);
@@ -3888,7 +4034,6 @@ mpc_err_t *mpca_lang_contents(int flags, const char *filename, ...) {
   mpc_input_delete(i);
 
   free(st.parsers);
-  va_end(va);
 
   fclose(f);
 
@@ -4126,4 +4271,3 @@ static void mpc_optimise_unretained(mpc_parser_t *p, int force) {
 void mpc_optimise(mpc_parser_t *p) {
   mpc_optimise_unretained(p, 1);
 }
-
