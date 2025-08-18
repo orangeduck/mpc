@@ -1,0 +1,6 @@
+module(
+    name = "mpc",
+    version = "0.9.8",
+)
+
+bazel_dep(name = "rules_cc", version = "0.1.2")
