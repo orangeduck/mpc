@@ -5,7 +5,7 @@ DIST = build
 MKDIR  ?= mkdir -p
 PREFIX ?= /usr/local
 CFLAGS ?= $(STD) -pedantic -O3 -g -Wall -Werror -Wextra -Wformat=2 -Wshadow \
-  -Wno-long-long -Wno-overlength-strings -Wno-format-nonliteral -Wcast-align \
+  -Wno-long-long -Wno-variadic-macros -Wno-overlength-strings -Wno-format-nonliteral -Wcast-align \
   -Wwrite-strings -Wstrict-prototypes -Wold-style-definition -Wredundant-decls \
   -Wnested-externs -Wmissing-include-dirs -Wswitch-default
 
