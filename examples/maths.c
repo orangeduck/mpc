@@ -6,14 +6,22 @@ int main(int argc, char **argv) {
   mpc_parser_t *Prod  = mpc_new("product");
   mpc_parser_t *Value = mpc_new("value");
   mpc_parser_t *Maths = mpc_new("maths");
-  
-  mpca_lang(MPCA_LANG_PREDICTIVE,
+  mpc_err_t *err;
+
+  err = mpca_lang(MPCA_LANG_PREDICTIVE,
     " expression : <product> (('+' | '-') <product>)*; "
     " product : <value>   (('*' | '/')   <value>)*;    "
     " value : /[0-9]+/ | '(' <expression> ')';         "
     " maths : /^/ <expression> /$/;                    ",
     Expr, Prod, Value, Maths, NULL);
-  
+
+  if (err != NULL) {
+    mpc_err_print(err);
+    mpc_err_delete(err);
+    mpc_cleanup(4, Expr, Prod, Value, Maths);
+    exit(1);
+  }
+
   mpc_print(Expr);
   mpc_print(Prod);
   mpc_print(Value);

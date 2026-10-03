@@ -3,19 +3,27 @@
 int main(int argc, char **argv) {
 
   mpc_result_t r;
-  
+  mpc_err_t* err;
+
   mpc_parser_t* Adjective = mpc_new("adjective");
   mpc_parser_t* Noun      = mpc_new("noun");
   mpc_parser_t* Phrase    = mpc_new("phrase");
   mpc_parser_t* Doge      = mpc_new("doge");
 
-  mpca_lang(MPCA_LANG_DEFAULT,
+  err = mpca_lang(MPCA_LANG_DEFAULT,
     " adjective : \"wow\" | \"many\" | \"so\" | \"such\";                 "
     " noun      : \"lisp\" | \"language\" | \"c\" | \"book\" | \"build\"; "
     " phrase    : <adjective> <noun>;                                     "
     " doge      : /^/ <phrase>* /$/;                                      ",
     Adjective, Noun, Phrase, Doge, NULL);
-  
+
+  if (err != NULL) {
+    mpc_err_print(err);
+    mpc_err_delete(err);
+    mpc_cleanup(4, Adjective, Noun, Phrase, Doge);
+    exit(1);
+  }
+
   if (argc > 1) {
     
     if (mpc_parse_contents(argv[1], Doge, &r)) {

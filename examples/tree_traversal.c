@@ -8,13 +8,21 @@ int main(int argc, char *argv[]) {
   mpc_ast_t *ast, *tree, *child, *child_sub, *ast_next;
   mpc_ast_trav_t *trav;
   mpc_result_t r;
+  mpc_err_t *err;
   int index, lb, i;
 
-  mpca_lang(MPCA_LANG_PREDICTIVE,
+  err = mpca_lang(MPCA_LANG_PREDICTIVE,
         " node : '(' <node> ',' /foo/ ',' <node> ')' | <leaf>;"
         " leaf : /bar/;"
         " input : /^/ <node> /$/;",
         Node, Leaf, Input, NULL);
+
+  if (err != NULL) {
+    mpc_err_print(err);
+    mpc_err_delete(err);
+    mpc_cleanup(3, Node, Leaf, Input);
+    return EXIT_FAILURE;
+  }
 
   if (argc > 1) {
 

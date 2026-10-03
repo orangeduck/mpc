@@ -2,8 +2,9 @@
 
 int main(int argc, char **argv) {
   
-  mpc_result_t r;  
-  
+  mpc_result_t r;
+  mpc_err_t* err;
+
   mpc_parser_t* Number  = mpc_new("number");
   mpc_parser_t* Symbol  = mpc_new("symbol");
   mpc_parser_t* String  = mpc_new("string");
@@ -13,7 +14,7 @@ int main(int argc, char **argv) {
   mpc_parser_t* Expr    = mpc_new("expr");
   mpc_parser_t* Lispy   = mpc_new("lispy");
 
-  mpca_lang(MPCA_LANG_PREDICTIVE,
+  err = mpca_lang(MPCA_LANG_PREDICTIVE,
     " number  \"number\"  : /[0-9]+/ ;                         "
     " symbol  \"symbol\"  : /[a-zA-Z0-9_+\\-*\\/\\\\=<>!&]+/ ; "
     " string  \"string\"  : /\"(\\\\.|[^\"])*\"/ ;             "
@@ -24,7 +25,14 @@ int main(int argc, char **argv) {
     "                     | <comment> | <sexpr>  | <qexpr> ;   "
     " lispy               : /^/ <expr>* /$/ ;                  ",
     Number, Symbol, String, Comment, Sexpr, Qexpr, Expr, Lispy, NULL);
-  
+
+  if (err != NULL) {
+    mpc_err_print(err);
+    mpc_err_delete(err);
+    mpc_cleanup(8, Number, Symbol, String, Comment, Sexpr, Qexpr, Expr, Lispy);
+    exit(1);
+  }
+
   if (argc > 1) {
 
     if (mpc_parse_contents(argv[1], Lispy, &r)) {

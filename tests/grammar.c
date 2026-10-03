@@ -400,6 +400,25 @@ void test_digits_file(void) {
   
 }
 
+void test_bad_grammar(void) {
+
+  mpc_err_t *err;
+  mpc_parser_t *Parser = mpc_new("parser");
+
+  /* ":=" is not valid grammar syntax, so the language parser itself must
+     fail. This mirrors the shape of the grammars baked into
+     examples/foobar.c and friends: mpca_lang() must report the failure
+     through its return value rather than leaving it to be silently
+     dropped by the caller. */
+  err = mpca_lang(MPCA_LANG_DEFAULT, "parser := \"foo\" | \"bar\" ;", Parser);
+
+  PT_ASSERT(err != NULL);
+
+  mpc_err_delete(err);
+  mpc_cleanup(1, Parser);
+
+}
+
 void suite_grammar(void) {
   pt_add_test(test_grammar, "Test Grammar", "Suite Grammar");
   pt_add_test(test_language, "Test Language", "Suite Grammar");
@@ -410,4 +429,5 @@ void suite_grammar(void) {
   pt_add_test(test_missingrule, "Test Missing Rule", "Suite Grammar");
   pt_add_test(test_regex_mode, "Test Regex Mode", "Suite Grammar");
   pt_add_test(test_digits_file, "Test Digits File", "Suite Grammar");
+  pt_add_test(test_bad_grammar, "Test Bad Grammar", "Suite Grammar");
 }
