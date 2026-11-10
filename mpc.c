@@ -592,13 +592,19 @@ void mpc_err_print_to(mpc_err_t *x, FILE *f) {
 }
 
 static void mpc_err_string_cat(char *buffer, int *pos, int *max, char const *fmt, ...) {
-  /* TODO: Error Checking on Length */
   int left = ((*max) - (*pos));
+  int wrote;
   va_list va;
   va_start(va, fmt);
-  if (left < 0) { left = 0;}
-  (*pos) += vsprintf(buffer + (*pos), fmt, va);
+  if (left < 0) { left = 0; }
+  /* vsnprintf writes at most left+1 bytes (including the NUL) into the
+     remaining space, so the fixed-size buffer can never be overrun. It
+     returns the number of characters that *would* have been written; clamp
+     pos to left on truncation so pos never advances past max. */
+  wrote = vsnprintf(buffer + (*pos), (size_t)left + 1, fmt, va);
   va_end(va);
+  if (wrote < 0) { return; }
+  (*pos) += (wrote < left) ? wrote : left;
 }
 
 static const char *mpc_err_char_unescape(char c, char char_unescape_buffer[4]) {
@@ -1700,7 +1706,7 @@ mpc_parser_t *mpc_failf(const char *fmt, ...) {
   if (!buffer) {
     return NULL;
   }
-  vsprintf(buffer, fmt, va);
+  vsnprintf(buffer, 2048, fmt, va);
   va_end(va);
 
   buffer = realloc(buffer, strlen(buffer) + 1);
@@ -1777,7 +1783,7 @@ mpc_parser_t *mpc_expectf(mpc_parser_t *a, const char *fmt, ...) {
   if (!buffer) {
     return NULL;
   }
-  vsprintf(buffer, fmt, va);
+  vsnprintf(buffer, 2048, fmt, va);
   va_end(va);
 
   buffer = realloc(buffer, strlen(buffer) + 1);
@@ -1894,7 +1900,7 @@ mpc_parser_t *mpc_checkf(mpc_parser_t *a, mpc_dtor_t da, mpc_check_t f, const ch
 
   va_start(va, fmt);
   buffer = malloc(2048);
-  vsprintf(buffer, fmt, va);
+  vsnprintf(buffer, 2048, fmt, va);
   va_end(va);
 
   p = mpc_check(a, da, f, buffer);
@@ -1910,7 +1916,7 @@ mpc_parser_t *mpc_check_withf(mpc_parser_t *a, mpc_dtor_t da, mpc_check_with_t f
 
   va_start(va, fmt);
   buffer = malloc(2048);
-  vsprintf(buffer, fmt, va);
+  vsnprintf(buffer, 2048, fmt, va);
   va_end(va);
 
   p = mpc_check_with(a, da, f, x, buffer);
