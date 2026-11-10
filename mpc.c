@@ -1260,9 +1260,13 @@ static int mpc_parse_run(mpc_input_t *i, mpc_parser_t *p, mpc_result_t *r, mpc_e
         ? mpc_malloc(i, sizeof(mpc_result_t) * p->data.repeat.n)
         : results_stk;
 
-      while (mpc_parse_run(i, p->data.repeat.x, &results[j], e, depth+1)) {
+      /* Stop before writing results[j] once j has reached n. Checking the
+         count only after the write let n == 0 run the sub-parser and overflow
+         the fixed-size results_stk array; guarding the loop makes mpc_count(0,
+         ...) consume nothing, as the documentation specifies. */
+      while (j < p->data.repeat.n
+      &&     mpc_parse_run(i, p->data.repeat.x, &results[j], e, depth+1)) {
         j++;
-        if (j == p->data.repeat.n) { break; }
       }
 
       if (j == p->data.repeat.n) {
