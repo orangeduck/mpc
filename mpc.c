@@ -1581,21 +1581,23 @@ mpc_parser_t *mpc_copy(mpc_parser_t *a) {
       break;
 
     case MPC_TYPE_OR:
-      p->data.or.xs = malloc(a->data.or.n * sizeof(mpc_parser_t*));
+      p->data.or.xs = a->data.or.n > 0 ? malloc(a->data.or.n * sizeof(mpc_parser_t*)) : NULL;
       for (i = 0; i < a->data.or.n; i++) {
         p->data.or.xs[i] = mpc_copy(a->data.or.xs[i]);
       }
     break;
     case MPC_TYPE_AND:
-      p->data.and.xs = malloc(a->data.and.n * sizeof(mpc_parser_t*));
+      p->data.and.xs = a->data.and.n > 0 ? malloc(a->data.and.n * sizeof(mpc_parser_t*)) : NULL;
       for (i = 0; i < a->data.and.n; i++) {
         p->data.and.xs[i] = mpc_copy(a->data.and.xs[i]);
       }
-      if (a->data.and.n > 0) {
+      if (a->data.and.n > 1) {
           p->data.and.dxs = malloc((a->data.and.n-1) * sizeof(mpc_dtor_t));
           for (i = 0; i < a->data.and.n-1; i++) {
             p->data.and.dxs[i] = a->data.and.dxs[i];
           }
+      } else {
+          p->data.and.dxs = NULL;
       }
     break;
 
@@ -1995,7 +1997,7 @@ mpc_parser_t *mpc_or(int n, ...) {
 
   p->type = MPC_TYPE_OR;
   p->data.or.n = n;
-  p->data.or.xs = malloc(sizeof(mpc_parser_t*) * n);
+  p->data.or.xs = n > 0 ? malloc(sizeof(mpc_parser_t*) * n) : NULL;
 
   va_start(va, n);
   for (i = 0; i < n; i++) {
@@ -2016,8 +2018,8 @@ mpc_parser_t *mpc_and(int n, mpc_fold_t f, ...) {
   p->type = MPC_TYPE_AND;
   p->data.and.n = n;
   p->data.and.f = f;
-  p->data.and.xs = malloc(sizeof(mpc_parser_t*) * n);
-  p->data.and.dxs = malloc(sizeof(mpc_dtor_t) * (n-1));
+  p->data.and.xs = n > 0 ? malloc(sizeof(mpc_parser_t*) * n) : NULL;
+  p->data.and.dxs = n > 1 ? malloc(sizeof(mpc_dtor_t) * (n-1)) : NULL;
 
   va_start(va, f);
   for (i = 0; i < n; i++) {
@@ -3039,10 +3041,13 @@ mpc_ast_t *mpc_ast_add_tag(mpc_ast_t *a, const char *t) {
 }
 
 mpc_ast_t *mpc_ast_add_root_tag(mpc_ast_t *a, const char *t) {
+  size_t tl;
   if (a == NULL) { return a; }
-  a->tag = realloc(a->tag, (strlen(t)-1) + strlen(a->tag) + 1);
-  memmove(a->tag + (strlen(t)-1), a->tag, strlen(a->tag)+1);
-  memmove(a->tag, t, (strlen(t)-1));
+  tl = strlen(t);
+  if (tl == 0) { return a; }
+  a->tag = realloc(a->tag, (tl - 1) + strlen(a->tag) + 1);
+  memmove(a->tag + (tl - 1), a->tag, strlen(a->tag) + 1);
+  memmove(a->tag, t, (tl - 1));
   return a;
 }
 
@@ -3344,7 +3349,7 @@ mpc_parser_t *mpca_or(int n, ...) {
 
   p->type = MPC_TYPE_OR;
   p->data.or.n = n;
-  p->data.or.xs = malloc(sizeof(mpc_parser_t*) * n);
+  p->data.or.xs = n > 0 ? malloc(sizeof(mpc_parser_t*) * n) : NULL;
 
   va_start(va, n);
   for (i = 0; i < n; i++) {
@@ -3366,8 +3371,8 @@ mpc_parser_t *mpca_and(int n, ...) {
   p->type = MPC_TYPE_AND;
   p->data.and.n = n;
   p->data.and.f = mpcf_fold_ast;
-  p->data.and.xs = malloc(sizeof(mpc_parser_t*) * n);
-  p->data.and.dxs = malloc(sizeof(mpc_dtor_t) * (n-1));
+  p->data.and.xs = n > 0 ? malloc(sizeof(mpc_parser_t*) * n) : NULL;
+  p->data.and.dxs = n > 1 ? malloc(sizeof(mpc_dtor_t) * (n-1)) : NULL;
 
   va_start(va, n);
   for (i = 0; i < n; i++) {
@@ -3950,10 +3955,78 @@ void mpc_stats(mpc_parser_t* p) {
   printf("Node Count: %i\n", mpc_nodecount_unretained(p, 1));
 }
 
+static void mpc_optimise_merge_xs(mpc_parser_t ***xs, int *n_out,
+    mpc_parser_t **txs, int m, int is_rhs) {
+  int n = *n_out;
+  int new_n = n + m - 1;
+  if (new_n == 0) {
+    free(*xs);
+    *xs = NULL;
+  } else if (is_rhs) {
+    *xs = realloc(*xs, sizeof(mpc_parser_t*) * new_n);
+    if (m > 0) {
+      memmove(*xs + n - 1, txs, m * sizeof(mpc_parser_t*));
+    }
+  } else if (m == 0) {
+    memmove(*xs, *xs + 1, (n - 1) * sizeof(mpc_parser_t*));
+    *xs = realloc(*xs, sizeof(mpc_parser_t*) * new_n);
+  } else {
+    *xs = realloc(*xs, sizeof(mpc_parser_t*) * new_n);
+    if (n > 1) {
+      memmove(*xs + m, *xs + 1, (n - 1) * sizeof(mpc_parser_t*));
+    }
+    memmove(*xs, txs, m * sizeof(mpc_parser_t*));
+  }
+  *n_out = new_n;
+}
+
+static void mpc_optimise_merge_or(mpc_parser_t *p, int is_rhs) {
+  mpc_parser_t *t = p->data.or.xs[is_rhs ? p->data.or.n - 1 : 0];
+  mpc_optimise_merge_xs(&p->data.or.xs, &p->data.or.n, t->data.or.xs, t->data.or.n, is_rhs);
+  free(t->data.or.xs);
+  free(t->name);
+  free(t);
+}
+
+static void mpc_optimise_merge_and(mpc_parser_t *p, int is_rhs, mpc_dtor_t dx) {
+  int i;
+  mpc_parser_t *t = p->data.and.xs[is_rhs ? p->data.and.n - 1 : 0];
+  mpc_optimise_merge_xs(&p->data.and.xs, &p->data.and.n, t->data.and.xs, t->data.and.n, is_rhs);
+  if (p->data.and.n > 1) {
+    p->data.and.dxs = realloc(p->data.and.dxs, sizeof(mpc_dtor_t) * (p->data.and.n - 1));
+    for (i = 0; i < p->data.and.n - 1; i++) {
+      p->data.and.dxs[i] = dx;
+    }
+  } else {
+    free(p->data.and.dxs);
+    p->data.and.dxs = NULL;
+  }
+  free(t->data.and.xs);
+  free(t->data.and.dxs);
+  free(t->name);
+  free(t);
+}
+
+static void mpc_optimise_unwrap_second(mpc_parser_t *p) {
+  mpc_parser_t *t = p->data.and.xs[1];
+  mpc_delete(p->data.and.xs[0]);
+  free(p->data.and.xs);
+  free(p->data.and.dxs);
+  if (p->retained) {
+    /* Preserve retained flag and name when optimising a retained root parser. */
+    p->type = t->type;
+    p->data = t->data;
+    free(t->name);
+  } else {
+    free(p->name);
+    memcpy(p, t, sizeof(mpc_parser_t));
+  }
+  free(t);
+}
+
 static void mpc_optimise_unretained(mpc_parser_t *p, int force) {
 
-  int i, n, m;
-  mpc_parser_t *t;
+  int i;
 
   if (p->retained && !force) { return; }
 
@@ -3993,28 +4066,19 @@ static void mpc_optimise_unretained(mpc_parser_t *p, int force) {
 
     /* Merge rhs `or` */
     if (p->type == MPC_TYPE_OR
+    &&  p->data.or.n > 0
     &&  p->data.or.xs[p->data.or.n-1]->type == MPC_TYPE_OR
     && !p->data.or.xs[p->data.or.n-1]->retained) {
-      t = p->data.or.xs[p->data.or.n-1];
-      n = p->data.or.n; m = t->data.or.n;
-      p->data.or.n = n + m - 1;
-      p->data.or.xs = realloc(p->data.or.xs, sizeof(mpc_parser_t*) * (n + m -1));
-      memmove(p->data.or.xs + n - 1, t->data.or.xs, m * sizeof(mpc_parser_t*));
-      free(t->data.or.xs); free(t->name); free(t);
+      mpc_optimise_merge_or(p, 1);
       continue;
     }
 
     /* Merge lhs `or` */
     if (p->type == MPC_TYPE_OR
+    &&  p->data.or.n > 0
     &&  p->data.or.xs[0]->type == MPC_TYPE_OR
     && !p->data.or.xs[0]->retained) {
-      t = p->data.or.xs[0];
-      n = p->data.or.n; m = t->data.or.n;
-      p->data.or.n = n + m - 1;
-      p->data.or.xs = realloc(p->data.or.xs, sizeof(mpc_parser_t*) * (n + m -1));
-      memmove(p->data.or.xs + m, p->data.or.xs + 1, (n - 1) * sizeof(mpc_parser_t*));
-      memmove(p->data.or.xs, t->data.or.xs, m * sizeof(mpc_parser_t*));
-      free(t->data.or.xs); free(t->name); free(t);
+      mpc_optimise_merge_or(p, 0);
       continue;
     }
 
@@ -4023,47 +4087,31 @@ static void mpc_optimise_unretained(mpc_parser_t *p, int force) {
     &&  p->data.and.n == 2
     &&  p->data.and.xs[0]->type == MPC_TYPE_PASS
     && !p->data.and.xs[0]->retained
+    && !p->data.and.xs[1]->retained
     &&  p->data.and.f == mpcf_fold_ast) {
-      t = p->data.and.xs[1];
-      mpc_delete(p->data.and.xs[0]);
-      free(p->data.and.xs); free(p->data.and.dxs); free(p->name);
-      memcpy(p, t, sizeof(mpc_parser_t));
-      free(t);
+      mpc_optimise_unwrap_second(p);
       continue;
     }
 
     /* Merge ast lhs `and` */
     if (p->type == MPC_TYPE_AND
+    &&  p->data.and.n > 0
     &&  p->data.and.f == mpcf_fold_ast
     &&  p->data.and.xs[0]->type == MPC_TYPE_AND
     && !p->data.and.xs[0]->retained
     &&  p->data.and.xs[0]->data.and.f == mpcf_fold_ast) {
-      t = p->data.and.xs[0];
-      n = p->data.and.n; m = t->data.and.n;
-      p->data.and.n = n + m - 1;
-      p->data.and.xs = realloc(p->data.and.xs, sizeof(mpc_parser_t*) * (n + m - 1));
-      p->data.and.dxs = realloc(p->data.and.dxs, sizeof(mpc_dtor_t) * (n + m - 1 - 1));
-      memmove(p->data.and.xs + m, p->data.and.xs + 1, (n - 1) * sizeof(mpc_parser_t*));
-      memmove(p->data.and.xs, t->data.and.xs, m * sizeof(mpc_parser_t*));
-      for (i = 0; i < p->data.and.n-1; i++) { p->data.and.dxs[i] = (mpc_dtor_t)mpc_ast_delete; }
-      free(t->data.and.xs); free(t->data.and.dxs); free(t->name); free(t);
+      mpc_optimise_merge_and(p, 0, (mpc_dtor_t)mpc_ast_delete);
       continue;
     }
 
     /* Merge ast rhs `and` */
     if (p->type == MPC_TYPE_AND
+    &&  p->data.and.n > 0
     &&  p->data.and.f == mpcf_fold_ast
     &&  p->data.and.xs[p->data.and.n-1]->type == MPC_TYPE_AND
     && !p->data.and.xs[p->data.and.n-1]->retained
     &&  p->data.and.xs[p->data.and.n-1]->data.and.f == mpcf_fold_ast) {
-      t = p->data.and.xs[p->data.and.n-1];
-      n = p->data.and.n; m = t->data.and.n;
-      p->data.and.n = n + m - 1;
-      p->data.and.xs = realloc(p->data.and.xs, sizeof(mpc_parser_t*) * (n + m -1));
-      p->data.and.dxs = realloc(p->data.and.dxs, sizeof(mpc_dtor_t) * (n + m - 1 - 1));
-      memmove(p->data.and.xs + n - 1, t->data.and.xs, m * sizeof(mpc_parser_t*));
-      for (i = 0; i < p->data.and.n-1; i++) { p->data.and.dxs[i] = (mpc_dtor_t)mpc_ast_delete; }
-      free(t->data.and.xs); free(t->data.and.dxs); free(t->name); free(t);
+      mpc_optimise_merge_and(p, 1, (mpc_dtor_t)mpc_ast_delete);
       continue;
     }
 
@@ -4073,47 +4121,31 @@ static void mpc_optimise_unretained(mpc_parser_t *p, int force) {
     &&  p->data.and.xs[0]->type == MPC_TYPE_LIFT
     &&  p->data.and.xs[0]->data.lift.lf == mpcf_ctor_str
     && !p->data.and.xs[0]->retained
+    && !p->data.and.xs[1]->retained
     &&  p->data.and.f == mpcf_strfold) {
-      t = p->data.and.xs[1];
-      mpc_delete(p->data.and.xs[0]);
-      free(p->data.and.xs); free(p->data.and.dxs); free(p->name);
-      memcpy(p, t, sizeof(mpc_parser_t));
-      free(t);
+      mpc_optimise_unwrap_second(p);
       continue;
     }
 
     /* Merge re lhs `and` */
     if (p->type == MPC_TYPE_AND
+    &&  p->data.and.n > 0
     &&  p->data.and.f == mpcf_strfold
     &&  p->data.and.xs[0]->type == MPC_TYPE_AND
     && !p->data.and.xs[0]->retained
     &&  p->data.and.xs[0]->data.and.f == mpcf_strfold) {
-      t = p->data.and.xs[0];
-      n = p->data.and.n; m = t->data.and.n;
-      p->data.and.n = n + m - 1;
-      p->data.and.xs = realloc(p->data.and.xs, sizeof(mpc_parser_t*) * (n + m - 1));
-      p->data.and.dxs = realloc(p->data.and.dxs, sizeof(mpc_dtor_t) * (n + m - 1 - 1));
-      memmove(p->data.and.xs + m, p->data.and.xs + 1, (n - 1) * sizeof(mpc_parser_t*));
-      memmove(p->data.and.xs, t->data.and.xs, m * sizeof(mpc_parser_t*));
-      for (i = 0; i < p->data.and.n-1; i++) { p->data.and.dxs[i] = free; }
-      free(t->data.and.xs); free(t->data.and.dxs); free(t->name); free(t);
+      mpc_optimise_merge_and(p, 0, free);
       continue;
     }
 
     /* Merge re rhs `and` */
     if (p->type == MPC_TYPE_AND
+    &&  p->data.and.n > 0
     &&  p->data.and.f == mpcf_strfold
     &&  p->data.and.xs[p->data.and.n-1]->type == MPC_TYPE_AND
     && !p->data.and.xs[p->data.and.n-1]->retained
     &&  p->data.and.xs[p->data.and.n-1]->data.and.f == mpcf_strfold) {
-      t = p->data.and.xs[p->data.and.n-1];
-      n = p->data.and.n; m = t->data.and.n;
-      p->data.and.n = n + m - 1;
-      p->data.and.xs = realloc(p->data.and.xs, sizeof(mpc_parser_t*) * (n + m -1));
-      p->data.and.dxs = realloc(p->data.and.dxs, sizeof(mpc_dtor_t) * (n + m - 1 - 1));
-      memmove(p->data.and.xs + n - 1, t->data.and.xs, m * sizeof(mpc_parser_t*));
-      for (i = 0; i < p->data.and.n-1; i++) { p->data.and.dxs[i] = free; }
-      free(t->data.and.xs); free(t->data.and.dxs); free(t->name); free(t);
+      mpc_optimise_merge_and(p, 1, free);
       continue;
     }
 
