@@ -819,10 +819,18 @@ This takes in a full language (zero or more rules) as well as any parsers referr
 * * *
 
 ```c
-mpc_err_t *mpca_lang_file(int flags, FILE* f, ...);
+mpc_err_t *mpca_lang_file(int flags, FILE *f, ...);
 ```
 
 This reads in the contents of file `f` and inputs it into `mpca_lang`.
+
+* * *
+
+```c
+mpc_err_t *mpca_lang_pipe(int flags, FILE *f, ...);
+```
+
+This reads in the contents of pipe `f` (such as `stdin`) and inputs it into `mpca_lang`.
 
 * * *
 
@@ -831,6 +839,180 @@ mpc_err_t *mpca_lang_contents(int flags, const char *filename, ...);
 ```
 
 This opens and reads in the contents of the file given by `filename` and passes it to `mpca_lang`.
+
+
+Abstract Syntax Tree (`mpc_ast_t`)
+----------------------------------
+
+Parsers built with `mpca_lang`, `mpca_grammar`, or the `mpca_*` combinators output an Abstract Syntax Tree represented by the `mpc_ast_t` structure.
+
+```c
+typedef struct {
+  long pos;
+  long row;
+  long col;
+  int term;
+} mpc_state_t;
+
+typedef struct mpc_ast_t {
+  char *tag;
+  char *contents;
+  mpc_state_t state;
+  int children_num;
+  struct mpc_ast_t** children;
+} mpc_ast_t;
+```
+
+Each node in the tree contains the following fields:
+
+* `tag`: A pipe-separated (`|`) list of all the rules used to parse that node (for example `"product|value|regex"`). Primitive parsers automatically add `"char"`, `"string"`, or `"regex"` as the innermost tag, while interior branch nodes with children end with `">"` (such as `"expression|>"`, or `">"` at the root).
+* `contents`: For leaf nodes, the matched input text (for example `"4"`, `"*"`, or `"("`). For branch nodes that have children, this is an empty string `""`.
+* `state`: An `mpc_state_t` recording where in the input the node began: byte offset `pos`, 0-indexed line number `row`, and 0-indexed column number `col` (`mpc_ast_print` displays `row + 1` and `col + 1`).
+* `children_num`: The number of direct child nodes under this node (`0` for leaf nodes).
+* `children`: An array of pointers (`mpc_ast_t**`) to the node's `children_num` child nodes (`children[0]` through `children[children_num - 1]`).
+
+
+Evaluating & Traversing the AST
+-------------------------------
+
+### Recursive Evaluation
+
+Because `mpc_ast_t` is a simple recursive tree structure, you can process or evaluate it with a recursive function that inspects `t->tag`, `t->contents`, `t->children_num`, and `t->children`.
+
+For the `Maths` grammar defined in the _Language Approach_ section above:
+
+```c
+long eval_op(long x, const char *op, long y) {
+  if (strcmp(op, "+") == 0) { return x + y; }
+  if (strcmp(op, "-") == 0) { return x - y; }
+  if (strcmp(op, "*") == 0) { return x * y; }
+  if (strcmp(op, "/") == 0) { return x / y; }
+  return 0;
+}
+
+long eval(mpc_ast_t *t) {
+  int i;
+  long x;
+
+  /* Leaf number node */
+  if (strstr(t->tag, "number")) {
+    return strtol(t->contents, NULL, 10);
+  }
+
+  /* Root node produced by: maths : /^/ <expression> /$/ */
+  if (strcmp(t->tag, ">") == 0) {
+    return eval(t->children[1]);
+  }
+
+  /* Parenthesized sub-expression: '(' <expression> ')' */
+  if (strcmp(t->children[0]->contents, "(") == 0) {
+    return eval(t->children[1]);
+  }
+
+  /* Left-to-right fold over <operand> (<op> <operand>)* */
+  x = eval(t->children[0]);
+  for (i = 1; i < t->children_num; i += 2) {
+    x = eval_op(x, t->children[i]->contents, eval(t->children[i + 1]));
+  }
+  return x;
+}
+```
+
+### Searching Children by Tag
+
+To find direct children with an exact `tag` string (matching with `strcmp`), use `mpc_ast_get_child` and `mpc_ast_get_index`, or their lower-bound variants `mpc_ast_get_child_lb` and `mpc_ast_get_index_lb` to iterate through multiple matches:
+
+```c
+int lb = 0;
+int index = mpc_ast_get_index_lb(node, "value|regex", lb);
+mpc_ast_t *child = mpc_ast_get_child_lb(node, "value|regex", lb);
+
+while (index != -1) {
+  printf("Child %d: %s\n", index, child->contents);
+  lb = index + 1;
+  index = mpc_ast_get_index_lb(node, "value|regex", lb);
+  child = mpc_ast_get_child_lb(node, "value|regex", lb);
+}
+```
+
+### Pre-Order and Post-Order Tree Traversal
+
+For non-recursive iteration over every node in an AST, use `mpc_ast_traverse_start`, `mpc_ast_traverse_next`, and `mpc_ast_traverse_free` with either `mpc_ast_trav_order_pre` or `mpc_ast_trav_order_post` (see `examples/tree_traversal.c`):
+
+```c
+mpc_ast_trav_t *trav = mpc_ast_traverse_start(ast, mpc_ast_trav_order_pre);
+mpc_ast_t *node = mpc_ast_traverse_next(&trav);
+
+while (node != NULL) {
+  printf("Tag: %s; Contents: %s\n", node->tag, node->contents);
+  node = mpc_ast_traverse_next(&trav);
+}
+
+mpc_ast_traverse_free(&trav);
+```
+
+Always call `mpc_ast_traverse_free(&trav)` after finishing or breaking out of traversal early so any remaining traversal state is freed.
+
+
+AST Combinators (`mpca_*`)
+--------------------------
+
+The `mpca_*` combinators mirror the standard combinators while automatically tagging, folding (`mpcf_fold_ast`), and destructing (`mpc_ast_delete`) `mpc_ast_t` values.
+
+<table>
+
+  <tr><td><code>mpc_parser_t *mpca_tag(mpc_parser_t *a, const char *t);</code></td><td>Replaces the tag on the AST returned by <code>a</code> with <code>t</code></td></tr>
+  <tr><td><code>mpc_parser_t *mpca_add_tag(mpc_parser_t *a, const char *t);</code></td><td>Prepends <code>t|</code> to the tag on the AST returned by <code>a</code></td></tr>
+  <tr><td><code>mpc_parser_t *mpca_root(mpc_parser_t *a);</code></td><td>Wraps a multi-child AST returned by <code>a</code> in a new <code>"&gt;"</code> root node</td></tr>
+  <tr><td><code>mpc_parser_t *mpca_state(mpc_parser_t *a);</code></td><td>Records the starting parser state in the AST node returned by <code>a</code></td></tr>
+  <tr><td><code>mpc_parser_t *mpca_total(mpc_parser_t *a);</code></td><td>Matches <code>a</code> surrounded by optional whitespace across the full input (using <code>mpc_ast_delete</code> on failure)</td></tr>
+  <tr><td><code>mpc_parser_t *mpca_not(mpc_parser_t *a);</code></td><td>Succeeds returning <code>NULL</code> if <code>a</code> fails; fails and deletes partial AST if <code>a</code> succeeds</td></tr>
+  <tr><td><code>mpc_parser_t *mpca_maybe(mpc_parser_t *a);</code></td><td>Runs <code>a</code> optionally, returning its AST or <code>NULL</code></td></tr>
+  <tr><td><code>mpc_parser_t *mpca_many(mpc_parser_t *a);</code></td><td>Runs <code>a</code> zero or more times and folds results with <code>mpcf_fold_ast</code></td></tr>
+  <tr><td><code>mpc_parser_t *mpca_many1(mpc_parser_t *a);</code></td><td>Runs <code>a</code> one or more times and folds results with <code>mpcf_fold_ast</code></td></tr>
+  <tr><td><code>mpc_parser_t *mpca_count(int n, mpc_parser_t *a);</code></td><td>Runs <code>a</code> exactly <code>n</code> times and folds results with <code>mpcf_fold_ast</code></td></tr>
+  <tr><td><code>mpc_parser_t *mpca_or(int n, ...);</code></td><td>Tries <code>n</code> AST parsers in sequence and returns the first that succeeds</td></tr>
+  <tr><td><code>mpc_parser_t *mpca_and(int n, ...);</code></td><td>Runs <code>n</code> AST parsers in sequence, folding results with <code>mpcf_fold_ast</code> and cleaning up partial ASTs with <code>mpc_ast_delete</code></td></tr>
+
+</table>
+
+_mpc_ also exposes the fold and apply functions used internally by the `mpca_*` combinators:
+
+<table>
+
+  <tr><td><code>mpc_val_t *mpcf_fold_ast(int n, mpc_val_t **as);</code></td><td>Folds <code>n</code> child <code>mpc_ast_t *</code> nodes into a parent node, collapsing single-child wrappers and flattening multi-child subtrees</td></tr>
+  <tr><td><code>mpc_val_t *mpcf_str_ast(mpc_val_t *c);</code></td><td>Converts string <code>c</code> into an <code>mpc_ast_t *</code> leaf node with tag <code>""</code> and frees <code>c</code></td></tr>
+  <tr><td><code>mpc_val_t *mpcf_state_ast(int n, mpc_val_t **xs);</code></td><td>Attaches <code>mpc_state_t *</code> (<code>xs[0]</code>) to <code>mpc_ast_t *</code> (<code>xs[1]</code>) and frees <code>xs[0]</code></td></tr>
+
+</table>
+
+
+AST Functions (`mpc_ast_*`)
+---------------------------
+
+<table>
+
+  <tr><td><code>mpc_ast_t *mpc_ast_new(const char *tag, const char *contents);</code></td><td>Allocates a new AST leaf node with the given <code>tag</code> and <code>contents</code></td></tr>
+  <tr><td><code>mpc_ast_t *mpc_ast_build(int n, const char *tag, ...);</code></td><td>Constructs a new AST node with <code>tag</code> and <code>n</code> child <code>mpc_ast_t *</code> arguments</td></tr>
+  <tr><td><code>mpc_ast_t *mpc_ast_add_root(mpc_ast_t *a);</code></td><td>Wraps <code>a</code> in a new <code>"&gt;"</code> root node if it has two or more children</td></tr>
+  <tr><td><code>mpc_ast_t *mpc_ast_add_child(mpc_ast_t *r, mpc_ast_t *a);</code></td><td>Appends child <code>a</code> to node <code>r</code> and returns <code>r</code></td></tr>
+  <tr><td><code>mpc_ast_t *mpc_ast_add_tag(mpc_ast_t *a, const char *t);</code></td><td>Prepends <code>t|</code> to <code>a-&gt;tag</code> and returns <code>a</code></td></tr>
+  <tr><td><code>mpc_ast_t *mpc_ast_add_root_tag(mpc_ast_t *a, const char *t);</code></td><td>Prepends the prefix of <code>t</code> (excluding trailing <code>"&gt;"</code>) to <code>a-&gt;tag</code> and returns <code>a</code></td></tr>
+  <tr><td><code>mpc_ast_t *mpc_ast_tag(mpc_ast_t *a, const char *t);</code></td><td>Replaces <code>a-&gt;tag</code> with <code>t</code> and returns <code>a</code></td></tr>
+  <tr><td><code>mpc_ast_t *mpc_ast_state(mpc_ast_t *a, mpc_state_t s);</code></td><td>Sets <code>a-&gt;state</code> to <code>s</code> and returns <code>a</code></td></tr>
+  <tr><td><code>void mpc_ast_delete(mpc_ast_t *a);</code></td><td>Recursively frees AST <code>a</code> and all of its children</td></tr>
+  <tr><td><code>void mpc_ast_print(mpc_ast_t *a);</code></td><td>Prints AST <code>a</code> to <code>stdout</code></td></tr>
+  <tr><td><code>void mpc_ast_print_to(mpc_ast_t *a, FILE *fp);</code></td><td>Prints AST <code>a</code> to file stream <code>fp</code></td></tr>
+  <tr><td><code>int mpc_ast_eq(mpc_ast_t *a, mpc_ast_t *b);</code></td><td>Recursively tests equality of <code>tag</code>, <code>contents</code>, and children of <code>a</code> and <code>b</code> (ignores <code>state</code>)</td></tr>
+  <tr><td><code>int mpc_ast_get_index(mpc_ast_t *ast, const char *tag);</code></td><td>Returns the index of the first child of <code>ast</code> whose <code>tag</code> equals <code>tag</code>, or <code>-1</code></td></tr>
+  <tr><td><code>int mpc_ast_get_index_lb(mpc_ast_t *ast, const char *tag, int lb);</code></td><td>Like <code>mpc_ast_get_index</code>, starting search at child index <code>lb</code></td></tr>
+  <tr><td><code>mpc_ast_t *mpc_ast_get_child(mpc_ast_t *ast, const char *tag);</code></td><td>Returns the first child of <code>ast</code> whose <code>tag</code> equals <code>tag</code>, or <code>NULL</code></td></tr>
+  <tr><td><code>mpc_ast_t *mpc_ast_get_child_lb(mpc_ast_t *ast, const char *tag, int lb);</code></td><td>Like <code>mpc_ast_get_child</code>, starting search at child index <code>lb</code></td></tr>
+  <tr><td><code>mpc_ast_trav_t *mpc_ast_traverse_start(mpc_ast_t *ast, mpc_ast_trav_order_t order);</code></td><td>Begins a traversal over <code>ast</code> in <code>mpc_ast_trav_order_pre</code> or <code>mpc_ast_trav_order_post</code></td></tr>
+  <tr><td><code>mpc_ast_t *mpc_ast_traverse_next(mpc_ast_trav_t **trav);</code></td><td>Returns the next node in the traversal, or <code>NULL</code> when finished</td></tr>
+  <tr><td><code>void mpc_ast_traverse_free(mpc_ast_trav_t **trav);</code></td><td>Frees remaining traversal state (required if stopping traversal early)</td></tr>
+
+</table>
 
 Case Study - Tokenizer
 ======================
