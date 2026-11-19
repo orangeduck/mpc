@@ -1173,7 +1173,7 @@ static int mpc_parse_run(mpc_input_t *i, mpc_parser_t *p, mpc_result_t *r, mpc_e
         mpc_parse_dtor(i, p->data.not.dx, r->output);
         MPC_FAILURE(mpc_err_new(i, "opposite"));
       } else {
-        mpc_input_unmark(i);
+        mpc_input_rewind(i);
         mpc_input_suppress_disable(i);
         MPC_SUCCESS(p->data.not.lf());
       }
@@ -1260,16 +1260,18 @@ static int mpc_parse_run(mpc_input_t *i, mpc_parser_t *p, mpc_result_t *r, mpc_e
         ? mpc_malloc(i, sizeof(mpc_result_t) * p->data.repeat.n)
         : results_stk;
 
-      while (mpc_parse_run(i, p->data.repeat.x, &results[j], e, depth+1)) {
+      mpc_input_mark(i);
+      while (j < p->data.repeat.n && mpc_parse_run(i, p->data.repeat.x, &results[j], e, depth+1)) {
         j++;
-        if (j == p->data.repeat.n) { break; }
       }
 
       if (j == p->data.repeat.n) {
+        mpc_input_unmark(i);
         MPC_SUCCESS(
           mpc_parse_fold(i, p->data.repeat.f, j, (mpc_val_t**)results);
           if (p->data.repeat.n > MPC_PARSE_STACK_MIN) { mpc_free(i, results); });
       } else {
+        mpc_input_rewind(i);
         for (k = 0; k < j; k++) {
           mpc_parse_dtor(i, p->data.repeat.dx, results[k].output);
         }
@@ -2219,7 +2221,7 @@ mpc_parser_t *mpc_tok_squares(mpc_parser_t *a, mpc_dtor_t ad)  { return mpc_tok_
 **
 **      <base> : <char>
 **             | "\" <char>
-**             | "(" <regex> ")"
+**             | "(" ("?" (":" | "=" | "!"))? <regex> ")"
 **             | "[" <range> "]"
 */
 
@@ -2253,6 +2255,23 @@ static mpc_val_t *mpcf_re_repeat(int n, mpc_val_t **xs) {
   }
 
   return mpc_count(num, mpcf_strfold, xs[0], free);
+}
+
+static mpc_val_t *mpcf_re_group(int n, mpc_val_t **xs) {
+  mpc_parser_t *p = xs[2];
+  (void)n;
+  free(xs[0]);
+  free(xs[3]);
+  if (xs[1] != NULL) {
+    switch (((char*)xs[1])[0]) {
+      case ':': break;
+      case '=': p = mpc_not_lift(mpc_not(p, free), mpcf_dtor_null, mpcf_ctor_str); break;
+      case '!': p = mpc_not_lift(p, free, mpcf_ctor_str); break;
+      default: break;
+    }
+    free(xs[1]);
+  }
+  return p;
 }
 
 static mpc_parser_t *mpc_re_escape_char(char c) {
@@ -2446,7 +2465,12 @@ mpc_parser_t *mpc_re_mode(const char *re, int mode) {
   ));
 
   mpc_define(Base, mpc_or(4,
-    mpc_parens(Regex, (mpc_dtor_t)mpc_delete),
+    mpc_and(4, mpcf_re_group,
+      mpc_char('('),
+      mpc_maybe(mpc_and(2, mpcf_snd_free, mpc_char('?'), mpc_oneof(":=!"), free)),
+      Regex,
+      mpc_char(')'),
+      free, free, (mpc_dtor_t)mpc_delete),
     mpc_squares(Range, (mpc_dtor_t)mpc_delete),
     mpc_apply_to(mpc_escape(), mpcf_re_escape, &mode),
     mpc_apply_to(mpc_noneof(")|"), mpcf_re_escape, &mode)

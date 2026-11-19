@@ -169,6 +169,59 @@ void test_regex_dotall(void) {
 
 }
 
+void test_regex_lookahead(void) {
+
+  mpc_parser_t *re0, *re1, *re2, *re3, *re4, *re5, *re6, *re7;
+
+  re0 = mpc_re("abc(?!e)d");
+  re1 = mpc_re("foo(?!bar)[a-z]+");
+  re2 = mpc_re("a+(?!b{2})b*");
+  re3 = mpc_re("abc(?=d)d");
+  re4 = mpc_re("foo(?=bar)[a-z]+");
+  re5 = mpc_re("(?=abc(?!e)d)[a-z]+");
+  re6 = mpc_re("(?:abc(?!e)d)");
+  re7 = mpc_re("a(?:bc|de)f");
+
+  PT_ASSERT(regex_test_pass(re0, "abcd", "abcd"));
+  PT_ASSERT(regex_test_fail(re0, "abce", "abce"));
+  PT_ASSERT(regex_test_fail(re0, "abc", "abc"));
+
+  PT_ASSERT(regex_test_pass(re1, "foobaz", "foobaz"));
+  PT_ASSERT(regex_test_fail(re1, "foobar", "foobar"));
+  PT_ASSERT(regex_test_pass(re1, "foob", "foob"));
+
+  PT_ASSERT(regex_test_pass(re2, "aab", "aab"));
+  PT_ASSERT(regex_test_fail(re2, "aabb", "aabb"));
+  PT_ASSERT(regex_test_pass(re2, "aa", "aa"));
+
+  PT_ASSERT(regex_test_pass(re3, "abcd", "abcd"));
+  PT_ASSERT(regex_test_fail(re3, "abce", "abce"));
+  PT_ASSERT(regex_test_fail(re3, "abc", "abc"));
+
+  PT_ASSERT(regex_test_pass(re4, "foobar", "foobar"));
+  PT_ASSERT(regex_test_fail(re4, "foobaz", "foobaz"));
+
+  PT_ASSERT(regex_test_pass(re5, "abcdxyz", "abcdxyz"));
+  PT_ASSERT(regex_test_fail(re5, "abce", "abce"));
+
+  PT_ASSERT(regex_test_pass(re6, "abcd", "abcd"));
+  PT_ASSERT(regex_test_fail(re6, "abce", "abce"));
+
+  PT_ASSERT(regex_test_pass(re7, "abcf", "abcf"));
+  PT_ASSERT(regex_test_pass(re7, "adef", "adef"));
+  PT_ASSERT(regex_test_fail(re7, "abdf", "abdf"));
+
+  mpc_delete(re0);
+  mpc_delete(re1);
+  mpc_delete(re2);
+  mpc_delete(re3);
+  mpc_delete(re4);
+  mpc_delete(re5);
+  mpc_delete(re6);
+  mpc_delete(re7);
+
+}
+
 void suite_regex(void) {
   pt_add_test(test_regex_basic, "Test Regex Basic", "Suite Regex");
   pt_add_test(test_regex_range, "Test Regex Range", "Suite Regex");
@@ -178,4 +231,5 @@ void suite_regex(void) {
   pt_add_test(test_regex_newline, "Test Regex Newline", "Suite Regex");
   pt_add_test(test_regex_multiline, "Test Regex Multiline", "Suite Regex");
   pt_add_test(test_regex_dotall, "Test Regex Dotall", "Suite Regex");
+  pt_add_test(test_regex_lookahead, "Test Regex Lookahead", "Suite Regex");
 }
