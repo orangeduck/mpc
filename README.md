@@ -796,7 +796,9 @@ The syntax for this is defined as follows.
 
 Rules are specified by rule name, optionally followed by an _expected_ string, followed by a colon `:`, followed by the definition, and ending in a semicolon `;`. Multiple rules can be specified. The _rule names_ must match the names given to any parsers created by `mpc_new`, otherwise the function will crash.
 
-The flags variable is a set of flags `MPCA_LANG_DEFAULT`, `MPCA_LANG_PREDICTIVE`, or `MPCA_LANG_WHITESPACE_SENSITIVE`. For specifying if the language is predictive or whitespace sensitive.
+The flags variable is a bitwise combination of `MPCA_LANG_DEFAULT`, `MPCA_LANG_PREDICTIVE`, `MPCA_LANG_WHITESPACE_SENSITIVE`, or `MPCA_LANG_NO_TAGS` for specifying if the language is predictive, whitespace sensitive, or omits string tag construction.
+
+To avoid string comparisons on `tag` during AST traversal, you can associate integer bitfield flags with parsers using `mpc_flag(mpc_parser_t *p, int flag)` (e.g. `mpc_flag(mpc_new("expr"), FLAG_EXPR)`). When parsed, those flags are bitwise-ORed into each matching node's `flags` field (`a->flags`), which can be inspected directly—optionally combined with `MPCA_LANG_NO_TAGS` to skip building string tags altogether.
 
 Like with the regular expressions, this user input is parsed by existing parts of the _mpc_ library. It provides one of the more powerful features of the library.
 
