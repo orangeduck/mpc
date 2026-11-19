@@ -1048,7 +1048,9 @@ enum {
   if (x) { MPC_SUCCESS(r->output); } \
   else { MPC_FAILURE(NULL); }
 
+#ifndef MPC_MAX_RECURSION_DEPTH
 #define MPC_MAX_RECURSION_DEPTH 1000
+#endif
 
 static mpc_result_t *mpc_grow_results(mpc_input_t *i, int j, mpc_result_t *results_stk, mpc_result_t *results){
   mpc_result_t *tmp_results = results;
@@ -1071,7 +1073,7 @@ static int mpc_parse_run(mpc_input_t *i, mpc_parser_t *p, mpc_result_t *r, mpc_e
   mpc_result_t results_stk[MPC_PARSE_STACK_MIN];
   mpc_result_t *results;
 
-  if (depth == MPC_MAX_RECURSION_DEPTH)
+  if (depth >= MPC_MAX_RECURSION_DEPTH)
   {
     MPC_FAILURE(mpc_err_fail(i, "Maximum recursion depth exceeded!"));
   }

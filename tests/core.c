@@ -96,13 +96,44 @@ void test_maths(void) {
 
 void test_strip(void) {
 
+  static const struct {
+    const char *in;
+    const char *l;
+    const char *r;
+    const char *lr;
+  } strip_cases[] = {
+    { " asdmlm dasd  ", "asdmlm dasd  ", " asdmlm dasd", "asdmlm dasd" },
+    { "",               "",              "",             ""            },
+    { " ",              "",              "",             ""            },
+    { "   ",            "",              "",             ""            },
+    { "\t \n",          "",              "",             ""            },
+    { "abc",            "abc",           "abc",          "abc"         },
+    { "abc ",           "abc ",          "abc",          "abc"         },
+    { " a ",            "a ",            " a",           "a"           }
+  };
   mpc_parser_t *Stripperl = mpc_apply(mpc_many(mpcf_strfold, mpc_any()), mpcf_strtriml);
   mpc_parser_t *Stripperr = mpc_apply(mpc_many(mpcf_strfold, mpc_any()), mpcf_strtrimr);
   mpc_parser_t *Stripper  = mpc_apply(mpc_many(mpcf_strfold, mpc_any()), mpcf_strtrim);
+  char buf1[8];
+  char buf2[10];
+  size_t k;
 
-  PT_ASSERT(mpc_test_pass(Stripperl, " asdmlm dasd  ", "asdmlm dasd  ", streq, free, strprint));
-  PT_ASSERT(mpc_test_pass(Stripperr, " asdmlm dasd  ", " asdmlm dasd", streq, free, strprint));
-  PT_ASSERT(mpc_test_pass(Stripper,  " asdmlm dasd  ", "asdmlm dasd", streq, free, strprint));
+  for (k = 0; k < sizeof(strip_cases) / sizeof(strip_cases[0]); k++) {
+    PT_ASSERT(mpc_test_pass(Stripperl, strip_cases[k].in, strip_cases[k].l,  streq, free, strprint));
+    PT_ASSERT(mpc_test_pass(Stripperr, strip_cases[k].in, strip_cases[k].r,  streq, free, strprint));
+    PT_ASSERT(mpc_test_pass(Stripper,  strip_cases[k].in, strip_cases[k].lr, streq, free, strprint));
+  }
+
+  /* Verify mpcf_strtrimr does not under-read s[-1] into a preceding buffer byte */
+  strcpy(buf1, "HELLO ");
+  PT_ASSERT(mpcf_strtrimr(buf1 + 6) == buf1 + 6);
+  PT_ASSERT_STR_EQ(buf1, "HELLO ");
+  PT_ASSERT(buf1[5] == ' ' && buf1[6] == '\0');
+
+  strcpy(buf2, "HELLO   ");
+  PT_ASSERT(mpcf_strtrimr(buf2 + 6) == buf2 + 6);
+  PT_ASSERT_STR_EQ(buf2, "HELLO ");
+  PT_ASSERT(buf2[5] == ' ' && buf2[6] == '\0');
 
   mpc_delete(Stripperl);
   mpc_delete(Stripperr);
@@ -272,14 +303,92 @@ void test_sepby(void) {
   mpc_delete(CommaSepIdent1);
 }
 
+static char *make_nested_parens(int n) {
+  int i;
+  char *s = malloc((size_t)(2 * n + 2));
+  for (i = 0; i < n; i++) { s[i] = '('; }
+  s[n] = 'a';
+  for (i = 0; i < n; i++) { s[n + 1 + i] = ')'; }
+  s[2 * n + 1] = '\0';
+  return s;
+}
+
+static void assert_recursion_depth_case(mpc_parser_t *p, int depth, int expect_pass, int is_ast) {
+  char *input = make_nested_parens(depth);
+  mpc_result_t r;
+  int ok = mpc_parse("test", input, p, &r);
+  if (expect_pass) {
+    PT_ASSERT(ok);
+    if (ok) {
+      if (is_ast) {
+        mpc_ast_delete(r.output);
+      } else {
+        PT_ASSERT_STR_EQ(r.output, input);
+        free(r.output);
+      }
+    } else {
+      mpc_err_delete(r.error);
+    }
+  } else {
+    PT_ASSERT(!ok);
+    if (!ok) {
+      PT_ASSERT(r.error != NULL);
+      PT_ASSERT(r.error->failure != NULL);
+      if (r.error && r.error->failure) {
+        PT_ASSERT_STR_EQ(r.error->failure, "Maximum recursion depth exceeded!");
+      }
+      mpc_err_delete(r.error);
+    } else if (is_ast) {
+      mpc_ast_delete(r.output);
+    } else {
+      free(r.output);
+    }
+  }
+  free(input);
+}
+
+void test_recursion_depth(void) {
+
+  mpc_parser_t *Expr = mpc_new("expr");
+  mpc_parser_t *LangExpr = mpc_new("expr");
+  mpc_err_t *err;
+
+  /* Direct combinator grammar (2 frames/level + 2 leaf frames: mpc_expectf -> single, so n <= 498 passes and n >= 499 exceeds 1000) */
+  mpc_define(Expr, mpc_or(2,
+    mpc_and(3, mpcf_strfold, mpc_char('('), Expr, mpc_char(')'), free, free),
+    mpc_char('a')
+  ));
+
+  assert_recursion_depth_case(Expr, 0,    1, 0);
+  assert_recursion_depth_case(Expr, 100,  1, 0);
+  assert_recursion_depth_case(Expr, 498,  1, 0);
+  assert_recursion_depth_case(Expr, 499,  0, 0);
+  assert_recursion_depth_case(Expr, 500,  0, 0);
+  assert_recursion_depth_case(Expr, 2000, 0, 0);
+  mpc_cleanup(1, Expr);
+
+  /* mpca_lang grammar (~5 parser frames per nesting level) */
+  err = mpca_lang(MPCA_LANG_DEFAULT, "expr : '(' <expr> ')' | 'a' ;", LangExpr);
+  PT_ASSERT(err == NULL);
+  if (err != NULL) { mpc_err_delete(err); }
+
+  assert_recursion_depth_case(LangExpr, 0,    1, 1);
+  assert_recursion_depth_case(LangExpr, 100,  1, 1);
+  assert_recursion_depth_case(LangExpr, 200,  0, 1);
+  assert_recursion_depth_case(LangExpr, 2000, 0, 1);
+  mpc_cleanup(1, LangExpr);
+
+}
+
 void suite_core(void) {
-  pt_add_test(test_ident,  "Test Ident",  "Suite Core");
-  pt_add_test(test_maths,  "Test Maths",  "Suite Core");
-  pt_add_test(test_strip,  "Test Strip",  "Suite Core");
-  pt_add_test(test_repeat, "Test Repeat", "Suite Core");
-  pt_add_test(test_copy,   "Test Copy",   "Suite Core");
-  pt_add_test(test_reader, "Test Reader", "Suite Core");
-  pt_add_test(test_tokens, "Test Tokens", "Suite Core");
-  pt_add_test(test_eoi,    "Test EOI",    "Suite Core");
-  pt_add_test(test_sepby,  "Test SepBy",  "Suite Core");
+  pt_add_test(test_ident,           "Test Ident",           "Suite Core");
+  pt_add_test(test_maths,           "Test Maths",           "Suite Core");
+  pt_add_test(test_strip,           "Test Strip",           "Suite Core");
+  pt_add_test(test_repeat,          "Test Repeat",          "Suite Core");
+  pt_add_test(test_copy,            "Test Copy",            "Suite Core");
+  pt_add_test(test_reader,          "Test Reader",          "Suite Core");
+  pt_add_test(test_tokens,          "Test Tokens",          "Suite Core");
+  pt_add_test(test_eoi,             "Test EOI",             "Suite Core");
+  pt_add_test(test_sepby,           "Test SepBy",           "Suite Core");
+  pt_add_test(test_recursion_depth, "Test Recursion Depth", "Suite Core");
 }
