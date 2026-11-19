@@ -104,6 +104,13 @@ void test_strip(void) {
   PT_ASSERT(mpc_test_pass(Stripperr, " asdmlm dasd  ", " asdmlm dasd", streq, free, strprint));
   PT_ASSERT(mpc_test_pass(Stripper,  " asdmlm dasd  ", "asdmlm dasd", streq, free, strprint));
 
+  PT_ASSERT(mpc_test_pass(Stripperl, "", "", streq, free, strprint));
+  PT_ASSERT(mpc_test_pass(Stripperr, "", "", streq, free, strprint));
+  PT_ASSERT(mpc_test_pass(Stripper,  "", "", streq, free, strprint));
+  PT_ASSERT(mpc_test_pass(Stripperl, "   ", "", streq, free, strprint));
+  PT_ASSERT(mpc_test_pass(Stripperr, "   ", "", streq, free, strprint));
+  PT_ASSERT(mpc_test_pass(Stripper,  "   ", "", streq, free, strprint));
+
   mpc_delete(Stripperl);
   mpc_delete(Stripperr);
   mpc_delete(Stripper);
@@ -272,14 +279,92 @@ void test_sepby(void) {
   mpc_delete(CommaSepIdent1);
 }
 
+void test_optimise_bounds(void) {
+
+  mpc_parser_t *p, *c, *parent;
+  mpc_parser_t *child, *root, *root_unwrapped, *re_root, *re_unwrapped;
+  mpc_ast_t *ast;
+
+  /* Zero-arity combinators in optimise, copy, and delete */
+  p = mpc_or(0);
+  mpc_optimise(p);
+  c = mpc_copy(p);
+  mpc_delete(c);
+  mpc_delete(p);
+
+  p = mpc_and(0, mpcf_null);
+  mpc_optimise(p);
+  c = mpc_copy(p);
+  mpc_delete(c);
+  mpc_delete(p);
+
+  p = mpca_or(0);
+  mpc_optimise(p);
+  c = mpc_copy(p);
+  mpc_delete(c);
+  mpc_delete(p);
+
+  p = mpca_and(0);
+  mpc_optimise(p);
+  c = mpc_copy(p);
+  mpc_delete(c);
+  mpc_delete(p);
+
+  /* Merging empty or/and children on LHS and RHS */
+  p = mpc_or(3, mpc_or(0), mpc_any(), mpc_or(0));
+  mpc_optimise(p);
+  PT_ASSERT(mpc_test_pass(p, "a", "a", streq, free, strprint));
+  mpc_delete(p);
+
+  p = mpc_and(1, mpcf_strfold, mpc_and(0, mpcf_strfold));
+  mpc_optimise(p);
+  mpc_delete(p);
+
+  p = mpca_and(3, mpca_and(0), mpc_any(), mpca_and(0));
+  mpc_optimise(p);
+  mpc_delete(p);
+
+  /* Retained child must not be freed when unwrapping leading pass/lift */
+  child = mpc_new("opt_child");
+  mpc_define(child, mpc_any());
+  root = mpca_and(2, mpc_pass(), child);
+  mpc_optimise(root);
+  mpc_delete(root);
+  re_root = mpc_and(2, mpcf_strfold, mpc_lift(mpcf_ctor_str), child, free);
+  mpc_optimise(re_root);
+  mpc_delete(re_root);
+  PT_ASSERT(mpc_test_pass(child, "z", "z", streq, free, strprint));
+
+  /* Retained root must stay retained when unwrapping leading pass/lift */
+  root_unwrapped = mpc_new("opt_root");
+  mpc_define(root_unwrapped, mpca_and(2, mpc_pass(), mpc_any()));
+  mpc_optimise(root_unwrapped);
+  re_unwrapped = mpc_new("opt_re_root");
+  mpc_define(re_unwrapped, mpc_and(2, mpcf_strfold, mpc_lift(mpcf_ctor_str), mpc_any(), free));
+  mpc_optimise(re_unwrapped);
+  parent = mpc_or(3, root_unwrapped, re_unwrapped, mpc_any());
+  mpc_delete(parent);
+  PT_ASSERT(mpc_test_pass(root_unwrapped, "x", "x", streq, free, strprint));
+  PT_ASSERT(mpc_test_pass(re_unwrapped, "y", "y", streq, free, strprint));
+  mpc_cleanup(3, child, root_unwrapped, re_unwrapped);
+
+  /* Empty root tag must not underflow strlen(t) - 1 */
+  ast = mpc_ast_new("root", "val");
+  PT_ASSERT(mpc_ast_add_root_tag(ast, "") == ast);
+  PT_ASSERT_STR_EQ(ast->tag, "root");
+  mpc_ast_delete(ast);
+
+}
+
 void suite_core(void) {
-  pt_add_test(test_ident,  "Test Ident",  "Suite Core");
-  pt_add_test(test_maths,  "Test Maths",  "Suite Core");
-  pt_add_test(test_strip,  "Test Strip",  "Suite Core");
-  pt_add_test(test_repeat, "Test Repeat", "Suite Core");
-  pt_add_test(test_copy,   "Test Copy",   "Suite Core");
-  pt_add_test(test_reader, "Test Reader", "Suite Core");
-  pt_add_test(test_tokens, "Test Tokens", "Suite Core");
-  pt_add_test(test_eoi,    "Test EOI",    "Suite Core");
-  pt_add_test(test_sepby,  "Test SepBy",  "Suite Core");
+  pt_add_test(test_ident,           "Test Ident",           "Suite Core");
+  pt_add_test(test_maths,           "Test Maths",           "Suite Core");
+  pt_add_test(test_strip,           "Test Strip",           "Suite Core");
+  pt_add_test(test_repeat,          "Test Repeat",          "Suite Core");
+  pt_add_test(test_copy,            "Test Copy",            "Suite Core");
+  pt_add_test(test_reader,          "Test Reader",          "Suite Core");
+  pt_add_test(test_tokens,          "Test Tokens",          "Suite Core");
+  pt_add_test(test_eoi,             "Test EOI",             "Suite Core");
+  pt_add_test(test_sepby,           "Test SepBy",           "Suite Core");
+  pt_add_test(test_optimise_bounds, "Test Optimise Bounds", "Suite Core");
 }
