@@ -93,7 +93,8 @@ void test_language_file(void) {
 
 void test_doge(void) {
   
-  mpc_ast_t *t0;  
+  mpc_ast_t *t0;
+  mpc_result_t r;
   mpc_parser_t* Adjective = mpc_new("adjective");
   mpc_parser_t* Noun      = mpc_new("noun");
   mpc_parser_t* Phrase    = mpc_new("phrase");
@@ -121,6 +122,14 @@ void test_doge(void) {
   PT_ASSERT(mpc_test_pass(Doge, "so c so c", t0, (int(*)(const void*,const void*))mpc_ast_eq, (mpc_dtor_t)mpc_ast_delete, (void(*)(const void*))mpc_ast_print));
  
   PT_ASSERT(mpc_test_fail(Doge, "so a so c", t0, (int(*)(const void*,const void*))mpc_ast_eq, (mpc_dtor_t)mpc_ast_delete, (void(*)(const void*))mpc_ast_print));
+
+  PT_ASSERT(!mpc_parse("test", "so a", Doge, &r));
+  PT_ASSERT(r.error != NULL);
+  PT_ASSERT(r.error->state.row == 0);
+  PT_ASSERT(r.error->state.col == 3);
+  PT_ASSERT(r.error->received == 'a');
+  PT_ASSERT(r.error->expected_num == 5);
+  mpc_err_delete(r.error);
   
   mpc_ast_delete(t0);
   
